@@ -1,0 +1,23 @@
+import StudentTimeRemain from "./Student/StudentTimeRemain";
+import NasDashboard from "./NAS/NasDashboard";
+import TeacherDashboard from "./Teacher/TeacherDashboard";
+import LibrarianDashboard from "./Librarian/LibrarianDashboard";
+import BookLog from "./Student/StudentBookLog";
+import TapIn from "./Login/TapIn"
+import { Routes, Route, Link } from "react-router-dom";
+
+
+export default function TheRoutes() {
+    return (
+        <Routes>
+            <Route path="/" element={<TapIn />} />
+            <Route path="/studentDashboard/TimeRemaining" element={<StudentTimeRemain />} />
+            <Route path="/studentDashboard/TimeRemaining/Addbook" element={<StudentTimeRemain />} />
+            <Route path="/studentDashboard/booklog" element={<BookLog />} />
+            <Route path="/nasDashboard" element={<NasDashboard />} />
+            <Route path="/teacherDashboard" element={<TeacherDashboard />} />
+            <Route path="/librarianDashboard" element={<LibrarianDashboard />} />
+            <Route path="*" element={<h1>Nothing Here..</h1>} />
+        </Routes>
+    )
+}
