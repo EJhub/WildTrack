@@ -14,15 +14,15 @@ import Button from '@mui/material/Button';
 import Addbook from './components/Addbook';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
-const StudentTimeRemain = () => {
+const StudentLibraryHours = () => {
   const [open, setOpen] = useState(false); // State to control modal open/close
   const navigate = useNavigate(); // Initialize the navigate hook
 
   const students = [
-    { id: '19-2134-332', name: 'Xevery', requiredMinutes: '150 Minutes', totalMinutes: '21:00 Minutes', remainingMinutes: '129:00 Minutes' },
-    { id: '22-3451-124', name: 'Brent', requiredMinutes: '150 Minutes', totalMinutes: '0:00 Minutes', remainingMinutes: '150:00 Minutes' },
-    { id: '18-0853-687', name: 'Junrey', requiredMinutes: '150 Minutes', totalMinutes: '0:00 Minutes', remainingMinutes: '150:00 Minutes' },
-    { id: '21-4238-785', name: 'David', requiredMinutes: '150 Minutes', totalMinutes: '0:00 Minutes', remainingMinutes: '150:00 Minutes' },
+    { date: '01/2/2024', TimeIn: '2:00pm', TimeOut: '21:00 Minutes', Minutes: '129:00 Minutes' },
+    { date: '02/2/2024', TimeIn: '3:00pm', TimeOut: '0:00 Minutes', Minutes: '150:00 Minutes' },
+    { date: '10/2/2024', TimeIn: '4:00pm', TimeOut: '0:00 Minutes', Minutes: '150:00 Minutes' },
+    { date: '30/2/2024', TimeIn: '5:00pm', TimeOut: '0:00 Minutes', Minutes: '150:00 Minutes' },
   ];
 
   const handleClickOpen = () => {
@@ -54,39 +54,35 @@ const StudentTimeRemain = () => {
               marginBottom: 2,
             }}
           >
-            <Typography variant="h4">Student Time Remaining</Typography>
+            <Typography variant="h4">Library Hours</Typography>
 
-            <Typography variant="subtitle1" sx={{ textAlign: 'right' }}>
-              REQUIRED TOTAL MINUTES: 150 MINUTES <br />
-              TOTAL MINUTES: 150 MINUTES
-            </Typography>
+           
           </Box>
 
           <TableContainer component={Paper}>
             <Table aria-label="simple table">
               <TableHead>
-                <TableRow>
-                  <TableCell>ID Number</TableCell>
-                  <TableCell>Student Name</TableCell>
-                  <TableCell>Required Total Minutes</TableCell>
-                  <TableCell>Total Minutes</TableCell>
-                  <TableCell>Remaining Minutes</TableCell>
-                  <TableCell>Add Book</TableCell>
+                <TableRow sx={{
+                  backgroundColor:"#D9D9D9",
+                }}>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Time In</TableCell>
+                  <TableCell>Book Title</TableCell>
+                  <TableCell>Time Out</TableCell>
+                  <TableCell>MINUTES</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {students.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>{student.id}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.requiredMinutes}</TableCell>
-                    <TableCell>{student.totalMinutes}</TableCell>
-                    <TableCell>{student.remainingMinutes}</TableCell>
-                    <TableCell>
-                      <Button variant="contained" color="primary" size="small" onClick={handleClickOpen}>
+                  <TableRow key={student.date}>
+                    <TableCell>{student.date}</TableCell>
+                    <TableCell>{student.TimeIn}</TableCell>
+                    <Button variant="contained" color="primary" size="small" onClick={handleClickOpen}>
                         Insert Book
                       </Button>
-                    </TableCell>
+                    <TableCell>{student.TimeOut}</TableCell>
+                    <TableCell>{student.Minutes}</TableCell>
+                  
                   </TableRow>
                 ))}
               </TableBody>
@@ -101,4 +97,4 @@ const StudentTimeRemain = () => {
   );
 };
 
-export default StudentTimeRemain;
+export default StudentLibraryHours;

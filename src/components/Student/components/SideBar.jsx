@@ -8,38 +8,49 @@ const SideBar = () => {
       sx={{
         width: '250px',
         height: '100vh',
-        backgroundColor: '#f4f4f4',
+        backgroundColor: '#CD6161',
         padding: '0px',
         boxSizing: 'border-box',
         borderRight: '2px solid #000',
         borderBottom: '2px solid #000', 
         borderTop: '2px solid #000',
+        
       }}
     >
       <List component="nav">
         <ListItem button component={Link} to="/studentDashboard/TimeRemaining" sx={{
             padding: '3rem',
             width: "100%",
-            boxSizing: 'border-box',
-            borderBottom: '2px solid #000', 
+            color: "#000000",
             textAlign: 'center',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              color: '#FFD700',
             },
         }}> 
-          <ListItemText primary="Time Remaining" />
+         <ListItemText primary="Home"/>
+
         </ListItem>
         <ListItem button component={Link} to="/studentDashboard/booklog" sx={{
             padding: '3rem',
             width: "100%",
-            boxSizing: 'border-box',
-            borderBottom: '2px solid #000', 
+            color: "#000000",
             textAlign: 'center',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              color: '#FFD700',
             },
         }} >
           <ListItemText primary="Book Log" />
+        </ListItem>
+        <ListItem button component={Link} to="/studentDashboard/booklog" sx={{
+            padding: '3rem',
+            width: "100%",
+            color: "#000000",
+            textAlign: 'center',
+            '&:hover': {
+              color: '#FFD700',
+            },
+        }} >
+          <ListItemText primary="Personal Information" />
         </ListItem>
       </List>
     </Box>

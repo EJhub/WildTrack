@@ -1,4 +1,4 @@
-import StudentTimeRemain from "./Student/StudentTimeRemain";
+import StudentLibraryHours from "./Student/StudentLibraryHours";
 import NasDashboard from "./NAS/NasDashboard";
 import TeacherDashboard from "./Teacher/TeacherDashboard";
 import LibrarianDashboard from "./Librarian/LibrarianDashboard";
@@ -11,8 +11,8 @@ export default function TheRoutes() {
     return (
         <Routes>
             <Route path="/" element={<TapIn />} />
-            <Route path="/studentDashboard/TimeRemaining" element={<StudentTimeRemain />} />
-            <Route path="/studentDashboard/TimeRemaining/Addbook" element={<StudentTimeRemain />} />
+            <Route path="/studentDashboard/TimeRemaining" element={<StudentLibraryHours />} />
+            <Route path="/studentDashboard/TimeRemaining/Addbook" element={<StudentLibraryHours />} />
             <Route path="/studentDashboard/booklog" element={<BookLog />} />
             <Route path="/nasDashboard" element={<NasDashboard />} />
             <Route path="/teacherDashboard" element={<TeacherDashboard />} />
