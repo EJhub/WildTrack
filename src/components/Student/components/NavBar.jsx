@@ -1,37 +1,27 @@
 import React from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 
 const NavBar = () => {
   return (
-    <AppBar position="static" color="#FFFFFF" sx={{ boxSizing:"border-box", borderBottom: '2px solid #000',  padding: '10px', }}>
-      <Toolbar>
-        <Box sx={{ flexGrow: 1}}>
-          <Typography variant="h4" component="div" sx={{ flexGrow: 1 }}>
-            Logo
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="body1" sx={{ marginRight: 2 }}>
-            Name of the Student
-          </Typography>
-          <Button
-            variant="outlined"
-            color="inherit"
-            sx={{
-              width: '70px',  
-              height: '70px',
-              borderRadius: '50%', 
-              padding: 0, 
-              minWidth: '40px', 
-            }}
-          >
-            Profile
-          </Button>
+    <AppBar 
+      position="static" 
+      sx={{ 
+        backgroundColor: 'transparent',
+        boxShadow: 'none', 
+        padding: 0,
+        margin: 0,
+        height: '135px', // Set to match the height needed for your image
+      }}
+    >
+      <Toolbar disableGutters sx={{ padding: 0, minHeight: '180px' }}>
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', margin: 0 }}>
+          <img 
+            src="/Logo.png" // Replace with the correct path to your image
+            alt="Logo"
+            style={{ width: '100%', height: '100%', objectFit: 'cover',  margin: 0, border: 0, paddingTop: 25}} 
+          />
         </Box>
       </Toolbar>
     </AppBar>

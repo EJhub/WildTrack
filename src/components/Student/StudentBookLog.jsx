@@ -13,13 +13,15 @@ import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 
 const BookLog = () => {
   
   const bookLogs = [
-    { title: 'Book Title 1', author: 'Author 1', accessionNumber: '12345', dateRead: '2024-10-16' },
-    { title: 'Book Title 2', author: 'Author 2', accessionNumber: '67890', dateRead: '2024-10-15' },
-    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: '2024-10-14' },
+    { title: 'Little Red Riding Hood', author: 'Charles Perrault', accessionNumber: 'LB0001', dateRead: 'October 18, 2024', rating: '★★★★☆' },
+    { title: 'Book Title 2', author: 'Author 2', accessionNumber: '67890', dateRead: 'October 17, 2024', rating: '★★★☆☆' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
   ];
 
   return (
@@ -27,38 +29,46 @@ const BookLog = () => {
       <NavBar />
       <Box sx={{ display: 'flex' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 2,
-            }}
-          >
-            <Typography variant="h4">Book Log</Typography>
+        <Box sx={{ padding: 4, flexGrow: 1, backgroundImage: 'url("/studentbackground.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: 3 }}>
+            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', marginBottom: 2, paddingTop: 5}}>Book Log</Typography>
+            
+            {/* Search bar positioned below the title and aligned to the left */}
             <TextField
               variant="outlined"
-              placeholder="Search"
+              placeholder="Type here..."
               size="small"
+              sx={{
+                backgroundColor: '#fff',
+                borderRadius: '15px',
+                width: '250px',
+                marginBottom: 2,
+              }}
               InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <SearchIcon />
+                    <FilterListIcon sx={{ cursor: 'pointer', marginRight: 1 }} />
+                    <SortByAlphaIcon sx={{ cursor: 'pointer' }} />
                   </InputAdornment>
                 ),
               }}
             />
           </Box>
 
-          <TableContainer component={Paper}>
+          <TableContainer component={Paper} sx={{ opacity: 0.9, borderRadius: "10px" }}>
             <Table aria-label="book log table">
-              <TableHead>
+              <TableHead sx={{ backgroundColor: '#D9D9D9'}}>
                 <TableRow>
-                  <TableCell>Book Title</TableCell>
-                  <TableCell>Author</TableCell>
-                  <TableCell>Accession Number</TableCell>
-                  <TableCell>Date Read</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>BOOK TITLE</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>AUTHOR</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>ACCESSION NUMBER</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>DATE READ</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>RATING</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -68,6 +78,7 @@ const BookLog = () => {
                     <TableCell>{log.author}</TableCell>
                     <TableCell>{log.accessionNumber}</TableCell>
                     <TableCell>{log.dateRead}</TableCell>
+                    <TableCell>{log.rating}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
