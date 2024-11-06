@@ -25,63 +25,122 @@ const Addbook = ({ open, handleClose, handleSubmit }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}>Add Book</DialogTitle>
-      <DialogContent>
-        <Typography sx={{ textAlign: 'left', marginTop: 2 }}>Author:</Typography>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="xs"
+      fullWidth
+      sx={{
+        '& .MuiPaper-root': {
+          borderRadius: '15px', 
+          overflow: 'hidden',
+          border: '2px solid #8B3D3D', 
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          textAlign: 'center',
+          fontWeight: 'bold',
+          backgroundColor: '#8B3D3D', 
+          color: '#000',
+        }}
+      >
+        <h2>Add Book</h2>
+      </DialogTitle>
+      <DialogContent
+        sx={{
+          backgroundColor: '#8B3D3D',
+          padding: '30px',
+        }}
+      >
+        <Typography sx={{ textAlign: 'left', color: '#000', marginLeft: 4 }}>Author:</Typography>
         <TextField
-          margin="dense"
           name="author"
-          type="text"
           fullWidth
           variant="outlined"
           value={bookDetails.author}
           onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
+          sx={{
+            marginBottom: 2,
+            backgroundColor: '#fff', // White input background
+            borderRadius: '10px',
+            height: "50px",
+            width: "330px",
+            overflow: 'hidden',
+          }}
         />
-        <Typography sx={{ textAlign: 'left', marginTop: 2 }}>Title:</Typography>
+        <Typography sx={{ textAlign: 'left', color: '#000', marginLeft: 4 }}>Title:</Typography>
         <TextField
-          margin="dense"
           name="title"
-          type="text"
           fullWidth
           variant="outlined"
           value={bookDetails.title}
           onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
+          sx={{
+            marginBottom: 2,
+            backgroundColor: '#fff', // White input background
+            borderRadius: '10px',
+             height: "50px",
+            width: "330px",
+            overflow: 'hidden',
+          }}
         />
-        <Typography sx={{ textAlign: 'left', marginTop: 2 }}>Accession Number:</Typography>
+        <Typography sx={{ textAlign: 'left', color: '#000', marginLeft: 4,}}>Accession Number:</Typography>
         <TextField
-          margin="dense"
           name="accessionNumber"
-          type="text"
           fullWidth
           variant="outlined"
           value={bookDetails.accessionNumber}
           onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
+          sx={{
+            marginBottom: 2,
+            backgroundColor: '#fff', // White input background
+            borderRadius: '10px',
+             height: "50px",
+            width: "330px",
+            overflow: 'hidden',
+          }}
         />
       </DialogContent>
 
-      <DialogActions sx={{ justifyContent: 'center', marginBottom: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', paddingX: 2 }}>
-          <Button
-            onClick={handleClose}
-            color="primary"
-            variant="outlined"
-            sx={{ borderRadius: '20px', width: '120px' }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={onSubmit}
-            color="primary"
-            variant="contained"
-            sx={{ borderRadius: '20px', width: '120px' }}
-          >
-            Submit
-          </Button>
-        </Box>
+      <DialogActions
+        sx={{
+          justifyContent: 'center',
+          backgroundColor: '#8B3D3D',
+          padding: 2,
+        }}
+      >
+        <Button
+          onClick={handleClose}
+          variant="contained"
+          sx={{
+            borderRadius: '10px',
+            width: '120px',
+            backgroundColor: '#BB5252',
+            color: '#000',
+            '&:hover': {
+              backgroundColor: '#A44444',
+            },
+          }}
+        >
+          CANCEL
+        </Button>
+        <Button
+          onClick={onSubmit}
+          variant="contained"
+          sx={{
+            borderRadius: '10px',
+            width: '120px',
+            backgroundColor: '#FFD700',
+            color: '#000',
+            '&:hover': {
+              backgroundColor: '#FFC107',
+            },
+          }}
+        >
+          SUBMIT
+        </Button>
       </DialogActions>
     </Dialog>
   );
