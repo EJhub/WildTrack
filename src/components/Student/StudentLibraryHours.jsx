@@ -52,7 +52,7 @@ const StudentLibraryHours = () => {
               marginBottom: 2,
             }}
           >
-            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold' }}>Library Hours</Typography>
+            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', paddingTop: 5 }}>Library Hours</Typography>
           </Box>
 
           <TableContainer component={Paper} sx={{ opacity: 0.9 }}>
