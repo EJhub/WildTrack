@@ -131,14 +131,14 @@ const NasBookEntry = () => {
             </Button>
           </Box>
           <TableContainer component={Paper} sx={{ maxHeight: 450, overflowY: 'auto', opacity: 0.95, marginTop: 3, borderRadius: '15px 15px 0 0' }}>
-            <Table>
-              <TableHead sx={{ background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)', color: '#fff' }}>
+            <Table stickyHeader>
+              <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff' }}>BOOK TITLE</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff' }}>AUTHOR</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff' }}>ACCESSION NUMBER</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff' }}>DATE READ</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff' }}>STUDENT</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)' }}>BOOK TITLE</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>AUTHOR</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>ACCESSION NUMBER</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>DATE READ</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>STUDENT</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
