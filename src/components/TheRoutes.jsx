@@ -26,7 +26,8 @@ export default function TheRoutes() {
             <Route path="/nasDashboard/BookEntry/AddLog" element={<NasBookEntry />} />
             <Route path="/nasDashboard/Register" element={<NasRegister />} />
             <Route path="/nasDashboard/ActivityLog" element={<NasActivityLog />} />
-            <Route path="/teacherDashboard" element={<TeacherDashboard />} />
+            <Route path="/TeacherDashboard/Home" element={<TeacherDashboard />} />
+            <Route path="/TeacherDashboard/Home/SetLibraryHours" element={<TeacherDashboard />} />
             <Route path="/librarianDashboard" element={<LibrarianDashboard />} />
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>
