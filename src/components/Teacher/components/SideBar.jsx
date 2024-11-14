@@ -37,7 +37,7 @@ const SideBar = () => {
     <Box
       sx={{
         width: '250px',
-        height: 'auto',
+        height: '600px',
         background: 'linear-gradient(to bottom, #CD6161, #8B3D3D)',
         padding: '0px',
         boxSizing: 'border-box',
@@ -60,7 +60,7 @@ const SideBar = () => {
 
         <ListItem button component={Link} to="/TeacherDashboard/StudentRecords" sx={getListItemStyles('/TeacherDashboard/StudentRecords')}>
           <ListItemText 
-            primary="Library Attendance" 
+            primary="Student Records" 
             primaryTypographyProps={{ 
               align: 'center', 
               fontWeight: location.pathname === '/TeacherDashboard/StudentRecords' ? 'bold' : 'normal' 
@@ -70,7 +70,7 @@ const SideBar = () => {
 
         <ListItem button component={Link} to="/TeacherDashboard/CompletedLibraryHours" sx={getListItemStyles('/TeacherDashboard/CompletedLibraryHours')}>
           <ListItemText 
-            primary="Book Entry" 
+            primary="Completed Library Hours" 
             primaryTypographyProps={{ 
               align: 'center', 
               fontWeight: location.pathname === '/TeacherDashboard/CompletedLibraryHours' ? 'bold' : 'normal' 
@@ -79,7 +79,7 @@ const SideBar = () => {
         </ListItem>
         <ListItem button component={Link} to="/TeacherDashboard/Analytics" sx={getListItemStyles('/TeacherDashboard/Analytics')}>
           <ListItemText 
-            primary="Register" 
+            primary="Analytics" 
             primaryTypographyProps={{ 
               align: 'center', 
               fontWeight: location.pathname === '/TeacherDashboard/Analytics' ? 'bold' : 'normal' 

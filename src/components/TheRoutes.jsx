@@ -9,6 +9,9 @@ import NasLibraryAttendance from "./NAS/NasLibraryAttendance";
 import NasBookEntry from "./NAS/NasBookEntry";
 import NasRegister from "./NAS/NasRegister";
 import NasActivityLog from "./NAS/NasActivityLog";
+import StudentRecords from "./Teacher/StudentRecords";
+import CompletedLibraryHours from "./Teacher/CompletedLibraryHours";
+import Analytics from "./Teacher/Analytics";
 import { Routes, Route, Link } from "react-router-dom";
 
 
@@ -28,6 +31,9 @@ export default function TheRoutes() {
             <Route path="/nasDashboard/ActivityLog" element={<NasActivityLog />} />
             <Route path="/TeacherDashboard/Home" element={<TeacherDashboard />} />
             <Route path="/TeacherDashboard/Home/SetLibraryHours" element={<TeacherDashboard />} />
+            <Route path="/TeacherDashboard/StudentRecords" element={<StudentRecords />} />
+            <Route path="/TeacherDashboard/CompletedLibraryHours" element={<CompletedLibraryHours />} />
+            <Route path="/TeacherDashboard/Analytics" element={<Analytics />} />
             <Route path="/librarianDashboard" element={<LibrarianDashboard />} />
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>
