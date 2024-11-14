@@ -3,19 +3,27 @@ import NasDashboard from "./NAS/NasDashboard";
 import TeacherDashboard from "./Teacher/TeacherDashboard";
 import LibrarianDashboard from "./Librarian/LibrarianDashboard";
 import BookLog from "./Student/StudentBookLog";
-import TapIn from "./Login/TapIn";
+import InputIDLogin from "./Login/InputIDLogin";
+import InputIDLogout from "./Login/InputIDLogout";
 import StudentPersonalInfo from "./Student/StudentPersonalInfo";
 import NasLibraryAttendance from "./NAS/NasLibraryAttendance";
 import NasBookEntry from "./NAS/NasBookEntry";
 import NasRegister from "./NAS/NasRegister";
 import NasActivityLog from "./NAS/NasActivityLog";
+import LogInHomepage from "./Login/LoginHomePage";
+import LogIn from "./Login/Login";
+import Register from "./Login/Register";
 import { Routes, Route, Link } from "react-router-dom";
 
 
 export default function TheRoutes() {
     return (
         <Routes>
-            <Route path="/" element={<TapIn />} />
+            <Route path="/" element={<InputIDLogin />} />
+            <Route path="/Tap-Out" element={<InputIDLogout />} />
+            <Route path="/LoginHomepage" element={<LogInHomepage />} />
+            <Route path="/Login" element={<LogIn />} />
+            <Route path="/Register" element={<Register />} />
             <Route path="/studentDashboard/TimeRemaining" element={<StudentLibraryHours />} />
             <Route path="/studentDashboard/TimeRemaining/Addbook" element={<StudentLibraryHours />} />
             <Route path="/studentDashboard/booklog" element={<BookLog />} />
