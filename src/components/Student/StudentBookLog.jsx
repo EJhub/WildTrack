@@ -17,7 +17,6 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 
 const BookLog = () => {
-  
   const bookLogs = [
     { title: 'Little Red Riding Hood', author: 'Charles Perrault', accessionNumber: 'LB0001', dateRead: 'October 18, 2024', rating: '★★★★☆' },
     { title: 'Book Title 2', author: 'Author 2', accessionNumber: '67890', dateRead: 'October 17, 2024', rating: '★★★☆☆' },
@@ -27,13 +26,45 @@ const BookLog = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundImage: 'url("/studentbackground.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: 3 }}>
-            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', marginBottom: 2, paddingTop: 5}}>Book Log</Typography>
-            
-            {/* Search bar positioned below the title and aligned to the left */}
+        <Box
+          sx={{
+            padding: 4,
+            flexGrow: 1,
+            backgroundImage: 'url("/studentbackground.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            overflow: 'auto',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 3,
+            }}
+          >
+            <Typography
+              variant="h4"
+              sx={{
+                color: '#000',
+                fontWeight: 'bold',
+                textAlign: 'left',
+              }}
+            >
+              Book Log
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: 2,
+            }}
+          >
             <TextField
               variant="outlined"
               placeholder="Type here..."
@@ -41,8 +72,8 @@ const BookLog = () => {
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
-                width: '250px',
-                marginBottom: 2,
+                width: { xs: '100%', sm: '360px' },
+                marginRight: 2,
               }}
               InputProps={{
                 startAdornment: (
@@ -60,9 +91,17 @@ const BookLog = () => {
             />
           </Box>
 
-          <TableContainer component={Paper} sx={{ opacity: 0.9, borderRadius: "10px" }}>
-            <Table aria-label="book log table">
-              <TableHead sx={{ backgroundColor: '#D9D9D9'}}>
+          <TableContainer
+            component={Paper}
+            sx={{
+              opacity: 0.9,
+              borderRadius: '10px',
+              maxHeight: 'calc(100vh - 200px)',
+              overflow: 'auto',
+            }}
+          >
+            <Table stickyHeader>
+              <TableHead sx={{ backgroundColor: '#D9D9D9' }}>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 'bold' }}>BOOK TITLE</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>AUTHOR</TableCell>

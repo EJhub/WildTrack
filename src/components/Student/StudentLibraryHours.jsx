@@ -24,7 +24,7 @@ const StudentLibraryHours = () => {
   ];
 
   const handleClickOpen = () => {
-    navigate("/studentDashboard/TimeRemaining/Addbook"); 
+    navigate("/studentDashboard/TimeRemaining/Addbook");
     setOpen(true);
   };
 
@@ -41,50 +41,71 @@ const StudentLibraryHours = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundImage: 'url("/studentbackground.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 2,
-            }}
-          >
-            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', paddingTop: 5 }}>Library Hours</Typography>
+        <Box
+          sx={{
+            padding: 4,
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundImage: 'url("/studentbackground.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            overflow: 'hidden', // Prevents unnecessary overflow
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', paddingTop: 5 }}>
+              Library Hours
+            </Typography>
           </Box>
 
-          <TableContainer component={Paper} sx={{ opacity: 0.9 }}>
-            <Table aria-label="library hours table">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: "#D9D9D9" }}>
-                <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Time In</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Book Title</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Time Out</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Minutes</TableCell>
-              </TableRow>
-            </TableHead>
-
+          {/* Table Container */}
+          <TableContainer
+            component={Paper}
+            sx={{
+              flexGrow: 1,
+              opacity: 0.9,
+              borderRadius: '15px',
+              overflow: 'auto', // Allows scrolling if the content exceeds the container
+            }}
+          >
+            <Table stickyHeader aria-label="library hours table">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Date</TableCell>
+                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Time In</TableCell>
+                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Book Title</TableCell>
+                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Time Out</TableCell>
+                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Minutes</TableCell>
+                </TableRow>
+              </TableHead>
               <TableBody>
                 {students.map((student, index) => (
                   <TableRow key={index}>
                     <TableCell>{student.date}</TableCell>
                     <TableCell>{student.timeIn}</TableCell>
                     <TableCell>
-                      {student.bookTitle ? student.bookTitle : (
-                        <Button 
-                          variant="outlined" 
-                          size="small" 
+                      {student.bookTitle ? (
+                        student.bookTitle
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          size="small"
                           onClick={handleClickOpen}
-                          sx={{ backgroundColor: '#FFD700', color: '#000', borderRadius:'15px', '&:hover': { backgroundColor: '#FFC107' } }}
+                          sx={{
+                            backgroundColor: '#FFD700',
+                            color: '#000',
+                            borderRadius: '15px',
+                            '&:hover': { backgroundColor: '#FFC107' },
+                          }}
                         >
                           Insert Book
                         </Button>
                       )}
                     </TableCell>
-
                     <TableCell>{student.timeOut}</TableCell>
                     <TableCell>{student.minutes}</TableCell>
                   </TableRow>
@@ -95,7 +116,7 @@ const StudentLibraryHours = () => {
         </Box>
       </Box>
 
-      {/* Popup Form Component */}
+      {/* Popup Form */}
       <Addbook open={open} handleClose={handleClose} handleSubmit={handleSubmit} />
     </>
   );
