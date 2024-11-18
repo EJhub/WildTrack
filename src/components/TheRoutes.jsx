@@ -16,6 +16,10 @@ import Analytics from "./Teacher/Analytics";
 import LogInHomepage from "./Login/LoginHomePage";
 import LogIn from "./Login/Login";
 import Register from "./Login/Register";
+import LibrarianStudentsList from "./Librarian/LibrarianStudentsList";
+import LibrarianTeacherReports from "./Librarian/LibrarianTeacherReports";
+import LibrarianStudentLibraryHours from './Librarian/LibrarianStudentLibraryHours';
+import LibrarianNASActivityLog from './Librarian/LibrarianNASActivityLog';
 import { Routes, Route, Link } from "react-router-dom";
 
 
