@@ -36,15 +36,27 @@ const Analytics = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
-        <Box sx={{ padding: 3, flexGrow: 1 }}>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#000', textAlign: 'left' }}>
+        <Box
+          sx={{
+            padding: 3,
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: 'calc(100vh - 140px)',
+            overflow: 'hidden', // Prevents unnecessary overflow
+          }}
+        >
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 'bold', color: '#000', textAlign: 'left', marginBottom: 3 }}
+          >
             Analytics
           </Typography>
 
           {/* Timeframe Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, marginY: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, marginBottom: 3 }}>
             {['Weekly', 'Monthly', 'Yearly'].map((period) => (
               <Button
                 key={period}
@@ -67,7 +79,16 @@ const Analytics = () => {
           </Box>
 
           {/* Chart Container */}
-          <Paper sx={{ position: 'relative', padding: 2, backgroundColor: 'rgba(215, 101, 101, 0.8)'}}>
+          <Paper
+            sx={{
+              flexGrow: 1,
+              position: 'relative',
+              padding: 2,
+              backgroundColor: 'rgba(215, 101, 101, 0.8)',
+              borderRadius: '15px',
+              overflow: 'auto',
+            }}
+          >
             {/* Dropdown positioned in the top-left corner */}
             <Box sx={{ position: 'absolute', top: 16, left: 16 }}>
               <Select
@@ -82,10 +103,13 @@ const Analytics = () => {
               </Select>
             </Box>
 
-            <Typography variant="h6" sx={{ color: '#000', textAlign: 'center', marginBottom: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{ color: '#000', textAlign: 'center', marginBottom: 2 }}
+            >
               Students doing Library Hours
             </Typography>
-            <Box sx={{ height: '350px' }}>
+            <Box sx={{ height: 'calc(100% - 50px)' }}>
               <Bar data={chartData} options={chartOptions} />
             </Box>
           </Paper>

@@ -21,6 +21,13 @@ const BookLog = () => {
     { title: 'Little Red Riding Hood', author: 'Charles Perrault', accessionNumber: 'LB0001', dateRead: 'October 18, 2024', rating: '★★★★☆' },
     { title: 'Book Title 2', author: 'Author 2', accessionNumber: '67890', dateRead: 'October 17, 2024', rating: '★★★☆☆' },
     { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
+    { title: 'Book Title 3', author: 'Author 3', accessionNumber: '11223', dateRead: 'October 16, 2024', rating: '★★★★★' },
   ];
 
   return (
@@ -96,8 +103,9 @@ const BookLog = () => {
             sx={{
               opacity: 0.9,
               borderRadius: '10px',
-              maxHeight: 'calc(100vh - 200px)',
+              maxHeight: 'calc(100vh - 350px)',
               overflow: 'auto',
+              overflowY: 'auto',
             }}
           >
             <Table stickyHeader>

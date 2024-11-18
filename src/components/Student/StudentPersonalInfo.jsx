@@ -53,7 +53,7 @@ const PersonalInformation = () => {
                 borderRadius: '10px',
                 margin: 'auto',
                 marginBottom: 2,
-
+               
               }}
             />
             <Box sx={{ marginBottom: 2 }}>

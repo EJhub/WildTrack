@@ -11,38 +11,35 @@ const NASDashboard = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
         <Box
           sx={{
-            padding: 2,
             flexGrow: 1,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundcolor: "#fff",
+            padding: 3,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
         >
-          <Box
-            component={Paper}
+          <Paper
             sx={{
               background: 'linear-gradient(to bottom, #D76565 0%, #743838 100%)',
               padding: 4,
-              marginTop:0.5,
               borderRadius: 3,
               maxWidth: 800,
               width: '100%',
-              height: "500px",
               textAlign: 'left',
+              boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 0 }}>
-              <Typography variant="h6" sx={{ color: '#000', }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+              <Typography variant="h6" sx={{ color: '#000' }}>
                 NAS Student In-Charge:
               </Typography>
-              <Box sx={{ textAlign: 'left', }}>
+              <Box sx={{ textAlign: 'right' }}>
                 <Typography variant="body2" sx={{ color: '#000' }}>
                   Status: Clocked Out
                 </Typography>
@@ -51,39 +48,40 @@ const NASDashboard = () => {
                 </Typography>
               </Box>
             </Box>
+
             <TextField
               placeholder="Input name here..."
               variant="outlined"
               fullWidth
               sx={{
                 backgroundColor: '#fff',
-                marginBottom: 10,
-                borderRadius: '10px',
+                marginBottom: 3,
                 height: "40px",
                 width: "300px",
                 overflow: 'hidden',
+                borderRadius: '10px',
+                '& .MuiOutlinedInput-root': {
+                  height: '40px',
+                  padding: '0 16px',
+                },
                 '& .MuiInputBase-input': {
                   textAlign: 'left',
-                  padding: '10px 20px', // Adjusts vertical padding to center text
-                },
-              }}
-              InputProps={{
-                sx: {
-                  height: '100%', // Ensures the input area takes up the full height of the TextField
-                  display: 'flex',
-                  alignItems: 'center', // Vertically centers the placeholder text
                 },
               }}
             />
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 10}}>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginBottom: 4 }}>
               <Button
                 variant="contained"
                 sx={{
                   backgroundColor: '#FFD700',
                   color: '#000',
-                  width: '120px',
-                  alignSelf: 'center',
+                  width: '150px',
                   borderRadius: '10px',
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    backgroundColor: '#FFC107',
+                  },
                 }}
               >
                 Time In
@@ -93,25 +91,27 @@ const NASDashboard = () => {
                 sx={{
                   backgroundColor: '#FFD700',
                   color: '#000',
-                  width: '120px',
-                  alignSelf: 'center',
+                  width: '150px',
                   borderRadius: '10px',
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    backgroundColor: '#FFC107',
+                  },
                 }}
               >
                 Time Out
               </Button>
             </Box>
-            <Typography variant="h6" sx={{ color: '#000',marginBottom: 1 }}>
+
+            <Typography variant="h6" sx={{ color: '#000', marginBottom: 2 }}>
               Recent Activity:
             </Typography>
-            <Box sx={{ marginBottom: 1 }}>
+            <Box>
               <Box
-                component="div"
                 sx={{
                   backgroundColor: '#fff',
-                  borderRadius: '20px',
-                  padding: 1,
-                  textAlign: 'left',
+                  borderRadius: '10px',
+                  padding: 2,
                   marginBottom: 1,
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -121,12 +121,10 @@ const NASDashboard = () => {
                 <Typography>12:30 PM</Typography>
               </Box>
               <Box
-                component="div"
                 sx={{
                   backgroundColor: '#fff',
-                  borderRadius: '20px',
-                  padding: 1,
-                  textAlign: 'left',
+                  borderRadius: '10px',
+                  padding: 2,
                   display: 'flex',
                   justifyContent: 'space-between',
                 }}
@@ -135,7 +133,7 @@ const NASDashboard = () => {
                 <Typography>12:37 PM</Typography>
               </Box>
             </Box>
-          </Box>
+          </Paper>
         </Box>
       </Box>
     </>
