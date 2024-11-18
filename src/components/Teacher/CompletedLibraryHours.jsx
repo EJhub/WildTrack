@@ -29,99 +29,105 @@ const CompletedLibraryHours = () => {
       status: 'Approved',
     },
     {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-      {
-        idNumber: '2009-40034',
-        name: 'Tricia O. Araneta',
-        dateCompleted: 'October 10, 2024',
-        validationDate: 'October 13, 2024',
-        validatedBy: 'Imelda D. Lopez',
-        status: 'Approved',
-      },
-    // Add more records as needed
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    {
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    {
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    {
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    {
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    {
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    {
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    {
+      idNumber: '2009-40034',
+      name: 'Tricia O. Araneta',
+      dateCompleted: 'October 10, 2024',
+      validationDate: 'October 13, 2024',
+      validatedBy: 'Imelda D. Lopez',
+      status: 'Approved',
+    },
+    // Add more records as needed...
   ];
 
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1 }}>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#000', textAlign: 'left' }}>
+        <Box
+          sx={{
+            padding: 4,
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: 'calc(100vh - 140px)',
+            overflow: 'hidden',
+            backgroundColor: '#fff',
+          }}
+        >
+          {/* Title */}
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 'bold', color: '#000', textAlign: 'left', marginBottom: 3 }}
+          >
             Completed Library Hours
           </Typography>
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, marginBottom: 2 }}>
+          {/* Search and Statistics */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 3,
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <TextField
                 placeholder="Type here..."
@@ -130,8 +136,7 @@ const CompletedLibraryHours = () => {
                 sx={{
                   backgroundColor: '#f1f1f1',
                   borderRadius: '28px',
-                  overflow: 'hidden',
-                  width: '360px',
+                  width: { xs: '100%', sm: '360px' },
                   '& .MuiOutlinedInput-root': { padding: '5px 10px' },
                 }}
                 InputProps={{
@@ -155,26 +160,37 @@ const CompletedLibraryHours = () => {
               </IconButton>
             </Box>
             <Typography sx={{ color: '#000', fontWeight: 'bold', textAlign: 'right' }}>
-              Total no. of completed library hours: 01<br />
+              Total no. of completed library hours: 01
+              <br />
               Total no. of students: 05
             </Typography>
           </Box>
 
-          <TableContainer component={Paper} sx={{ borderRadius: '15px', overflow: 'auto', maxHeight: '400px' }}>
+          {/* Table */}
+          <TableContainer
+            component={Paper}
+            sx={{
+              flexGrow: 1,
+              borderRadius: '15px',
+              overflow: 'auto',
+              maxHeight: 'calc(100vh - 345px)', // Dynamic height adjustment
+              border: '1px solid #A85858',
+            }}
+          >
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#A85858' }}>ID Number</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#A85858' }}>Name</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#A85858' }}>Date Completed</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#A85858' }}>Validation Date</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#A85858' }}>Validated By</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#A85858' }}>Status</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>ID Number</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>Name</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>Date Completed</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>Validation Date</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>Validated By</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>Status</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {completedRecords.map((record, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={index} hover>
                     <TableCell>{record.idNumber}</TableCell>
                     <TableCell>{record.name}</TableCell>
                     <TableCell>{record.dateCompleted}</TableCell>

@@ -65,18 +65,10 @@ const TeacherDashboard = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundColor: '#fff' }}>
-          <Paper 
-            sx={{
-              maxHeight: '480px', // Set maximum height for the scrollable area
-              overflowY: 'auto', // Enable vertical scrolling
-              padding: 3,
-              borderRadius: 3,
-              backgroundColor: 'transparent',
-            }}
-          >
+        <Box sx={{ flexGrow: 1, overflowY: 'auto',maxHeight: 'calc(100vh - 140px)' }}>
+          <Box sx={{ padding: 4 }}>
             {/* Total Library Hours Card */}
             <Box
               sx={{
@@ -94,7 +86,6 @@ const TeacherDashboard = () => {
                   alignItems: 'center',
                   textAlign: 'center',
                   borderRadius: 2,
-                  flexGrow: 1,
                   maxWidth: '250px',
                 }}
               >
@@ -149,7 +140,7 @@ const TeacherDashboard = () => {
             </Paper>
 
             {/* Assigned Deadline Table */}
-            <Paper sx={{ padding: '16px', backgroundColor: 'rgba(215, 101, 101, 0.8)', width: '30rem' }}>
+            <Paper sx={{ padding: '16px', backgroundColor: 'rgba(215, 101, 101, 0.8)', width: '100%', borderRadius: 3 }}>
               <Typography variant="h6" sx={{ color: '#000', marginBottom: '16px', textAlign: 'left' }}>Assigned Deadline</Typography>
               <TableContainer>
                 <Table>
@@ -172,7 +163,7 @@ const TeacherDashboard = () => {
                 </Table>
               </TableContainer>
             </Paper>
-          </Paper>
+          </Box>
         </Box>
       </Box>
 

@@ -1,13 +1,13 @@
 import React from 'react';
-import { List, ListItem, ListItemText, Box, Button } from '@mui/material';
+import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 
 const SideBar = () => {
   const location = useLocation();
+  const isSmallScreen = useMediaQuery('(max-width:600px)'); // Adjust for screens smaller than 600px
 
-  // Helper function to get styles for active and inactive list items
   const getListItemStyles = (path) => ({
     paddingY: '1.5rem',
     color: '#000',
@@ -28,7 +28,7 @@ const SideBar = () => {
         height: '0',
         borderTop: '20px solid transparent',
         borderBottom: '20px solid transparent',
-        borderLeft: '30px solid #CD6161', // Arrow color matching the sidebar
+        borderLeft: '30px solid #CD6161',
       },
     }),
   });
@@ -36,8 +36,8 @@ const SideBar = () => {
   return (
     <Box
       sx={{
-        width: '250px',
-        height: '600px',
+        width: isSmallScreen ? '80px' : '250px',
+        height: 'auto', // Full height of the viewport
         background: 'linear-gradient(to bottom, #CD6161, #8B3D3D)',
         padding: '0px',
         boxSizing: 'border-box',
@@ -48,73 +48,74 @@ const SideBar = () => {
       }}
     >
       <List component="nav" sx={{ flexGrow: 1, paddingTop: '20px' }}>
-        <ListItem button component={Link} to="/nasDashboard/Home" sx={getListItemStyles('/nasDashboard/Home')}> 
-          <ListItemText 
-            primary="Home" 
-            primaryTypographyProps={{ 
-              align: 'center', 
-              fontWeight: location.pathname === '/nasDashboard/Home' ? 'bold' : 'normal' 
-            }} 
+        <ListItem button component={Link} to="/nasDashboard/Home" sx={getListItemStyles('/nasDashboard/Home')}>
+          <ListItemText
+            primary={isSmallScreen ? 'H' : 'Home'}
+            primaryTypographyProps={{
+              align: 'center',
+              fontWeight: location.pathname === '/nasDashboard/Home' ? 'bold' : 'normal',
+            }}
           />
         </ListItem>
 
         <ListItem button component={Link} to="/nasDashboard/LibraryAttendance" sx={getListItemStyles('/nasDashboard/LibraryAttendance')}>
-          <ListItemText 
-            primary="Library Attendance" 
-            primaryTypographyProps={{ 
-              align: 'center', 
-              fontWeight: location.pathname === '/nasDashboard/LibraryAttendance' ? 'bold' : 'normal' 
-            }} 
+          <ListItemText
+            primary={isSmallScreen ? 'LA' : 'Library Attendance'}
+            primaryTypographyProps={{
+              align: 'center',
+              fontWeight: location.pathname === '/nasDashboard/LibraryAttendance' ? 'bold' : 'normal',
+            }}
           />
         </ListItem>
 
         <ListItem button component={Link} to="/nasDashboard/BookEntry" sx={getListItemStyles('/nasDashboard/BookEntry')}>
-          <ListItemText 
-            primary="Book Entry" 
-            primaryTypographyProps={{ 
-              align: 'center', 
-              fontWeight: location.pathname === '/nasDashboard/BookEntry' ? 'bold' : 'normal' 
-            }} 
+          <ListItemText
+            primary={isSmallScreen ? 'BE' : 'Book Entry'}
+            primaryTypographyProps={{
+              align: 'center',
+              fontWeight: location.pathname === '/nasDashboard/BookEntry' ? 'bold' : 'normal',
+            }}
           />
         </ListItem>
+
         <ListItem button component={Link} to="/nasDashboard/Register" sx={getListItemStyles('/nasDashboard/Register')}>
-          <ListItemText 
-            primary="Register" 
-            primaryTypographyProps={{ 
-              align: 'center', 
-              fontWeight: location.pathname === '/nasDashboard/Register' ? 'bold' : 'normal' 
-            }} 
+          <ListItemText
+            primary={isSmallScreen ? 'R' : 'Register'}
+            primaryTypographyProps={{
+              align: 'center',
+              fontWeight: location.pathname === '/nasDashboard/Register' ? 'bold' : 'normal',
+            }}
           />
         </ListItem>
+
         <ListItem button component={Link} to="/nasDashboard/ActivityLog" sx={getListItemStyles('/nasDashboard/ActivityLog')}>
-          <ListItemText 
-            primary="Activity Log" 
-            primaryTypographyProps={{ 
-              align: 'center', 
-              fontWeight: location.pathname === '/nasDashboard/ActivityLog' ? 'bold' : 'normal' 
-            }} 
+          <ListItemText
+            primary={isSmallScreen ? 'AL' : 'Activity Log'}
+            primaryTypographyProps={{
+              align: 'center',
+              fontWeight: location.pathname === '/nasDashboard/ActivityLog' ? 'bold' : 'normal',
+            }}
           />
         </ListItem>
       </List>
 
-      {/* Footer section for icons */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-around', 
-          padding: '1rem', 
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-around',
+          padding: '1rem',
         }}
       >
-        <Button 
-          component={Link} 
-          to="/logout" 
-          sx={{ 
-            backgroundColor: '#FFD700', 
-            color: '#000', 
-            border: "solid 2px",
-            borderRadius: '12px', 
-            padding: '4px 12px', 
+        <Button
+          component={Link}
+          to="/logout"
+          sx={{
+            backgroundColor: '#FFD700',
+            color: '#000',
+            border: 'solid 2px',
+            borderRadius: '12px',
+            padding: '4px 12px',
             minWidth: 'auto',
             '&:hover': {
               backgroundColor: '#FFC107',
@@ -123,11 +124,11 @@ const SideBar = () => {
         >
           Log Out
         </Button>
-        
+
         <Button component={Link} to="/settings" sx={{ minWidth: 0 }}>
           <SettingsIcon sx={{ color: '#FFD700' }} />
         </Button>
-        
+
         <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
           <NotificationsIcon sx={{ color: '#FFD700' }} />
         </Button>

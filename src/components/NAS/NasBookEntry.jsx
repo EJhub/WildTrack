@@ -26,85 +26,64 @@ const NasBookEntry = () => {
       student: 'Tricia O. Araneta 2009-40034',
     },
     {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
-      {
-        title: 'Little Red Riding Hood',
-        author: 'Charles Perrault',
-        accessionNumber: 'LB0001',
-        dateRead: 'October 18, 2024',
-        student: 'Tricia O. Araneta 2009-40034',
-      },
+      title: 'Little Red Riding Hood',
+      author: 'Charles Perrault',
+      accessionNumber: 'LB0001',
+      dateRead: 'October 18, 2024',
+      student: 'Tricia O. Araneta 2009-40034',
+    },
+    {
+      title: 'Little Red Riding Hood',
+      author: 'Charles Perrault',
+      accessionNumber: 'LB0001',
+      dateRead: 'October 18, 2024',
+      student: 'Tricia O. Araneta 2009-40034',
+    },
+    {
+      title: 'Little Red Riding Hood',
+      author: 'Charles Perrault',
+      accessionNumber: 'LB0001',
+      dateRead: 'October 18, 2024',
+      student: 'Tricia O. Araneta 2009-40034',
+    },
+    {
+      title: 'Little Red Riding Hood',
+      author: 'Charles Perrault',
+      accessionNumber: 'LB0001',
+      dateRead: 'October 18, 2024',
+      student: 'Tricia O. Araneta 2009-40034',
+    },
+    {
+      title: 'Little Red Riding Hood',
+      author: 'Charles Perrault',
+      accessionNumber: 'LB0001',
+      dateRead: 'October 18, 2024',
+      student: 'Tricia O. Araneta 2009-40034',
+    },
+    {
+      title: 'Little Red Riding Hood',
+      author: 'Charles Perrault',
+      accessionNumber: 'LB0001',
+      dateRead: 'October 18, 2024',
+      student: 'Tricia O. Araneta 2009-40034',
+    },
+    {
+      title: 'Little Red Riding Hood',
+      author: 'Charles Perrault',
+      accessionNumber: 'LB0001',
+      dateRead: 'October 18, 2024',
+      student: 'Tricia O. Araneta 2009-40034',
+    },
     // Add more initial entries as needed
   ]);
 
   const handleClickOpen = () => {
-    navigate("/nasDashboard/BookEntry/AddLog");
+    navigate('/nasDashboard/BookEntry/AddLog');
     setOpen(true);
   };
 
   const handleClose = () => {
-    navigate("/nasDashboard/BookEntry");
+    navigate('/nasDashboard/BookEntry');
     setOpen(false);
   };
 
@@ -116,11 +95,13 @@ const NasBookEntry = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundColor: '#fff' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', padding: 4, overflowY: 'auto' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', marginTop: 2 }}>Book Entry</Typography>
+            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold' }}>
+              Book Entry
+            </Typography>
             <Button
               variant="contained"
               color="warning"
@@ -130,15 +111,69 @@ const NasBookEntry = () => {
               Add Log
             </Button>
           </Box>
-          <TableContainer component={Paper} sx={{ maxHeight: 450, overflowY: 'auto', opacity: 0.95, marginTop: 3, borderRadius: '15px 15px 0 0' }}>
+          <TableContainer
+            component={Paper}
+            sx={{
+              flexGrow: 1,
+              maxHeight: 'calc(100vh - 150px)',
+              overflowY: 'auto',
+              opacity: 0.95,
+              marginTop: 3,
+              borderRadius: '15px 15px 0 0',
+            }}
+          >
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)' }}>BOOK TITLE</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>AUTHOR</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>ACCESSION NUMBER</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', borderRight: '1px solid #ffffff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>DATE READ</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)'  }}>STUDENT</TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      borderRight: '1px solid #ffffff',
+                      background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)',
+                    }}
+                  >
+                    BOOK TITLE
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      borderRight: '1px solid #ffffff',
+                      background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)',
+                    }}
+                  >
+                    AUTHOR
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      borderRight: '1px solid #ffffff',
+                      background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)',
+                    }}
+                  >
+                    ACCESSION NUMBER
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      borderRight: '1px solid #ffffff',
+                      background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)',
+                    }}
+                  >
+                    DATE READ
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      background: 'linear-gradient(to bottom, #D76565 20%, #BE4747 79%)',
+                    }}
+                  >
+                    STUDENT
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -157,7 +192,6 @@ const NasBookEntry = () => {
         </Box>
       </Box>
 
-      {/* Popup Form Component */}
       <AddLog open={open} handleClose={handleClose} handleSubmit={handleSubmit} />
     </>
   );

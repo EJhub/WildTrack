@@ -11,12 +11,14 @@ const NasRegister = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundColor: '#fff' }}>
-          <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left', marginLeft: 25 }}>Registration</Typography>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', padding: 4, overflowY: 'auto', backgroundColor: '#fff' }}>
+          <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left', marginLeft: 25 }}>
+            Registration
+          </Typography>
 
-          <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
             {/* Student Registration Section */}
             <Paper
               sx={{
@@ -37,15 +39,26 @@ const NasRegister = () => {
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Box sx={{ width: '48%' }}>
-                    <Typography variant="body1" sx={{ textAlign: 'left', color: '#000',  marginBottom: 2 }}>Grade:</Typography>
+                    <Typography variant="body1" sx={{ textAlign: 'left', color: '#000', marginBottom: 2 }}>Grade:</Typography>
                     <TextField fullWidth variant="outlined" sx={{ backgroundColor: '#fff', borderRadius: '10px' }} />
                   </Box>
                   <Box sx={{ width: '48%' }}>
-                    <Typography variant="body1" sx={{ textAlign: 'left', color: '#000',  marginBottom: 2 }}>Section:</Typography>
+                    <Typography variant="body1" sx={{ textAlign: 'left', color: '#000', marginBottom: 2 }}>Section:</Typography>
                     <TextField fullWidth variant="outlined" sx={{ backgroundColor: '#fff', borderRadius: '10px' }} />
                   </Box>
                 </Box>
-                <Button variant="contained" sx={{ backgroundColor: '#FFD700', color: '#000',  borderRadius: '10px', width: '180px',  alignSelf: 'center'}}>Register Student</Button>
+                <Button
+                  variant="contained"
+                  sx={{
+                    backgroundColor: '#FFD700',
+                    color: '#000',
+                    borderRadius: '10px',
+                    width: '180px',
+                    alignSelf: 'center',
+                  }}
+                >
+                  Register Student
+                </Button>
               </Box>
             </Paper>
 
@@ -70,7 +83,18 @@ const NasRegister = () => {
                 <Typography variant="body1" sx={{ textAlign: 'left', color: '#000' }}>Author:</Typography>
                 <TextField fullWidth variant="outlined" sx={{ backgroundColor: '#fff', borderRadius: '10px' }} />
 
-                <Button variant="contained" sx={{ backgroundColor: '#FFD700', color: '#000', borderRadius: '10px', width: '180px',  alignSelf: 'center', }}>Register Book</Button>
+                <Button
+                  variant="contained"
+                  sx={{
+                    backgroundColor: '#FFD700',
+                    color: '#000',
+                    borderRadius: '10px',
+                    width: '180px',
+                    alignSelf: 'center',
+                  }}
+                >
+                  Register Book
+                </Button>
               </Box>
             </Paper>
           </Box>
