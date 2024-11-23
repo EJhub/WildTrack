@@ -1,7 +1,23 @@
 import React, { useState } from 'react';
 
 function Register() {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
   const [focusedInput, setFocusedInput] = useState(null);
+  const [message, setMessage] = useState(null);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
   const handleFocus = (inputName) => {
     setFocusedInput(inputName);
@@ -23,23 +39,63 @@ function Register() {
     marginBottom: '10px',
   });
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      setMessage('Passwords do not match.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      if (response.ok) {
+        setMessage('User registered successfully!');
+      } else {
+        const errorData = await response.json();
+        setMessage(errorData.message || 'Failed to register. Please try again.');
+      }
+    } catch (error) {
+      setMessage('Email already exists.');
+      console.error('Error:', error);
+    }
+  };
+
   return (
     <div style={styles.background}>
       <div style={styles.container}>
         <div style={styles.registerBox}>
           <h2 style={styles.title}>Sign up</h2>
-          <form>
+          {message && <p style={{ color: 'red' }}>{message}</p>}
+          <form onSubmit={handleSubmit}>
             <div style={styles.rowInputGroup}>
               <input
                 type="text"
+                name="firstName"
                 placeholder="First Name"
+                value={formData.firstName}
+                onChange={handleInputChange}
                 style={{ ...getInputStyle('firstName'), width: '48%' }}
                 onFocus={() => handleFocus('firstName')}
                 onBlur={handleBlur}
               />
               <input
                 type="text"
+                name="lastName"
                 placeholder="Last Name"
+                value={formData.lastName}
+                onChange={handleInputChange}
                 style={{ ...getInputStyle('lastName'), width: '48%' }}
                 onFocus={() => handleFocus('lastName')}
                 onBlur={handleBlur}
@@ -48,7 +104,10 @@ function Register() {
             <div style={styles.inputGroup}>
               <input
                 type="email"
+                name="email"
                 placeholder="Email"
+                value={formData.email}
+                onChange={handleInputChange}
                 style={getInputStyle('email')}
                 onFocus={() => handleFocus('email')}
                 onBlur={handleBlur}
@@ -57,7 +116,10 @@ function Register() {
             <div style={styles.inputGroup}>
               <input
                 type="password"
+                name="password"
                 placeholder="Password"
+                value={formData.password}
+                onChange={handleInputChange}
                 style={getInputStyle('password')}
                 onFocus={() => handleFocus('password')}
                 onBlur={handleBlur}
@@ -66,13 +128,18 @@ function Register() {
             <div style={styles.inputGroup}>
               <input
                 type="password"
+                name="confirmPassword"
                 placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
                 style={getInputStyle('confirmPassword')}
                 onFocus={() => handleFocus('confirmPassword')}
                 onBlur={handleBlur}
               />
             </div>
-            <button style={styles.registerButton}>Register</button>
+            <button type="submit" style={styles.registerButton}>
+              Register
+            </button>
           </form>
           <p style={styles.loginText}>
             Already have an account? <a href="#" style={styles.loginLink}>Login here</a>
