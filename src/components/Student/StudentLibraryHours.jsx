@@ -33,10 +33,15 @@ const StudentLibraryHours = () => {
     setOpen(false);
   };
 
-  const handleSubmit = (bookDetails) => {
-    console.log('Submitted book details:', bookDetails);
-    setOpen(false);
+  const handleSubmit = async (bookDetails) => {
+    try {
+      console.log('Submitted book details:', bookDetails);
+      // Optionally refresh book list or update state here
+    } catch (error) {
+      console.error('Error handling submission:', error);
+    }
   };
+  
 
   return (
     <>
