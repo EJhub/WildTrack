@@ -1,11 +1,12 @@
 import React from 'react';
 import NavBar from './components/NavBar'; // Importing NavBar component
-import Dashboard from './components/Dashboard'; // Importing Dashboard component
+// Importing Dashboard component
 import { Box, Typography, Grid, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Divider } from '@mui/material';
 import CheckBoxIcon from '@mui/icons-material/CheckBox'; // Using CheckBoxIcon as before
 import CloseIcon from '@mui/icons-material/Close'; // Close Icon
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckIcon from '@mui/icons-material/Check';
+import SideBar from './components/SideBar';
 
 const LibrarianDashboard = () => {
   const approvals = [
@@ -16,8 +17,8 @@ const LibrarianDashboard = () => {
     <>
       <NavBar />
       <Box sx={{ display: 'flex' }}>
-        <Dashboard />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundColor: '#ffffff' }}>
+        <SideBar />
+        <Box sx={{ padding: 4, flexGrow: 1, backgroundColor: '#ffffff',maxHeight: 'calc(100vh - 140px)', }}>
           {/* Data Summary Boxes Section */}
           <Grid container spacing={2} sx={{ marginBottom: 3 }}>
             <Grid item xs={12} sm={4}>

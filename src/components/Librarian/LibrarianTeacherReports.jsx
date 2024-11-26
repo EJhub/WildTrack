@@ -15,6 +15,14 @@ const TeacherReports = () => {
     { id: '65827', teacher: 'Ralph', file: 'Report.pdf', issuedBy: 'Shiena', status: 'Approved' },
     { id: '23467', teacher: 'Rotela', file: 'Report.pdf', issuedBy: 'Maria Smith', status: 'Denied' },
     { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+    { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+    { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+    { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+    { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+    { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+    { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+    { id: '09213', teacher: 'Crissanta', file: 'Report.pdf', issuedBy: 'Angelie', status: 'Pending' },
+
   ];
 
   const handleClick = (event) => {
@@ -33,16 +41,27 @@ const TeacherReports = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundColor: '#ffffff' }}>
+        <Box
+          sx={{
+            padding: 4,
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
           {/* Teacher Reports Title */}
-          <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', marginBottom: 2 }}>
+          <Typography
+            variant="h4"
+            sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left' }}
+          >
             Teacher Reports
           </Typography>
 
-          {/* Search bar placed above the table, outside the table */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
+          {/* Search bar placed above the table */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 3 }}>
             <TextField
               variant="outlined"
               placeholder="Search"
@@ -50,8 +69,8 @@ const TeacherReports = () => {
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
-                width: '250px',
-                paddingRight: '30px', // Space for the search icon on the right
+                width: { xs: '100%', sm: '300px' },
+                '& .MuiOutlinedInput-root': { padding: '5px 10px' },
               }}
               InputProps={{
                 endAdornment: (
@@ -64,40 +83,73 @@ const TeacherReports = () => {
           </Box>
 
           {/* Table displaying teacher reports */}
-          <TableContainer component={Paper} sx={{ opacity: 0.9, borderRadius: '10px' }}>
-            <Table aria-label="teacher reports table" sx={{ width: '100%' }}>
-              <TableHead sx={{ backgroundColor: '#CD6161' }}>
+          <TableContainer
+            component={Paper}
+            sx={{
+              flexGrow: 1,
+              borderRadius: '15px',
+              overflow: 'auto',
+              maxHeight: 'calc(100vh - 340px)', // Adjusts to remaining space
+            }}
+          >
+            <Table stickyHeader>
+              <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', fontSize: '1rem' }}>ID Number</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', fontSize: '1rem' }}>Teacher Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', fontSize: '1rem' }}>File Report</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', fontSize: '1rem' }}>Issued By</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', fontSize: '1rem' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', fontSize: '1rem' }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                    ID Number
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                    Teacher Name
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                    File Report
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                    Issued By
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                    Status
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {data.map((report, index) => (
-                  <TableRow key={index}>
-                    <TableCell sx={{ backgroundColor: '#CD6161', fontWeight: 'normal', color: '#000', fontSize: '0.9rem' }}>
-                      {report.id}
-                    </TableCell>
-                    <TableCell sx={{ backgroundColor: '#CD6161', fontSize: '0.9rem', color: '#000' }}>{report.teacher}</TableCell>
-                    <TableCell sx={{ backgroundColor: '#CD6161', fontSize: '0.9rem', color: '#000' }}>
-                      <InsertDriveFileIcon sx={{ fontSize: 18, marginRight: 1, color: '#000' }} />
+                  <TableRow
+                    key={index}
+                    hover
+                    sx={{
+                      backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF',
+                      '&:hover': { backgroundColor: '#FCEAEA' },
+                    }}
+                  >
+                    <TableCell>{report.id}</TableCell>
+                    <TableCell>{report.teacher}</TableCell>
+                    <TableCell>
+                      <InsertDriveFileIcon
+                        sx={{ fontSize: 18, marginRight: 1, color: '#000' }}
+                      />
                       {report.file}
                     </TableCell>
-                    <TableCell sx={{ backgroundColor: '#CD6161', fontSize: '0.9rem', color: '#000' }}>{report.issuedBy}</TableCell>
-                    <TableCell sx={{ backgroundColor: '#CD6161', fontSize: '0.9rem', color: '#000' }}>{report.status}</TableCell>
-                    <TableCell sx={{ backgroundColor: '#CD6161', fontSize: '0.9rem', color: '#000' }}>
+                    <TableCell>{report.issuedBy}</TableCell>
+                    <TableCell>{report.status}</TableCell>
+                    <TableCell>
                       <IconButton onClick={handleClick}>
                         <MoreVertIcon sx={{ color: '#000' }} />
                       </IconButton>
                       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
-                        <MenuItem onClick={() => handleActionSelect('Approved')} sx={{ backgroundColor: '#FFFF00' }}>
+                        <MenuItem
+                          onClick={() => handleActionSelect('Approved')}
+                          sx={{ backgroundColor: '#FFFF00' }}
+                        >
                           Approved
                         </MenuItem>
-                        <MenuItem onClick={() => handleActionSelect('Denied')} sx={{ backgroundColor: '#CD6161' }}>
+                        <MenuItem
+                          onClick={() => handleActionSelect('Denied')}
+                          sx={{ backgroundColor: '#CD6161', color: '#fff' }}
+                        >
                           Denied
                         </MenuItem>
                       </Menu>

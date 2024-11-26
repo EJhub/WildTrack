@@ -46,7 +46,11 @@ export default function TheRoutes() {
             <Route path="/TeacherDashboard/StudentRecords" element={<StudentRecords />} />
             <Route path="/TeacherDashboard/CompletedLibraryHours" element={<CompletedLibraryHours />} />
             <Route path="/TeacherDashboard/Analytics" element={<Analytics />} />
-            <Route path="/librarianDashboard" element={<LibrarianDashboard />} />
+            <Route path="/librarianDashboard/Home" element={<LibrarianDashboard />} />
+            <Route path="/librarianDashboard/LibrarianStudentSlist" element={<LibrarianStudentsList />} />
+            <Route path="/librarianDashboard/LibrarianTeacherReports" element={<LibrarianTeacherReports />} />
+            <Route path="/librarianDashboard/LibrarianStudentLibraryHours" element={<LibrarianStudentLibraryHours />} />
+            <Route path="/librarianDashboard/LibrarianNASActivityLog" element={<LibrarianNASActivityLog />} />
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>
     )
