@@ -1,31 +1,91 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function LoginPage() {
+  const navigate = useNavigate(); // Hook to handle navigation
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [error, setError] = useState(null);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCredentials((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSignupNavigation = () => {
+    navigate('/register'); // Navigate to the Register page
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('http://localhost:8080/api/login', {
+        email: credentials.username, // Use "email" as key instead of "username"
+        password: credentials.password,
+      });
+  
+      const { role } = response.data; // Extract the role from the response
+      setError(null); // Clear any previous errors
+  
+      // Navigate based on role
+      switch (role) {
+        case 'Librarian':
+          navigate('/librarianDashboard');
+          break;
+        case 'Student':
+          navigate('/studentDashboard/TimeRemaining');
+          break;
+        case 'Teacher':
+          navigate('/TeacherDashboard/Home');
+          break;
+        default:
+          setError('Invalid role. Please contact support.');
+      }
+    } catch (err) {
+      setError('Login failed. Please check your credentials.');
+    }
+  };
+  
+
   return (
     <div style={styles.background}>
       <div style={styles.container}>
         <div style={styles.blurBorder}>
           <div style={styles.loginBox}>
             <h2 style={styles.title}>Sign in</h2>
-            <form>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+            <form onSubmit={handleLogin}>
               <input
                 type="text"
+                name="username"
                 placeholder="Username or Email"
                 style={styles.input}
+                value={credentials.username}
+                onChange={handleInputChange}
               />
               <input
                 type="password"
+                name="password"
                 placeholder="Password"
                 style={styles.input}
+                value={credentials.password}
+                onChange={handleInputChange}
               />
               <div style={styles.options}>
-                <a href="#" style={styles.forgotPassword}>Forgot password?</a>
+                <a href="#" style={styles.forgotPassword}>
+                  Forgot password?
+                </a>
               </div>
-              <br />
-              <button style={styles.signInButton}>Sign in</button>
+              <button type="submit" style={styles.signInButton}>Sign in</button>
             </form>
             <p style={styles.signupText}>
-              Don't have an account? <a href="#" style={styles.signupLink}>Signup</a>
+              Don't have an account?{' '}
+              <span
+                style={styles.signupLink}
+                onClick={handleSignupNavigation}
+              >
+                Signup
+              </span>
             </p>
           </div>
         </div>
@@ -118,6 +178,7 @@ const styles = {
   signupLink: {
     color: '#007bff',
     textDecoration: 'none',
+    cursor: 'pointer',
   },
 };
 
