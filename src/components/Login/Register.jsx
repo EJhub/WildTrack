@@ -9,6 +9,9 @@ function Register() {
     password: "",
     confirmPassword: "",
     role: "User", // Default role
+    idNumber: "", // For students
+    grade: "", // For students
+    section: "", // For students
   });
   const [focusedInput, setFocusedInput] = useState(null);
   const [message, setMessage] = useState(null);
@@ -70,7 +73,10 @@ function Register() {
           lastName: formData.lastName,
           email: formData.email,
           password: formData.password,
-          role: formData.role, // Include role in the request
+          role: formData.role, // Include role
+          idNumber: formData.role === "Student" ? formData.idNumber : null,
+          grade: formData.role === "Student" ? formData.grade : null,
+          section: formData.role === "Student" ? formData.section : null,
         }),
       });
 
@@ -165,6 +171,45 @@ function Register() {
                 <option value="Teacher">Teacher</option>
               </select>
             </div>
+            {/* Conditional Fields for Student Role */}
+            {formData.role === "Student" && (
+              <>
+                <div style={styles.inputGroup}>
+                  <input
+                    type="text"
+                    name="idNumber"
+                    placeholder="ID Number"
+                    value={formData.idNumber}
+                    onChange={handleInputChange}
+                    style={getInputStyle("idNumber")}
+                    onFocus={() => handleFocus("idNumber")}
+                    onBlur={handleBlur}
+                  />
+                </div>
+                <div style={styles.rowInputGroup}>
+                  <input
+                    type="text"
+                    name="grade"
+                    placeholder="Grade"
+                    value={formData.grade}
+                    onChange={handleInputChange}
+                    style={{ ...getInputStyle("grade"), width: "48%" }}
+                    onFocus={() => handleFocus("grade")}
+                    onBlur={handleBlur}
+                  />
+                  <input
+                    type="text"
+                    name="section"
+                    placeholder="Section"
+                    value={formData.section}
+                    onChange={handleInputChange}
+                    style={{ ...getInputStyle("section"), width: "48%" }}
+                    onFocus={() => handleFocus("section")}
+                    onBlur={handleBlur}
+                  />
+                </div>
+              </>
+            )}
             <button type="submit" style={styles.registerButton}>
               Register
             </button>

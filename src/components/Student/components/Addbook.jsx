@@ -6,17 +6,15 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const Addbook = ({ open, handleClose, handleSubmit }) => {
+const Addbook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   const [bookDetails, setBookDetails] = useState({
     author: '',
     title: '',
     accessionNumber: '',
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -25,26 +23,32 @@ const Addbook = ({ open, handleClose, handleSubmit }) => {
     setBookDetails((prevDetails) => ({ ...prevDetails, [name]: value }));
   };
 
-  const onSubmit = async () => {
+  const onSubmit = () => {
     setLoading(true);
+    setError(null);
+
+    // Validate the entered book against the registered books
+    const bookExists = registeredBooks.some(
+      (book) =>
+        book.author === bookDetails.author &&
+        book.title === bookDetails.title &&
+        book.accessionNumber === bookDetails.accessionNumber
+    );
+
+    if (!bookExists) {
+      setError('The entered book details do not match any registered book.');
+      toast.error('Book not found in the registered list.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await axios.post(
-        'http://localhost:8080/api/books/add',
-        bookDetails,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      console.log('Book added successfully:', response.data);
-      toast.success('Book added successfully! 🎉'); // Show success notification
-      handleSubmit(bookDetails);
+      handleSubmit(bookDetails); // Pass the validated book back to the parent component
+      toast.success('Book added successfully! 🎉');
       handleClose();
-    } catch (error) {
-      console.error('Error adding book:', error);
-      toast.error('Failed to add the book. Please try again.'); // Show error notification
-      setError('Failed to add the book. Please try again.');
+    } catch (err) {
+      console.error('Error adding book:', err);
+      toast.error('Failed to submit book details. Please try again.');
     } finally {
       setLoading(false);
     }

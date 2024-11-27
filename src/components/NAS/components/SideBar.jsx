@@ -78,12 +78,12 @@ const SideBar = () => {
           />
         </ListItem>
 
-        <ListItem button component={Link} to="/nasDashboard/Register" sx={getListItemStyles('/nasDashboard/Register')}>
+        <ListItem button component={Link} to="/nasDashboard/NasBooklRegistration" sx={getListItemStyles('/nasDashboard/NasBooklRegistration')}>
           <ListItemText
-            primary={isSmallScreen ? 'R' : 'Register'}
+            primary={isSmallScreen ? 'R' : 'Book Registration'}
             primaryTypographyProps={{
               align: 'center',
-              fontWeight: location.pathname === '/nasDashboard/Register' ? 'bold' : 'normal',
+              fontWeight: location.pathname === '/nasDashboard/NasBooklRegistration' ? 'bold' : 'normal',
             }}
           />
         </ListItem>

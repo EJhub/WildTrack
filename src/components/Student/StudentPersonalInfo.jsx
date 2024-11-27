@@ -7,12 +7,11 @@ import Paper from '@mui/material/Paper';
 import Avatar from '@mui/material/Avatar';
 
 const PersonalInformation = () => {
-  const userInfo = {
-    name: 'Rickshel Brent B. Ilustrisimo',
-    idNumber: '24-5321-243',
-    gradeLevel: '6 - Hope',
-    image: '/path/to/image.png', // Replace with the actual path to your image
-  };
+  const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+
+  if (!loggedInUser) {
+    return <Typography variant="h6">No user is logged in.</Typography>;
+  }
 
   return (
     <>
@@ -37,7 +36,7 @@ const PersonalInformation = () => {
               padding: 4,
               borderRadius: 2,
               maxWidth: 400,
-              width: '90%', // Ensures responsiveness
+              width: '90%',
               textAlign: 'center',
             }}
           >
@@ -45,15 +44,14 @@ const PersonalInformation = () => {
               Personal Information
             </Typography>
             <Avatar
-              alt={userInfo.name}
-              src={userInfo.image}
+              alt={loggedInUser.firstName + ' ' + loggedInUser.lastName}
+              src="/path/to/image.png"
               sx={{
                 width: 150,
                 height: 150,
                 borderRadius: '10px',
                 margin: 'auto',
                 marginBottom: 2,
-               
               }}
             />
             <Box sx={{ marginBottom: 2 }}>
@@ -71,7 +69,7 @@ const PersonalInformation = () => {
                   boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
                 }}
               >
-                {userInfo.name}
+                {loggedInUser.firstName} {loggedInUser.lastName}
               </Box>
             </Box>
             <Box sx={{ marginBottom: 2 }}>
@@ -89,25 +87,7 @@ const PersonalInformation = () => {
                   boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
                 }}
               >
-                {userInfo.idNumber}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="body1" sx={{ color: '#000', marginBottom: 1, textAlign: 'left' }}>
-                Grade Level:
-              </Typography>
-              <Box
-                component="div"
-                sx={{
-                  backgroundColor: '#fff',
-                  borderRadius: '5px',
-                  padding: 1,
-                  textAlign: 'center',
-                  width: '100%',
-                  boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
-                }}
-              >
-                {userInfo.gradeLevel}
+                {loggedInUser.idNumber}
               </Box>
             </Box>
           </Paper>

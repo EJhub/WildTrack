@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import axios from 'axios';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import Box from '@mui/material/Box';
@@ -12,39 +13,104 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
 import Addbook from './components/Addbook';
-import { useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { AuthContext } from '../AuthContext'; // Import AuthContext
+import dayjs from 'dayjs';
 
 const StudentLibraryHours = () => {
+  const { user } = useContext(AuthContext); // Get user details from AuthContext
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
+  const [registeredBooks, setRegisteredBooks] = useState([]);
+  const [libraryHours, setLibraryHours] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const students = [
-    { date: 'October 18, 2024', timeIn: '8:25:09 AM', bookTitle: 'Little Red Riding Hood', timeOut: '8:42:02 AM', minutes: '16 minutes' },
-    { date: 'October 18, 2024', timeIn: '2:25:04 PM', bookTitle: '', timeOut: '-', minutes: '-' },
-  ];
+  useEffect(() => {
+    if (!user || !user.idNumber) {
+      toast.error('Unauthorized access. Please log in.');
+      return;
+    }
 
-  const handleClickOpen = () => {
-    navigate("/studentDashboard/TimeRemaining/Addbook");
+    const fetchLibraryHours = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error('Unauthorized access. Please log in.');
+          return;
+        }
+
+        const response = await axios.get(`http://localhost:8080/api/library-hours/user/${user.idNumber}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setLibraryHours(response.data);
+      } catch (error) {
+        console.error('Error fetching library hours:', error);
+        toast.error('Failed to fetch library hours.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLibraryHours();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchRegisteredBooks = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error('Unauthorized access. Please log in.');
+          return;
+        }
+
+        const response = await axios.get('http://localhost:8080/api/books/all', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setRegisteredBooks(response.data);
+      } catch (error) {
+        console.error('Error fetching registered books:', error);
+        toast.error('Failed to fetch registered books.');
+      }
+    };
+
+    fetchRegisteredBooks();
+  }, []);
+
+  const handleClickOpen = (student) => {
+    setSelectedStudent(student);
     setOpen(true);
   };
 
   const handleClose = () => {
-    navigate("/studentDashboard/TimeRemaining");
     setOpen(false);
+    setSelectedStudent(null);
   };
 
-  const handleSubmit = async (bookDetails) => {
-    try {
-      console.log('Submitted book details:', bookDetails);
-      // Optionally refresh book list or update state here
-    } catch (error) {
-      console.error('Error handling submission:', error);
+  const handleSubmit = (bookDetails) => {
+    if (selectedStudent) {
+      const updatedLibraryHours = libraryHours.map((entry) =>
+        entry.id === selectedStudent.id
+          ? { ...entry, bookTitle: bookDetails.title }
+          : entry
+      );
+      setLibraryHours(updatedLibraryHours);
+      toast.success(`Book "${bookDetails.title}" added to the student record!`);
+      handleClose();
     }
   };
-  
+
+  if (loading) {
+    return <Typography>Loading...</Typography>;
+  }
 
   return (
     <>
+      <ToastContainer />
       <NavBar />
       <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
@@ -57,49 +123,48 @@ const StudentLibraryHours = () => {
             backgroundImage: 'url("/studentbackground.png")',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            overflow: 'hidden', // Prevents unnecessary overflow
+            overflow: 'hidden',
           }}
         >
-          {/* Header */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
             <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', paddingTop: 5 }}>
               Library Hours
             </Typography>
           </Box>
 
-          {/* Table Container */}
           <TableContainer
             component={Paper}
             sx={{
               flexGrow: 1,
               opacity: 0.9,
               borderRadius: '15px',
-              overflow: 'auto', // Allows scrolling if the content exceeds the container
+              maxHeight: 'calc(100vh - 300px)',
+              overflow: 'auto',
             }}
           >
             <Table stickyHeader aria-label="library hours table">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Date</TableCell>
-                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Time In</TableCell>
-                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Book Title</TableCell>
-                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Time Out</TableCell>
-                  <TableCell sx={{backgroundColor: "#D9D9D9", fontWeight: 'bold' }}>Minutes</TableCell>
+                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Date</TableCell>
+                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Time In</TableCell>
+                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Book Title</TableCell>
+                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Time Out</TableCell>
+                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Minutes</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {students.map((student, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{student.date}</TableCell>
-                    <TableCell>{student.timeIn}</TableCell>
+                {libraryHours.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{dayjs(entry.date).format('MM/DD/YYYY')}</TableCell>
+                    <TableCell>{dayjs(entry.timeIn).format('hh:mm A')}</TableCell>
                     <TableCell>
-                      {student.bookTitle ? (
-                        student.bookTitle
+                      {entry.bookTitle ? (
+                        entry.bookTitle
                       ) : (
                         <Button
                           variant="outlined"
                           size="small"
-                          onClick={handleClickOpen}
+                          onClick={() => handleClickOpen(entry)}
                           sx={{
                             backgroundColor: '#FFD700',
                             color: '#000',
@@ -111,8 +176,8 @@ const StudentLibraryHours = () => {
                         </Button>
                       )}
                     </TableCell>
-                    <TableCell>{student.timeOut}</TableCell>
-                    <TableCell>{student.minutes}</TableCell>
+                    <TableCell>{entry.timeOut ? dayjs(entry.timeOut).format('hh:mm A') : '--'}</TableCell>
+                    <TableCell>{entry.minutes || '--'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -121,8 +186,12 @@ const StudentLibraryHours = () => {
         </Box>
       </Box>
 
-      {/* Popup Form */}
-      <Addbook open={open} handleClose={handleClose} handleSubmit={handleSubmit} />
+      <Addbook
+        open={open}
+        handleClose={handleClose}
+        handleSubmit={handleSubmit}
+        registeredBooks={registeredBooks}
+      />
     </>
   );
 };
