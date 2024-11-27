@@ -8,7 +8,7 @@ import InputIDLogout from "./Login/InputIDLogout";
 import StudentPersonalInfo from "./Student/StudentPersonalInfo";
 import NasLibraryAttendance from "./NAS/NasLibraryAttendance";
 import NasBookEntry from "./NAS/NasBookEntry";
-import NasRegister from "./NAS/NasRegister";
+import NasBooklRegistration from "./NAS/NasBooklRegistration";
 import NasActivityLog from "./NAS/NasActivityLog";
 import StudentRecords from "./Teacher/StudentRecords";
 import CompletedLibraryHours from "./Teacher/CompletedLibraryHours";
@@ -20,6 +20,7 @@ import LibrarianStudentsList from "./Librarian/LibrarianStudentsList";
 import LibrarianTeacherReports from "./Librarian/LibrarianTeacherReports";
 import LibrarianStudentLibraryHours from './Librarian/LibrarianStudentLibraryHours';
 import LibrarianNASActivityLog from './Librarian/LibrarianNASActivityLog';
+import ProtectedRoute from './ProtectedRoute';
 import { Routes, Route, Link } from "react-router-dom";
 
 
@@ -31,15 +32,15 @@ export default function TheRoutes() {
             <Route path="/LoginHomepage" element={<LogInHomepage />} />
             <Route path="/Login" element={<LogIn />} />
             <Route path="/Register" element={<Register />} />
-            <Route path="/studentDashboard/TimeRemaining" element={<StudentLibraryHours />} />
-            <Route path="/studentDashboard/TimeRemaining/Addbook" element={<StudentLibraryHours />} />
+            <Route path="/studentDashboard/TimeRemaining" element={<ProtectedRoute><StudentLibraryHours /></ProtectedRoute> } />
+            <Route path="/studentDashboard/TimeRemaining/Addbook" element={<ProtectedRoute><StudentLibraryHours /> </ProtectedRoute>} />
             <Route path="/studentDashboard/booklog" element={<BookLog />} />
             <Route path="/studentDashboard/personalInfo" element={<StudentPersonalInfo />} />
             <Route path="/nasDashboard/Home" element={<NasDashboard />} />
             <Route path="/nasDashboard/LibraryAttendance" element={<NasLibraryAttendance />} />
             <Route path="/nasDashboard/BookEntry" element={<NasBookEntry />} />
             <Route path="/nasDashboard/BookEntry/AddLog" element={<NasBookEntry />} />
-            <Route path="/nasDashboard/Register" element={<NasRegister />} />
+            <Route path="/nasDashboard/NasBooklRegistration" element={<NasBooklRegistration />} />
             <Route path="/nasDashboard/ActivityLog" element={<NasActivityLog />} />
             <Route path="/TeacherDashboard/Home" element={<TeacherDashboard />} />
             <Route path="/TeacherDashboard/Home/SetLibraryHours" element={<TeacherDashboard />} />

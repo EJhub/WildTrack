@@ -63,20 +63,6 @@ const SideBar = () => {
           />
         </ListItem>
 
-        <ListItem
-          button
-          component={Link}
-          to="/librarianDashboard/Library Attendance"
-          sx={getListItemStyles('/librarianDashboard/Library Attendance')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'SR' : 'Library Attendance'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname === '/librarianDashboard/Library Attendance' ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
 
         <ListItem
           button
@@ -96,34 +82,6 @@ const SideBar = () => {
         <ListItem
           button
           component={Link}
-          to="/librarianDashboard/LibrarianStudentSlist"
-          sx={getListItemStyles('/librarianDashboard/LibrarianStudentSlist')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'A' : 'Students List'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname === '/librarianDashboard/LibrarianStudentSlist' ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
-        <ListItem
-          button
-          component={Link}
-          to="/librarianDashboard/LibrarianTeacherReports"
-          sx={getListItemStyles('/librarianDashboard/LibrarianTeacherReports')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'A' : 'Teachers Report'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname === '/librarianDashboard/LibrarianTeacherReports' ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
-        <ListItem
-          button
-          component={Link}
           to="/librarianDashboard/LibrarianNASActivityLog"
           sx={getListItemStyles('/librarianDashboard/LibrarianNASActivityLog')}
         >
@@ -132,6 +90,20 @@ const SideBar = () => {
             primaryTypographyProps={{
               align: 'center',
               fontWeight: location.pathname === '/librarianDashboard/LibrarianNASActivityLog' ? 'bold' : 'normal',
+            }}
+          />
+        </ListItem>
+        <ListItem
+          button
+          component={Link}
+          to="/librarianDashboard/LibrarianAnalytics"
+          sx={getListItemStyles('/librarianDashboard/LibrarianAnalytics')}
+        >
+          <ListItemText
+            primary={isSmallScreen ? 'A' : 'Analytics'}
+            primaryTypographyProps={{
+              align: 'center',
+              fontWeight: location.pathname === '/librarianDashboard/LibrarianAnalytics' ? 'bold' : 'normal',
             }}
           />
         </ListItem>
