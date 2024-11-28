@@ -1,84 +1,73 @@
-import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
-import NavBar from './components/NavBar';
-import SideBar from './components/SideBar';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import Button from '@mui/material/Button';
-import Addbook from './components/Addbook';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { AuthContext } from '../AuthContext'; // Import AuthContext
-import dayjs from 'dayjs';
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+} from "@mui/material";
+import { toast, ToastContainer } from "react-toastify";
+import axios from "axios";
+import "react-toastify/dist/ReactToastify.css";
+import NavBar from "./components/NavBar";
+import SideBar from "./components/SideBar";
+import AddBook from "./components/AddBook"; // AddBook component
 
 const StudentLibraryHours = () => {
-  const { user } = useContext(AuthContext); // Get user details from AuthContext
-  const [open, setOpen] = useState(false);
-  const [registeredBooks, setRegisteredBooks] = useState([]);
   const [libraryHours, setLibraryHours] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [registeredBooks, setRegisteredBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   useEffect(() => {
-    if (!user || !user.idNumber) {
-      toast.error('Unauthorized access. Please log in.');
-      return;
-    }
-
     const fetchLibraryHours = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          toast.error('Unauthorized access. Please log in.');
+        const token = localStorage.getItem("token");
+        const params = new URLSearchParams(window.location.search);
+        const idNumber = params.get("id");
+
+        if (!token || !idNumber) {
+          toast.error("Unauthorized access. Please log in.");
           return;
         }
 
-        const response = await axios.get(`http://localhost:8080/api/library-hours/user/${user.idNumber}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          `http://localhost:8080/api/library-hours/user/${idNumber}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         setLibraryHours(response.data);
       } catch (error) {
-        console.error('Error fetching library hours:', error);
-        toast.error('Failed to fetch library hours.');
+        console.error("Error fetching library hours:", error);
+        toast.error("Failed to fetch library hours.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLibraryHours();
-  }, [user]);
-
-  useEffect(() => {
-    const fetchRegisteredBooks = async () => {
+    const fetchBooks = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          toast.error('Unauthorized access. Please log in.');
-          return;
-        }
-
-        const response = await axios.get('http://localhost:8080/api/books/all', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          "http://localhost:8080/api/books/all"
+        );
         setRegisteredBooks(response.data);
       } catch (error) {
-        console.error('Error fetching registered books:', error);
-        toast.error('Failed to fetch registered books.');
+        console.error("Error fetching books:", error);
+        toast.error("Failed to fetch books.");
       }
     };
 
-    fetchRegisteredBooks();
+    fetchLibraryHours();
+    fetchBooks();
   }, []);
 
   const handleClickOpen = (student) => {
@@ -91,17 +80,43 @@ const StudentLibraryHours = () => {
     setSelectedStudent(null);
   };
 
-  const handleSubmit = (bookDetails) => {
-    if (selectedStudent) {
+  const handleSubmit = async (bookDetails) => {
+  if (selectedStudent) {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:8080/api/library-hours/${selectedStudent.id}/add-book`,
+        { bookTitle: bookDetails.title },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       const updatedLibraryHours = libraryHours.map((entry) =>
         entry.id === selectedStudent.id
           ? { ...entry, bookTitle: bookDetails.title }
           : entry
       );
       setLibraryHours(updatedLibraryHours);
-      toast.success(`Book "${bookDetails.title}" added to the student record!`);
+      toast.success(`Book "${bookDetails.title}" added successfully!`);
       handleClose();
+    } catch (error) {
+      console.error("Error updating library record with book:", error);
+      toast.error("Failed to add book to the library record.");
     }
+  }
+};
+
+
+  const calculateMinutes = (timeIn, timeOut) => {
+    if (!timeIn || !timeOut) return "--";
+    const inTime = new Date(timeIn);
+    const outTime = new Date(timeOut);
+    const diffMs = outTime - inTime;
+    const diffMinutes = Math.floor(diffMs / 1000 / 60);
+    return diffMinutes > 0 ? `${diffMinutes} mins` : "--";
   };
 
   if (loading) {
@@ -112,22 +127,32 @@ const StudentLibraryHours = () => {
     <>
       <ToastContainer />
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box sx={{ display: "flex", height: "100vh" }}>
         <SideBar />
         <Box
           sx={{
             padding: 4,
             flexGrow: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundImage: 'url("/studentbackground.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            overflow: 'hidden',
+            display: "flex",
+            flexDirection: "column",
+            backgroundImage: "url('/studentbackground.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            overflow: "hidden",
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-            <Typography variant="h4" sx={{ color: '#000', fontWeight: 'bold', paddingTop: 5 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 2,
+            }}
+          >
+            <Typography
+              variant="h4"
+              sx={{ color: "#000", fontWeight: "bold", paddingTop: 5 }}
+            >
               Library Hours
             </Typography>
           </Box>
@@ -137,26 +162,26 @@ const StudentLibraryHours = () => {
             sx={{
               flexGrow: 1,
               opacity: 0.9,
-              borderRadius: '15px',
+              borderRadius: "15px",
+              overflow: "auto",
               maxHeight: 'calc(100vh - 300px)',
-              overflow: 'auto',
             }}
           >
             <Table stickyHeader aria-label="library hours table">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Date</TableCell>
-                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Time In</TableCell>
-                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Book Title</TableCell>
-                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Time Out</TableCell>
-                  <TableCell sx={{ backgroundColor: '#D9D9D9', fontWeight: 'bold' }}>Minutes</TableCell>
+                  <TableCell sx={{ backgroundColor: "#D9D9D9", fontWeight: "bold" }}>Date</TableCell>
+                  <TableCell sx={{ backgroundColor: "#D9D9D9", fontWeight: "bold" }}>Time In</TableCell>
+                  <TableCell sx={{ backgroundColor: "#D9D9D9", fontWeight: "bold" }}>Book Title</TableCell>
+                  <TableCell sx={{ backgroundColor: "#D9D9D9", fontWeight: "bold" }}>Time Out</TableCell>
+                  <TableCell sx={{ backgroundColor: "#D9D9D9", fontWeight: "bold" }}>Minutes</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {libraryHours.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell>{dayjs(entry.date).format('MM/DD/YYYY')}</TableCell>
-                    <TableCell>{dayjs(entry.timeIn).format('hh:mm A')}</TableCell>
+                    <TableCell>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
                     <TableCell>
                       {entry.bookTitle ? (
                         entry.bookTitle
@@ -166,18 +191,21 @@ const StudentLibraryHours = () => {
                           size="small"
                           onClick={() => handleClickOpen(entry)}
                           sx={{
-                            backgroundColor: '#FFD700',
-                            color: '#000',
-                            borderRadius: '15px',
-                            '&:hover': { backgroundColor: '#FFC107' },
+                            backgroundColor: "#FFD700",
+                            color: "#000",
+                            "&:hover": { backgroundColor: "#FFC107" },
                           }}
                         >
                           Insert Book
                         </Button>
                       )}
                     </TableCell>
-                    <TableCell>{entry.timeOut ? dayjs(entry.timeOut).format('hh:mm A') : '--'}</TableCell>
-                    <TableCell>{entry.minutes || '--'}</TableCell>
+                    <TableCell>
+                      {entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}
+                    </TableCell>
+                    <TableCell>
+                      {calculateMinutes(entry.timeIn, entry.timeOut)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -186,7 +214,7 @@ const StudentLibraryHours = () => {
         </Box>
       </Box>
 
-      <Addbook
+      <AddBook
         open={open}
         handleClose={handleClose}
         handleSubmit={handleSubmit}

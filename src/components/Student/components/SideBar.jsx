@@ -1,23 +1,41 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import { AuthContext } from '../../AuthContext';
 
 const SideBar = () => {
   const location = useLocation();
-  const isSmallScreen = useMediaQuery('(max-width:600px)'); // Adjust for screens smaller than 600px
+  const navigate = useNavigate();
+  const { user, logout } = useContext(AuthContext); // Access user and logout from AuthContext
+  const isSmallScreen = useMediaQuery('(max-width:600px)');
+
+  const handleLogout = () => {
+    logout(); // Clear authentication data
+    navigate('/login'); // Redirect to login page
+  };
+
+  const navigateWithId = (path) => {
+    const idNumber = user?.idNumber || localStorage.getItem('idNumber');
+    if (idNumber) {
+      navigate(`${path}?id=${idNumber}`);
+    } else {
+      console.error('No ID Number found for navigation');
+      handleLogout();
+    }
+  };
 
   const getListItemStyles = (path) => ({
     paddingY: '1.5rem',
     color: '#000',
     textAlign: 'center',
-    fontWeight: location.pathname === path ? 'bold' : 'normal',
+    fontWeight: location.pathname.startsWith(path) ? 'bold' : 'normal',
     position: 'relative',
     '&:hover': {
       color: '#FFD700',
     },
-    ...(location.pathname === path && {
+    ...(location.pathname.startsWith(path) && {
       '&::after': {
         content: '""',
         position: 'absolute',
@@ -48,32 +66,44 @@ const SideBar = () => {
       }}
     >
       <List component="nav" sx={{ flexGrow: 1, paddingTop: '20px' }}>
-        <ListItem button component={Link} to="/studentDashboard/TimeRemaining" sx={getListItemStyles('/studentDashboard/TimeRemaining')}>
+        <ListItem
+          button
+          onClick={() => navigateWithId('/studentDashboard/TimeRemaining')}
+          sx={getListItemStyles('/studentDashboard/TimeRemaining')}
+        >
           <ListItemText
             primary={isSmallScreen ? 'H' : 'Home'}
             primaryTypographyProps={{
               align: 'center',
-              fontWeight: location.pathname === '/studentDashboard/TimeRemaining' ? 'bold' : 'normal',
+              fontWeight: location.pathname.startsWith('/studentDashboard/TimeRemaining') ? 'bold' : 'normal',
             }}
           />
         </ListItem>
 
-        <ListItem button component={Link} to="/studentDashboard/booklog" sx={getListItemStyles('/studentDashboard/booklog')}>
+        <ListItem
+          button
+          onClick={() => navigateWithId('/studentDashboard/booklog')}
+          sx={getListItemStyles('/studentDashboard/booklog')}
+        >
           <ListItemText
             primary={isSmallScreen ? 'B' : 'Book Log'}
             primaryTypographyProps={{
               align: 'center',
-              fontWeight: location.pathname === '/studentDashboard/booklog' ? 'bold' : 'normal',
+              fontWeight: location.pathname.startsWith('/studentDashboard/booklog') ? 'bold' : 'normal',
             }}
           />
         </ListItem>
 
-        <ListItem button component={Link} to="/studentDashboard/personalInfo" sx={getListItemStyles('/studentDashboard/personalInfo')}>
+        <ListItem
+          button
+          onClick={() => navigateWithId('/studentDashboard/personalInfo')}
+          sx={getListItemStyles('/studentDashboard/personalInfo')}
+        >
           <ListItemText
             primary={isSmallScreen ? 'P' : 'Personal Info'}
             primaryTypographyProps={{
               align: 'center',
-              fontWeight: location.pathname === '/studentDashboard/personalInfo' ? 'bold' : 'normal',
+              fontWeight: location.pathname.startsWith('/studentDashboard/personalInfo') ? 'bold' : 'normal',
             }}
           />
         </ListItem>
@@ -88,8 +118,7 @@ const SideBar = () => {
         }}
       >
         <Button
-          component={Link}
-          to="/logout"
+          onClick={handleLogout}
           sx={{
             backgroundColor: '#FFD700',
             color: '#000',
@@ -105,11 +134,11 @@ const SideBar = () => {
           Log Out
         </Button>
 
-        <Button component={Link} to="/settings" sx={{ minWidth: 0 }}>
+        <Button onClick={() => navigateWithId('/settings')} sx={{ minWidth: 0 }}>
           <SettingsIcon sx={{ color: '#FFD700' }} />
         </Button>
 
-        <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
+        <Button onClick={() => navigateWithId('/notifications')} sx={{ minWidth: 0 }}>
           <NotificationsIcon sx={{ color: '#FFD700' }} />
         </Button>
       </Box>
