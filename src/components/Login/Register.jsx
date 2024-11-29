@@ -9,7 +9,7 @@ function Register() {
     password: "",
     confirmPassword: "",
     role: "User", // Default role
-    idNumber: "", // For students
+    idNumber: "", // For students and NAS
     grade: "", // For students
     section: "", // For students
   });
@@ -74,7 +74,9 @@ function Register() {
           email: formData.email,
           password: formData.password,
           role: formData.role, // Include role
-          idNumber: formData.role === "Student" ? formData.idNumber : null,
+          idNumber: ["Student", "NAS"].includes(formData.role)
+            ? formData.idNumber
+            : null,
           grade: formData.role === "Student" ? formData.grade : null,
           section: formData.role === "Student" ? formData.section : null,
         }),
@@ -169,46 +171,48 @@ function Register() {
                 <option value="Librarian">Librarian</option>
                 <option value="Student">Student</option>
                 <option value="Teacher">Teacher</option>
+                <option value="NAS">NAS</option>
               </select>
             </div>
+            {/* Conditional Fields for Student and NAS Roles */}
+            {["Student", "NAS"].includes(formData.role) && (
+              <div style={styles.inputGroup}>
+                <input
+                  type="text"
+                  name="idNumber"
+                  placeholder="ID Number"
+                  value={formData.idNumber}
+                  onChange={handleInputChange}
+                  style={getInputStyle("idNumber")}
+                  onFocus={() => handleFocus("idNumber")}
+                  onBlur={handleBlur}
+                />
+              </div>
+            )}
             {/* Conditional Fields for Student Role */}
             {formData.role === "Student" && (
-              <>
-                <div style={styles.inputGroup}>
-                  <input
-                    type="text"
-                    name="idNumber"
-                    placeholder="ID Number"
-                    value={formData.idNumber}
-                    onChange={handleInputChange}
-                    style={getInputStyle("idNumber")}
-                    onFocus={() => handleFocus("idNumber")}
-                    onBlur={handleBlur}
-                  />
-                </div>
-                <div style={styles.rowInputGroup}>
-                  <input
-                    type="text"
-                    name="grade"
-                    placeholder="Grade"
-                    value={formData.grade}
-                    onChange={handleInputChange}
-                    style={{ ...getInputStyle("grade"), width: "48%" }}
-                    onFocus={() => handleFocus("grade")}
-                    onBlur={handleBlur}
-                  />
-                  <input
-                    type="text"
-                    name="section"
-                    placeholder="Section"
-                    value={formData.section}
-                    onChange={handleInputChange}
-                    style={{ ...getInputStyle("section"), width: "48%" }}
-                    onFocus={() => handleFocus("section")}
-                    onBlur={handleBlur}
-                  />
-                </div>
-              </>
+              <div style={styles.rowInputGroup}>
+                <input
+                  type="text"
+                  name="grade"
+                  placeholder="Grade"
+                  value={formData.grade}
+                  onChange={handleInputChange}
+                  style={{ ...getInputStyle("grade"), width: "48%" }}
+                  onFocus={() => handleFocus("grade")}
+                  onBlur={handleBlur}
+                />
+                <input
+                  type="text"
+                  name="section"
+                  placeholder="Section"
+                  value={formData.section}
+                  onChange={handleInputChange}
+                  style={{ ...getInputStyle("section"), width: "48%" }}
+                  onFocus={() => handleFocus("section")}
+                  onBlur={handleBlur}
+                />
+              </div>
             )}
             <button type="submit" style={styles.registerButton}>
               Register

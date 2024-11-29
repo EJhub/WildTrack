@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import Box from '@mui/material/Box';
@@ -6,8 +6,81 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
+import axios from 'axios';
 
 const NASDashboard = () => {
+  const [idNumber, setIdNumber] = useState('');
+  const [name, setName] = useState(''); // State for the NAS student's name
+  const [logData, setLogData] = useState(null);
+  const [status, setStatus] = useState('Clocked Out');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch the latest log when the ID number changes
+  useEffect(() => {
+    if (idNumber) {
+      fetchLatestLog();
+    }
+  }, [idNumber]);
+
+  // Handle input changes for the ID number field
+  const handleInputChange = (e) => {
+    setIdNumber(e.target.value);
+  };
+
+  // Fetch the latest log from the backend
+  const fetchLatestLog = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await axios.get(`http://localhost:8080/api/nas-logs/latest/${idNumber}`);
+      setLogData(response.data);
+      setName(response.data.name); // Update the name state
+      setStatus(response.data.status);
+    } catch (err) {
+      setLogData(null);
+      setName(''); // Clear name on error
+      setStatus('Clocked Out');
+      setError('No records found for this ID.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Time In
+  const handleTimeIn = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await axios.post('http://localhost:8080/api/nas-logs/time-in', { idNumber });
+      setLogData(response.data);
+      setName(response.data.name); // Update the name state
+      setStatus('Clocked In');
+    } catch (err) {
+      setError('Failed to clock in. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Time Out
+  const handleTimeOut = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await axios.post('http://localhost:8080/api/nas-logs/time-out', { idNumber });
+      setLogData(response.data);
+      setStatus('Clocked Out');
+    } catch (err) {
+      setError('Failed to clock out. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <NavBar />
@@ -41,23 +114,29 @@ const NASDashboard = () => {
               </Typography>
               <Box sx={{ textAlign: 'right' }}>
                 <Typography variant="body2" sx={{ color: '#000' }}>
-                  Status: Clocked Out
+                  Status: {status}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#000' }}>
-                  Last Time Out: 12:37 PM
+                  Last Time Out: {logData?.timeOut ? new Date(logData.timeOut).toLocaleTimeString() : 'N/A'}
                 </Typography>
               </Box>
             </Box>
 
+            <Typography variant="body1" sx={{ color: '#000', marginBottom: 3 }}>
+              Name: {name || 'N/A'}
+            </Typography>
+
             <TextField
-              placeholder="Input name here..."
+              placeholder="Input ID number here..."
               variant="outlined"
               fullWidth
+              value={idNumber}
+              onChange={handleInputChange}
               sx={{
                 backgroundColor: '#fff',
                 marginBottom: 3,
-                height: "40px",
-                width: "300px",
+                height: '40px',
+                width: '300px',
                 overflow: 'hidden',
                 borderRadius: '10px',
                 '& .MuiOutlinedInput-root': {
@@ -73,6 +152,8 @@ const NASDashboard = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginBottom: 4 }}>
               <Button
                 variant="contained"
+                onClick={handleTimeIn}
+                disabled={status === 'Clocked In' || loading}
                 sx={{
                   backgroundColor: '#FFD700',
                   color: '#000',
@@ -88,6 +169,8 @@ const NASDashboard = () => {
               </Button>
               <Button
                 variant="contained"
+                onClick={handleTimeOut}
+                disabled={status === 'Clocked Out' || loading}
                 sx={{
                   backgroundColor: '#FFD700',
                   color: '#000',
@@ -102,6 +185,12 @@ const NASDashboard = () => {
                 Time Out
               </Button>
             </Box>
+
+            {error && (
+              <Typography variant="body2" sx={{ color: 'red', marginBottom: 2 }}>
+                {error}
+              </Typography>
+            )}
 
             <Typography variant="h6" sx={{ color: '#000', marginBottom: 2 }}>
               Recent Activity:
@@ -118,7 +207,9 @@ const NASDashboard = () => {
                 }}
               >
                 <Typography sx={{ fontWeight: 'bold' }}>Time In:</Typography>
-                <Typography>12:30 PM</Typography>
+                <Typography>
+                  {logData?.timeIn ? new Date(logData.timeIn).toLocaleTimeString() : 'N/A'}
+                </Typography>
               </Box>
               <Box
                 sx={{
@@ -130,7 +221,9 @@ const NASDashboard = () => {
                 }}
               >
                 <Typography sx={{ fontWeight: 'bold' }}>Time Out:</Typography>
-                <Typography>12:37 PM</Typography>
+                <Typography>
+                  {logData?.timeOut ? new Date(logData.timeOut).toLocaleTimeString() : 'N/A'}
+                </Typography>
               </Box>
             </Box>
           </Paper>

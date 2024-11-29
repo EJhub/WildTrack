@@ -32,14 +32,17 @@ const Login = () => {
   
       // Call login from AuthContext to update user state
       login({ token, role, idNumber });
-  
-      // Navigate based on role
-      if (role === "Student") {
+
+      // Navigate based on user role
+      if (role === 'Student') {
         navigate(`/studentDashboard/TimeRemaining?id=${idNumber}`);
-      } else if (role === "Librarian") {
-        navigate("/librarianDashboard/Home");
-      } else if (role === "Teacher") {
-        navigate("/TeacherDashboard/Home");
+      } else if (role === 'Librarian') {
+        navigate('/librarianDashboard');
+      } else if (role === 'Teacher') {
+        navigate('/TeacherDashboard/Home');
+      } else if (role === 'NAS') {
+        navigate('/nasDashboard/Home');
+
       } else {
         throw new Error("Invalid role returned from the server.");
       }
