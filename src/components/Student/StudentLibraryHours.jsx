@@ -23,7 +23,7 @@ const StudentLibraryHours = () => {
   const [registeredBooks, setRegisteredBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedEntry, setSelectedEntry] = useState(null);
 
   useEffect(() => {
     const fetchLibraryHours = async () => {
@@ -56,9 +56,7 @@ const StudentLibraryHours = () => {
 
     const fetchBooks = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:8080/api/books/all"
-        );
+        const response = await axios.get("http://localhost:8080/api/books/all");
         setRegisteredBooks(response.data);
       } catch (error) {
         console.error("Error fetching books:", error);
@@ -70,45 +68,48 @@ const StudentLibraryHours = () => {
     fetchBooks();
   }, []);
 
-  const handleClickOpen = (student) => {
-    setSelectedStudent(student);
+  const handleClickOpen = (entry) => {
+    setSelectedEntry(entry);
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
-    setSelectedStudent(null);
+    setSelectedEntry(null);
   };
 
   const handleSubmit = async (bookDetails) => {
-  if (selectedStudent) {
+    if (!selectedEntry || !bookDetails || !bookDetails.id) {
+      toast.error("Failed to assign book. Invalid data.");
+      return;
+    }
+  
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:8080/api/library-hours/${selectedStudent.id}/add-book`,
-        { bookTitle: bookDetails.title },
+        `http://localhost:8080/api/books/${bookDetails.id}/assign-library-hours/${selectedEntry.id}`,
+        {},
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-
+  
       const updatedLibraryHours = libraryHours.map((entry) =>
-        entry.id === selectedStudent.id
+        entry.id === selectedEntry.id
           ? { ...entry, bookTitle: bookDetails.title }
           : entry
       );
       setLibraryHours(updatedLibraryHours);
-      toast.success(`Book "${bookDetails.title}" added successfully!`);
+      toast.success(`Book "${bookDetails.title}" assigned successfully!`);
       handleClose();
     } catch (error) {
-      console.error("Error updating library record with book:", error);
-      toast.error("Failed to add book to the library record.");
+      console.error("Error assigning book to library hours:", error);
+      toast.error("Failed to assign book to library hours.");
     }
-  }
-};
-
+  };
+  
 
   const calculateMinutes = (timeIn, timeOut) => {
     if (!timeIn || !timeOut) return "--";
@@ -164,7 +165,7 @@ const StudentLibraryHours = () => {
               opacity: 0.9,
               borderRadius: "15px",
               overflow: "auto",
-              maxHeight: 'calc(100vh - 300px)',
+              maxHeight: "calc(100vh - 300px)",
             }}
           >
             <Table stickyHeader aria-label="library hours table">

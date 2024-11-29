@@ -7,7 +7,7 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
-const Addbook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
+const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   const [bookDetails, setBookDetails] = useState({
     author: "",
     title: "",
@@ -37,20 +37,20 @@ const Addbook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
     if (!validateForm()) return;
 
     // Validate the entered book against the registered books
-    const bookExists = registeredBooks.some(
-      (book) =>
-        book.author === bookDetails.author &&
-        book.title === bookDetails.title &&
-        book.accessionNumber === bookDetails.accessionNumber
+    const book = registeredBooks.find(
+      (b) =>
+        b.author === bookDetails.author &&
+        b.title === bookDetails.title &&
+        b.accessionNumber === bookDetails.accessionNumber
     );
 
-    if (!bookExists) {
+    if (!book) {
       setError("The entered book details do not match any registered book.");
       return;
     }
 
     try {
-      handleSubmit(bookDetails); // Pass the validated book back to the parent component
+      handleSubmit(book); // Pass the validated book to the parent component
       setSuccess("Book added successfully!");
       setBookDetails({ author: "", title: "", accessionNumber: "" }); // Clear form
     } catch (err) {
@@ -197,4 +197,4 @@ const Addbook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   );
 };
 
-export default Addbook;
+export default AddBook;
