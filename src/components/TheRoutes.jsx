@@ -34,7 +34,7 @@ export default function TheRoutes() {
             <Route path="/Register" element={<Register />} />
             <Route path="/studentDashboard/TimeRemaining" element={<ProtectedRoute><StudentLibraryHours /></ProtectedRoute> } />
             <Route path="/studentDashboard/TimeRemaining/Addbook" element={<ProtectedRoute><StudentLibraryHours /> </ProtectedRoute>} />
-            <Route path="/studentDashboard/booklog" element={<BookLog />} />
+            <Route path="/studentDashboard/booklog" element={<ProtectedRoute><BookLog /></ProtectedRoute>} />
             <Route path="/studentDashboard/personalInfo" element={<StudentPersonalInfo />} />
             <Route path="/nasDashboard/Home" element={<NasDashboard />} />
             <Route path="/nasDashboard/LibraryAttendance" element={<NasLibraryAttendance />} />
