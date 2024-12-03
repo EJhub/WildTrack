@@ -191,29 +191,40 @@ function Register() {
             )}
             {/* Conditional Fields for Student Role */}
             {formData.role === "Student" && (
-              <div style={styles.rowInputGroup}>
-                <input
-                  type="text"
-                  name="grade"
-                  placeholder="Grade"
-                  value={formData.grade}
-                  onChange={handleInputChange}
-                  style={{ ...getInputStyle("grade"), width: "48%" }}
-                  onFocus={() => handleFocus("grade")}
-                  onBlur={handleBlur}
-                />
-                <input
-                  type="text"
-                  name="section"
-                  placeholder="Section"
-                  value={formData.section}
-                  onChange={handleInputChange}
-                  style={{ ...getInputStyle("section"), width: "48%" }}
-                  onFocus={() => handleFocus("section")}
-                  onBlur={handleBlur}
-                />
-              </div>
-            )}
+  <div style={styles.rowInputGroup}>
+    <select
+      name="grade"
+      value={formData.grade}
+      onChange={handleInputChange}
+      style={{ ...getInputStyle("grade"), width: "48%" }}
+      onFocus={() => handleFocus("grade")}
+      onBlur={handleBlur}
+    >
+      <option value="">Select Grade</option>
+      {Array.from({ length: 6 }, (_, i) => (
+        <option key={i} value={`Grade ${i + 1}`}>
+          Grade {i + 1}
+        </option>
+      ))}
+    </select>
+    <select
+      name="section"
+      value={formData.section}
+      onChange={handleInputChange}
+      style={{ ...getInputStyle("section"), width: "48%" }}
+      onFocus={() => handleFocus("section")}
+      onBlur={handleBlur}
+    >
+      <option value="">Select Section</option>
+      {["A", "B", "C"].map((section) => (
+        <option key={section} value={section}>
+          {section}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
+
             <button type="submit" style={styles.registerButton}>
               Register
             </button>

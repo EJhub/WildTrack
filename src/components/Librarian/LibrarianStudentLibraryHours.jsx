@@ -1,17 +1,53 @@
-import React from 'react';
-import NavBar from './components/NavBar'; // Importing NavBar
-import SideBar from './components/SideBar'; // Importing the updated SideBars component
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper, TextField, InputAdornment, IconButton } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu'; // Three lines icon for menu
-import SearchIcon from '@mui/icons-material/Search'; // Search icon
-import FilterListIcon from '@mui/icons-material/FilterList'; // A-Z filter icon
+import React, { useEffect, useState } from 'react';
+import NavBar from './components/NavBar';
+import SideBar from './components/SideBar';
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Paper,
+  TextField,
+  InputAdornment,
+  IconButton,
+} from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
 
 const LibrarianStudentLibraryHours = () => {
-  const data = [
-    { id: '2009-40034', name: 'Tricia O. Araneta', date: 'October 10, 2024', timeIn: '8:27:05 AM', timeOut: '8:45:05 AM', minutes: '13 minutes' },
-    { id: '19-2134-332', name: 'Xevery Jan C. Bolo', date: 'October 10, 2024', timeIn: '8:27:06 AM', timeOut: '8:45:06 AM', minutes: '13 minutes' },
-    // Add more sample data here...
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/library-hours/summary');
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error('Error fetching library hours summary:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography variant="h6">Loading...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <>
@@ -19,7 +55,6 @@ const LibrarianStudentLibraryHours = () => {
       <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
 
-        {/* Main content area */}
         <Box
           sx={{
             padding: 4,
@@ -37,7 +72,6 @@ const LibrarianStudentLibraryHours = () => {
             Student Library Hours
           </Typography>
 
-          {/* Search and filter section */}
           <Box
             sx={{
               display: 'flex',
@@ -47,12 +81,10 @@ const LibrarianStudentLibraryHours = () => {
               flexWrap: { xs: 'wrap', md: 'nowrap' },
             }}
           >
-            {/* Menu Icon */}
             <IconButton>
               <MenuIcon />
             </IconButton>
 
-            {/* Search field */}
             <TextField
               variant="outlined"
               placeholder="Type here..."
@@ -72,13 +104,11 @@ const LibrarianStudentLibraryHours = () => {
               }}
             />
 
-            {/* Filter A-Z */}
             <IconButton>
               <FilterListIcon />
             </IconButton>
           </Box>
 
-          {/* Table displaying student library hours */}
           <TableContainer
             component={Paper}
             sx={{
@@ -91,34 +121,22 @@ const LibrarianStudentLibraryHours = () => {
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell
-                    sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}
-                  >
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
                     ID Number
                   </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}
-                  >
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
                     Name
                   </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}
-                  >
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
                     Latest Library Hour Date
                   </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}
-                  >
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
                     Latest Time-In
                   </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}
-                  >
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
                     Latest Time-Out
                   </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}
-                  >
+                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
                     Completed Minutes
                   </TableCell>
                 </TableRow>
@@ -133,12 +151,12 @@ const LibrarianStudentLibraryHours = () => {
                       '&:hover': { backgroundColor: '#FCEAEA' },
                     }}
                   >
-                    <TableCell>{student.id}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.date}</TableCell>
-                    <TableCell>{student.timeIn}</TableCell>
-                    <TableCell>{student.timeOut}</TableCell>
-                    <TableCell>{student.minutes}</TableCell>
+                    <TableCell>{student.idNumber}</TableCell>
+                    <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                    <TableCell>{student.latestLibraryHourDate}</TableCell>
+                    <TableCell>{student.latestTimeIn}</TableCell>
+                    <TableCell>{student.latestTimeOut}</TableCell>
+                    <TableCell>{student.totalMinutes}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
