@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import Box from '@mui/material/Box';
@@ -20,11 +21,56 @@ import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import MenuIcon from '@mui/icons-material/Menu';
 
 const StudentRecords = () => {
-  const students = [
-    { idNumber: '2009-40034', name: 'Tricia O. Araneta', gradeSection: '5 - Hope', progress: 'Completed', status: 'Approved' },
-    { idNumber: '22-3451-124', name: 'Brent Ilustrisimo', gradeSection: '5 - Faith', progress: 'In-progress', status: '-' },
-    // Additional student entries...
-  ];
+  const [students, setStudents] = useState([]);
+  const [filteredStudents, setFilteredStudents] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch students with time-in and time-out
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const token = localStorage.getItem('authToken'); // Retrieve auth token if needed
+        const response = await axios.get('http://localhost:8080/api/library-hours/with-user-details', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const formattedStudents = response.data.map((student) => ({
+          idNumber: student.idNumber,
+          name: `${student.firstName} ${student.lastName}`,
+          gradeSection: student.gradeSection || 'N/A',
+          progress: student.timeOut ? 'Completed' : 'In-progress',
+          status: student.timeOut ? 'Approved' : 'Pending',
+        }));        
+
+        setStudents(formattedStudents);
+        setFilteredStudents(formattedStudents);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching students:', err);
+        setError('Failed to fetch student records. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, []);
+
+  // Handle search filter
+  const handleSearch = (event) => {
+    const value = event.target.value.toLowerCase();
+    setSearch(value);
+    setFilteredStudents(
+      students.filter(
+        (student) =>
+          student.name.toLowerCase().includes(value) || student.idNumber.toLowerCase().includes(value)
+      )
+    );
+  };
 
   return (
     <>
@@ -54,6 +100,8 @@ const StudentRecords = () => {
               placeholder="Search by name or ID..."
               variant="outlined"
               size="small"
+              value={search}
+              onChange={handleSearch}
               sx={{
                 backgroundColor: '#f1f1f1',
                 borderRadius: '28px',
@@ -81,45 +129,99 @@ const StudentRecords = () => {
             </IconButton>
           </Box>
 
-          <TableContainer
-            component={Paper}
-            sx={{
-              flexGrow: 1,
-              borderRadius: '15px',
-              overflow: 'auto',
-              maxHeight: 'calc(100vh - 250px)', // Ensures the table fits the remaining space
-              border: '1px solid #A85858',
-            }}
-          >
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#A85858' }}>ID Number</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#A85858' }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#A85858' }}>Grade & Section</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#A85858' }}>Progress</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#A85858' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#A85858' }}>Edit</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {students.map((student, index) => (
-                  <TableRow key={index} hover>
-                    <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.idNumber}</TableCell>
-                    <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.name}</TableCell>
-                    <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.gradeSection}</TableCell>
-                    <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.progress}</TableCell>
-                    <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.status}</TableCell>
-                    <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>
-                      <IconButton color="primary">
-                        <EditIcon />
-                      </IconButton>
+          {loading ? (
+            <Typography>Loading student records...</Typography>
+          ) : error ? (
+            <Typography color="error">{error}</Typography>
+          ) : (
+            <TableContainer
+              component={Paper}
+              sx={{
+                flexGrow: 1,
+                borderRadius: '15px',
+                overflow: 'auto',
+                maxHeight: 'calc(100vh - 250px)', // Ensures the table fits the remaining space
+                border: '1px solid #A85858',
+              }}
+            >
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        backgroundColor: '#A85858',
+                      }}
+                    >
+                      ID Number
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        backgroundColor: '#A85858',
+                      }}
+                    >
+                      Name
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        backgroundColor: '#A85858',
+                      }}
+                    >
+                      Grade & Section
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        backgroundColor: '#A85858',
+                      }}
+                    >
+                      Progress
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        backgroundColor: '#A85858',
+                      }}
+                    >
+                      Status
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        backgroundColor: '#A85858',
+                      }}
+                    >
+                      Edit
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {filteredStudents.map((student, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.idNumber}</TableCell>
+                      <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.name}</TableCell>
+                      <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.gradeSection}</TableCell>
+                      <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.progress}</TableCell>
+                      <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.status}</TableCell>
+                      <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>
+                        <IconButton color="primary">
+                          <EditIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </Box>
       </Box>
     </>
