@@ -19,6 +19,9 @@ import Register from "./Login/Register";
 import LibrarianAnalytics from "./Librarian/LibrarianAnalytics";
 import LibrarianStudentLibraryHours from './Librarian/LibrarianStudentLibraryHours';
 import LibrarianNASActivityLog from './Librarian/LibrarianNASActivityLog';
+import LibrarianManageTeacher from "./Librarian/ManageTeacher";
+import LibrarianManageRecords from "./Librarian/ManageRecords";
+import LibrarianManageBooks from "./Librarian/ManageBooks";
 import ProtectedRoute from './ProtectedRoute';
 import { Routes, Route, Link } from "react-router-dom";
 
@@ -50,6 +53,9 @@ export default function TheRoutes() {
             <Route path="/librarianDashboard/LibrarianAnalytics" element={<LibrarianAnalytics/>} />
             <Route path="/librarianDashboard/LibrarianStudentLibraryHours" element={<LibrarianStudentLibraryHours />} />
             <Route path="/librarianDashboard/LibrarianNASActivityLog" element={<LibrarianNASActivityLog />} />
+            <Route path="/librarianDashboard/LibrarianManageTeacher" element={<LibrarianManageTeacher />} />
+            <Route path="/librarianDashboard/LibrarianManageRecords" element={<LibrarianManageRecords />} />
+            <Route path="/librarianDashboard/LibrarianManageBooks" element={<LibrarianManageBooks/>} />
             
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>

@@ -3,16 +3,21 @@ import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/m
 import { Link, useLocation } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import Settings from './Settings'; // Import the Settings component
-
+ 
 const SideBar = () => {
   const location = useLocation();
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   const [openSettings, setOpenSettings] = useState(false);
-
+  const [manageOpen, setManageOpen] = useState(false);
+ 
   const handleOpenSettings = () => setOpenSettings(true);
   const handleCloseSettings = () => setOpenSettings(false);
-
+ 
+  const toggleManage = () => setManageOpen((prev) => !prev);
+ 
   const getListItemStyles = (path) => ({
     paddingY: isSmallScreen ? '0.5rem' : '1.5rem',
     color: '#000',
@@ -37,7 +42,7 @@ const SideBar = () => {
       },
     }),
   });
-
+ 
   return (
     <>
       <Box
@@ -61,7 +66,7 @@ const SideBar = () => {
             sx={getListItemStyles('/librarianDashboard/Home')}
           >
             <ListItemText
-              primary={isSmallScreen ? 'H' : 'Home'}
+              primary={isSmallScreen ? 'H' : 'Dashboard'}
               primaryTypographyProps={{
                 align: 'center',
                 fontWeight:
@@ -69,7 +74,7 @@ const SideBar = () => {
               }}
             />
           </ListItem>
-
+ 
           <ListItem
             button
             component={Link}
@@ -88,24 +93,8 @@ const SideBar = () => {
               }}
             />
           </ListItem>
+ 
 
-          <ListItem
-            button
-            component={Link}
-            to="/librarianDashboard/LibrarianNASActivityLog"
-            sx={getListItemStyles('/librarianDashboard/LibrarianNASActivityLog')}
-          >
-            <ListItemText
-              primary={isSmallScreen ? 'A' : 'NAS Activity Log'}
-              primaryTypographyProps={{
-                align: 'center',
-                fontWeight:
-                  location.pathname === '/librarianDashboard/LibrarianNASActivityLog'
-                    ? 'bold'
-                    : 'normal',
-              }}
-            />
-          </ListItem>
           <ListItem
             button
             component={Link}
@@ -113,7 +102,7 @@ const SideBar = () => {
             sx={getListItemStyles('/librarianDashboard/LibrarianAnalytics')}
           >
             <ListItemText
-              primary={isSmallScreen ? 'A' : 'Analytics'}
+              primary={isSmallScreen ? 'A' : 'Analytics and Reports'}
               primaryTypographyProps={{
                 align: 'center',
                 fontWeight:
@@ -123,8 +112,81 @@ const SideBar = () => {
               }}
             />
           </ListItem>
+          <br></br><br></br>
+ 
+          {/* Manage Section */}
+          <ListItem button onClick={toggleManage} sx={{paddingY: '1rem', marginLeft: '-60px'}}>
+            <ListItemText
+              primary={isSmallScreen ? 'M' : 'Manage'}
+              primaryTypographyProps={{
+                align: 'center',
+                fontWeight: 'bold',
+                color: '#FFD700',
+                textTransform: 'uppercase',
+              }}
+            />
+            {manageOpen ? <ExpandLessIcon sx={{ color: '#FFD700'}} /> : <ExpandMoreIcon sx={{ color: '#FFD700' }} />}
+          </ListItem>
+ 
+          {manageOpen && (
+            <>
+              <ListItem 
+                button
+                component={Link}
+                to="/librarianDashboard/Student"
+                sx={getListItemStyles('/librarianDashboard/Student')}
+              >
+                <ListItemText primary={isSmallScreen ? 'S' : 'Student'} />
+              </ListItem>
+ 
+              <ListItem
+                button
+                component={Link}
+                to="/librarianDashboard/NASStudent"
+                sx={getListItemStyles('/librarianDashboard/NASStudent')}
+              >
+                <ListItemText primary={isSmallScreen ? 'NAS' : 'NAS Student'} />
+              </ListItem>
+ 
+              <ListItem
+                button
+                component={Link}
+                to="/librarianDashboard/LibrarianManageTeacher"
+                sx={getListItemStyles('/librarianDashboard/LibrarianManageTeacher')}
+              >
+                <ListItemText primary={isSmallScreen ? 'T' : 'Teacher'} />
+              </ListItem>
+ 
+              <ListItem
+                button
+                component={Link}
+                to="/librarianDashboard/LibrarianManageRecords"
+                sx={getListItemStyles('/librarianDashboard/LibrarianManageRecords')}
+              >
+                <ListItemText primary={isSmallScreen ? 'R' : 'Records'} />
+              </ListItem>
+ 
+              <ListItem
+                button
+                component={Link}
+                to="/librarianDashboard/LibrarianManageBooks"
+                sx={getListItemStyles('/librarianDashboard/LibrarianManageBooks')}
+              >
+                <ListItemText primary={isSmallScreen ? 'B' : 'Books'} />
+              </ListItem>
+ 
+              <ListItem
+                button
+                component={Link}
+                to="/librarianDashboard/Genre"
+                sx={getListItemStyles('/librarianDashboard/Genre')}
+              >
+                <ListItemText primary={isSmallScreen ? 'G' : 'Genre'} />
+              </ListItem>
+            </>
+          )}
         </List>
-
+ 
         <Box
           sx={{
             display: 'flex',
@@ -151,21 +213,21 @@ const SideBar = () => {
           >
             {isSmallScreen ? 'LO' : 'Log Out'}
           </Button>
-
+ 
           <Button onClick={handleOpenSettings} sx={{ minWidth: 0 }}>
             <SettingsIcon sx={{ color: '#FFD700' }} />
           </Button>
-
+ 
           <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
             <NotificationsIcon sx={{ color: '#FFD700' }} />
           </Button>
         </Box>
       </Box>
-
+ 
       {/* Use the separate Settings component */}
       <Settings open={openSettings} onClose={handleCloseSettings} />
     </>
   );
 };
-
+ 
 export default SideBar;
