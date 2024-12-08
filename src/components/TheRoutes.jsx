@@ -22,6 +22,7 @@ import LibrarianNASActivityLog from './Librarian/LibrarianNASActivityLog';
 import LibrarianManageTeacher from "./Librarian/ManageTeacher";
 import LibrarianManageRecords from "./Librarian/ManageRecords";
 import LibrarianManageBooks from "./Librarian/ManageBooks";
+import LibrarianManageStudent from "./Librarian/ManageStudent";
 import ProtectedRoute from './ProtectedRoute';
 import { Routes, Route, Link } from "react-router-dom";
 
@@ -56,6 +57,7 @@ export default function TheRoutes() {
             <Route path="/librarianDashboard/LibrarianManageTeacher" element={<LibrarianManageTeacher />} />
             <Route path="/librarianDashboard/LibrarianManageRecords" element={<LibrarianManageRecords />} />
             <Route path="/librarianDashboard/LibrarianManageBooks" element={<LibrarianManageBooks/>} />
+            <Route path="/librarianDashboard/LibrarianManageStudent" element={<LibrarianManageStudent/>} />
             
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>

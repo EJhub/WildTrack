@@ -133,8 +133,8 @@ const SideBar = () => {
               <ListItem 
                 button
                 component={Link}
-                to="/librarianDashboard/Student"
-                sx={getListItemStyles('/librarianDashboard/Student')}
+                to="/librarianDashboard/LibrarianManageStudent"
+                sx={getListItemStyles('/librarianDashboard/LibrarianManageStudent')}
               >
                 <ListItemText primary={isSmallScreen ? 'S' : 'Student'} />
               </ListItem>
