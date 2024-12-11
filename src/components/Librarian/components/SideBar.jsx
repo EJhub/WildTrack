@@ -62,15 +62,15 @@ const SideBar = () => {
           <ListItem
             button
             component={Link}
-            to="/librarianDashboard/Home"
-            sx={getListItemStyles('/librarianDashboard/Home')}
+            to="/librarian/Home"
+            sx={getListItemStyles('/librarian/Home')}
           >
             <ListItemText
               primary={isSmallScreen ? 'H' : 'Dashboard'}
               primaryTypographyProps={{
                 align: 'center',
                 fontWeight:
-                  location.pathname === '/librarianDashboard/Home' ? 'bold' : 'normal',
+                  location.pathname === '/librarian/Home' ? 'bold' : 'normal',
               }}
             />
           </ListItem>
@@ -78,8 +78,8 @@ const SideBar = () => {
           <ListItem
             button
             component={Link}
-            to="/librarianDashboard/LibrarianStudentLibraryHours"
-            sx={getListItemStyles('/librarianDashboard/LibrarianStudentLibraryHours')}
+            to="/librarian/LibrarianStudentLibraryHours"
+            sx={getListItemStyles('/librarian/LibrarianStudentLibraryHours')}
           >
             <ListItemText
               primary={isSmallScreen ? 'CLH' : 'Student Library Hours'}
@@ -87,7 +87,7 @@ const SideBar = () => {
                 align: 'center',
                 fontWeight:
                   location.pathname ===
-                  '/librarianDashboard/LibrarianStudentLibraryHours'
+                  '/librarian/LibrarianStudentLibraryHours'
                     ? 'bold'
                     : 'normal',
               }}
@@ -98,15 +98,15 @@ const SideBar = () => {
           <ListItem
             button
             component={Link}
-            to="/librarianDashboard/LibrarianAnalytics"
-            sx={getListItemStyles('/librarianDashboard/LibrarianAnalytics')}
+            to="/librarian/LibrarianAnalytics"
+            sx={getListItemStyles('/librarian/LibrarianAnalytics')}
           >
             <ListItemText
               primary={isSmallScreen ? 'A' : 'Analytics and Reports'}
               primaryTypographyProps={{
                 align: 'center',
                 fontWeight:
-                  location.pathname === '/librarianDashboard/LibrarianAnalytics'
+                  location.pathname === '/librarian/LibrarianAnalytics'
                     ? 'bold'
                     : 'normal',
               }}
@@ -133,8 +133,8 @@ const SideBar = () => {
               <ListItem 
                 button
                 component={Link}
-                to="/librarianDashboard/LibrarianManageStudent"
-                sx={getListItemStyles('/librarianDashboard/LibrarianManageStudent')}
+                to="/librarian/LibrarianManageStudent"
+                sx={getListItemStyles('/librarian/LibrarianManageStudent')}
               >
                 <ListItemText primary={isSmallScreen ? 'S' : 'Student'} />
               </ListItem>
@@ -142,8 +142,8 @@ const SideBar = () => {
               <ListItem
                 button
                 component={Link}
-                to="/librarianDashboard/NASStudent"
-                sx={getListItemStyles('/librarianDashboard/NASStudent')}
+                to="/librarian/LibrarianManageNASStudent"
+                sx={getListItemStyles('/librarian/LibrarianManageNASStudent')}
               >
                 <ListItemText primary={isSmallScreen ? 'NAS' : 'NAS Student'} />
               </ListItem>
@@ -151,8 +151,8 @@ const SideBar = () => {
               <ListItem
                 button
                 component={Link}
-                to="/librarianDashboard/LibrarianManageTeacher"
-                sx={getListItemStyles('/librarianDashboard/LibrarianManageTeacher')}
+                to="/librarian/LibrarianManageTeacher"
+                sx={getListItemStyles('/librarian/LibrarianManageTeacher')}
               >
                 <ListItemText primary={isSmallScreen ? 'T' : 'Teacher'} />
               </ListItem>
@@ -160,8 +160,8 @@ const SideBar = () => {
               <ListItem
                 button
                 component={Link}
-                to="/librarianDashboard/LibrarianManageRecords"
-                sx={getListItemStyles('/librarianDashboard/LibrarianManageRecords')}
+                to="/librarian/LibrarianManageRecords"
+                sx={getListItemStyles('/librarian/LibrarianManageRecords')}
               >
                 <ListItemText primary={isSmallScreen ? 'R' : 'Records'} />
               </ListItem>
@@ -169,8 +169,8 @@ const SideBar = () => {
               <ListItem
                 button
                 component={Link}
-                to="/librarianDashboard/LibrarianManageBooks"
-                sx={getListItemStyles('/librarianDashboard/LibrarianManageBooks')}
+                to="/librarian/LibrarianManageBooks"
+                sx={getListItemStyles('/librarian/LibrarianManageBooks')}
               >
                 <ListItemText primary={isSmallScreen ? 'B' : 'Books'} />
               </ListItem>
@@ -178,8 +178,8 @@ const SideBar = () => {
               <ListItem
                 button
                 component={Link}
-                to="/librarianDashboard/Genre"
-                sx={getListItemStyles('/librarianDashboard/Genre')}
+                to="/librarian/Genre"
+                sx={getListItemStyles('/librarian/Genre')}
               >
                 <ListItemText primary={isSmallScreen ? 'G' : 'Genre'} />
               </ListItem>

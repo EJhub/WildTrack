@@ -34,11 +34,12 @@ const LibrarianManageTeacher = () => {
   const [currentTeacher, setCurrentTeacher] = useState(null); // Store teacher data for updating
   const [teacherToDelete, setTeacherToDelete] = useState(null); // Store teacher data to delete
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Modal state for delete confirmation
+  const [currentView, setCurrentView] = useState('Teachers'); // Add currentView state
   // States for search/filtering
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('2023-2024');
-
+  
   // Pagination States
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [page, setPage] = useState(0);
@@ -113,6 +114,7 @@ const LibrarianManageTeacher = () => {
 
   // Get the teachers for the current page
   const paginatedTeachers = teachers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   return (
     <>
       <NavBar />
@@ -128,7 +130,7 @@ const LibrarianManageTeacher = () => {
               textAlign: 'left',
             }}
           >
-            Manage Teacher Activity
+            {currentView === "Teachers" ? "Manage Teacher Activity" : "Activity Log"}
           </Typography>
 
           {/* Search and Filters Section */}
@@ -147,7 +149,7 @@ const LibrarianManageTeacher = () => {
 
             <TextField
               variant="outlined"
-              placeholder="Search teachers..."
+              placeholder="Search..."
               size="small"
               sx={{
                 backgroundColor: '#fff',
@@ -165,7 +167,8 @@ const LibrarianManageTeacher = () => {
             />
           </Box>
 
-          {/* Additional Filters Section: Date, Academic Year, Grade */}
+          {/* Additional Filters Section */}
+          {currentView === "Activity Log" && (
           <Box
             sx={{
               display: 'flex',
@@ -217,138 +220,175 @@ const LibrarianManageTeacher = () => {
               <FilterListIcon sx={{ fontSize: 24 }} />
             </IconButton>
           </Box>
+        )}
 
           {/* Action Buttons Section */}
           <Box
             sx={{
               display: 'flex',
+              flexDirection: 'column', // Stack buttons vertically
+              alignItems: 'flex-end',
               gap: 2,
               marginBottom: 2,
-              marginTop: '-20px',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
             }}
           >
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleOpenForm}// Open add teacher form
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 20px',
-                backgroundColor: '#FFB300',
-                '&:hover': { backgroundColor: '#F57C00' },
-              }}
-            >
-              Add Teacher
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant={currentView === "Activity Log" ? "contained" : "outlined"}
+                
+                onClick={() => setCurrentView("Activity Log")} // Toggle to Activity Log
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 20px',
+                  backgroundColor: currentView === "Activity Log" ? "#F8C400" : "inherit",
+                  '&:hover': { backgroundColor: '#DCC532' },
+                }}
+              >
+                Activity Log
+              </Button>
 
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => console.log('Activity Log Clicked')} // Action for Activity Log button
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 20px',
-                backgroundColor: '#4CAF50',
-                '&:hover': { backgroundColor: '#388E3C' },
-              }}
-            >
-              Activity Log
-            </Button>
+              <Button
+                variant={currentView === "Teachers" ? "contained" : "outlined"}
+                onClick={() => setCurrentView("Teachers")} // Toggle to Teachers
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 20px',
+                  backgroundColor: currentView === "Teachers" ? "#F8C400" : "inherit",
+                  '&:hover': { backgroundColor: '#DCC532' },
+                }}
+              >
+                Teachers
+              </Button>
+            </Box>
 
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => console.log('Teacher Button Clicked')} // Action for Teacher button
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 20px',
-                backgroundColor: '#1976D2',
-                '&:hover': { backgroundColor: '#1565C0' },
-              }}
-            >
-              Teacher
-            </Button>
+            {currentView === "Teachers" && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleOpenForm} // Open add teacher form
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 20px',
+                  backgroundColor: '#8C383E',
+                  '&:hover': { backgroundColor: '#610A0C' },
+                }}
+              >
+                Add Teacher
+              </Button>
+            )}
           </Box>
-
 
           {/* Table Section */}
           <TableContainer component={Paper} sx={{ borderRadius: '15px', overflow: 'auto', maxHeight: 'calc(100vh - 340px)' }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
-                    ID Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
-                    Name
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
-                    Quarter
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
-                    Subject Handled
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
-                    Action
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {teachers.map((teacher, index) => (
-                  <TableRow
-                    key={teacher.id}
-                    hover
-                    sx={{
-                      backgroundColor: index % 2 === 0 ? '#FFF8E1' : '#ffffff',
-                      '&:hover': { backgroundColor: '#FFB300' },
-                    }}
-                  >
-                    <TableCell>{teacher.idNumber}</TableCell>
-                    <TableCell>{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
-                    <TableCell>{teacher.quarter}</TableCell>
-                    <TableCell>{teacher.subject}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleOpenUpdateForm(teacher)}
-                        sx={{ marginRight: 1, backgroundColor: '#FFB300', '&:hover': { backgroundColor: '#F57C00' } }}
-                      >
-                        Update
-                      </Button>
-                      <Button 
-                      variant="contained" 
-                      color="secondary"
-                      onClick={() => handleOpenDeleteModal(teacher)}
-                       sx={{ backgroundColor: '#F44336', '&:hover': { backgroundColor: '#D32F2F' } }}>
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {/* Pagination */}
-          <Box sx={{ position: 'relative', width: '100%' }}>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={teachers.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                paddingTop: 2,
-                width: '100%',
-              }}
-            />
-          </Box>
+  <Table stickyHeader>
+    <TableHead>
+      <TableRow>
+        {currentView === "Teachers" ? (
+          <>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              ID NUMBER
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              NAME
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              GRADE LEVEL HANDLED
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              SECTION HANDLED
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              SUBJECT HANDLED
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              ACTION
+            </TableCell>
+          </>
+        ) : (
+          <>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              Log ID
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              Date
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              Activity
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
+              Description
+            </TableCell>
+          </>
+        )}
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {currentView === "Teachers" ? (
+        paginatedTeachers.map((teacher, index) => (
+          <TableRow
+            key={teacher.id}
+            hover
+            sx={{
+              backgroundColor: index % 2 === 0 ? '#FFF8E1' : '#ffffff',
+              '&:hover': { backgroundColor: '#FFB300' },
+            }}
+          >
+            <TableCell>{teacher.idNumber}</TableCell>
+            <TableCell>{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
+            <TableCell>{teacher.grade}</TableCell>
+            <TableCell>{teacher.section}</TableCell>
+            <TableCell>{teacher.subject}</TableCell>
+            <TableCell>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => handleOpenUpdateForm(teacher)}
+                sx={{ marginRight: 1, backgroundColor: '#FFB300', '&:hover': { backgroundColor: '#F57C00' } }}
+              >
+                Update
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => handleOpenDeleteModal(teacher)}
+                sx={{ backgroundColor: '#F44336', '&:hover': { backgroundColor: '#D32F2F' } }}
+              >
+                Delete
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))
+      ) : (
+        <TableRow>
+          <TableCell colSpan={4} align="center">
+            No activity logs yet.
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+</TableContainer>
+
+
+          {currentView === "Teachers" && (
+            <Box sx={{ position: 'relative', width: '100%' }}>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={teachers.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  paddingTop: 2,
+                  width: '100%',
+                }}
+              />
+            </Box>
+          )}
         </Box>
       </Box>
 
@@ -364,11 +404,12 @@ const LibrarianManageTeacher = () => {
           onUpdate={handleUpdate}
         />
       )}
+
       {/* Delete Confirmation Modal */}
       <DeleteConfirmation
         open={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
-        onConfirm={handleDeleteTeacher} // Delete teacher if confirmed
+        onConfirm={handleDeleteTeacher}
       />
     </>
   );

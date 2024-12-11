@@ -5,7 +5,6 @@ import {
   Button,
   Typography,
   IconButton,
-  MenuItem,
   Snackbar,
   Alert,
   Grid,
@@ -21,8 +20,8 @@ const CreateTeacherForm = ({ open, onClose }) => {
     password: '',
     role: 'Teacher', // Default to Teacher role
     subject: '',
-    startQuarter: '', // Add start quarter
-    endQuarter: '', // Add end quarter
+    grade: '', // Separate grade
+    section: '', // Input text for section
     idNumber: '',
   });
   const [loading, setLoading] = useState(false);
@@ -32,14 +31,15 @@ const CreateTeacherForm = ({ open, onClose }) => {
     severity: '',
   });
 
-  const subjects = ['Math', 'Science', 'History', 'English', 'Art', 'Physical Education']; // Example subjects
-  const quarters = ['Q1', 'Q2', 'Q3', 'Q4']; // Example quarters
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Automatically prefix "Grade" for the grade field
+    const newValue = name === 'grade' && value ? `Grade ${value.replace(/Grade\s*/i, '')}` : value;
+
     setFormData((prevData) => ({
       ...prevData,
-      [name]: value,
+      [name]: newValue,
     }));
   };
 
@@ -51,8 +51,8 @@ const CreateTeacherForm = ({ open, onClose }) => {
       password: '',
       role: 'Teacher',
       subject: '',
-      startQuarter: '',
-      endQuarter: '',
+      grade: '',
+      section: '',
       idNumber: '',
     });
   };
@@ -65,8 +65,8 @@ const CreateTeacherForm = ({ open, onClose }) => {
       !formData.email ||
       !formData.password ||
       !formData.role ||
-      !formData.startQuarter ||
-      !formData.endQuarter ||
+      !formData.grade ||
+      !formData.section ||
       !formData.subject ||
       !formData.idNumber
     ) {
@@ -81,7 +81,8 @@ const CreateTeacherForm = ({ open, onClose }) => {
       password: formData.password,
       role: formData.role,
       subject: formData.subject,
-      quarter: `${formData.startQuarter}-${formData.endQuarter}`, // Combine start and end quarters
+      grade: formData.grade, // Send grade separately
+      section: formData.section, // Send section as input text
       idNumber: formData.idNumber,
     };
 
@@ -102,15 +103,6 @@ const CreateTeacherForm = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const filteredEndQuarters = () => {
-    // If no start quarter is selected, return all quarters for the end quarter
-    if (!formData.startQuarter) return quarters;
-
-    // Otherwise, filter out quarters that are before the selected start quarter
-    const startQuarterIndex = quarters.indexOf(formData.startQuarter);
-    return quarters.slice(startQuarterIndex);
   };
 
   if (!open) return null;
@@ -215,68 +207,33 @@ const CreateTeacherForm = ({ open, onClose }) => {
         <TextField
           label="Subject"
           name="subject"
-          select
           value={formData.subject}
           onChange={handleInputChange}
           variant="outlined"
           fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 15000 }, // Ensure dropdown is above other elements
-            },
-          }}
-        >
-          {subjects.map((subject) => (
-            <MenuItem key={subject} value={subject}>
-              {subject}
-            </MenuItem>
-          ))}
-        </TextField>
-
+        />
         <Grid container spacing={2}>
           <Grid item xs={6}>
             <TextField
-              label="Start Quarter"
-              name="startQuarter"
-              select
-              value={formData.startQuarter}
+              label="Grade Level"
+              name="grade"
+              placeholder="Enter grade number (e.g., 1, 2, 3)"
+              value={formData.grade}
               onChange={handleInputChange}
               variant="outlined"
               fullWidth
-              SelectProps={{
-                MenuProps: {
-                  sx: { zIndex: 15000 }, // Ensure dropdown is above other elements
-                },
-              }}
-            >
-              {quarters.map((quarter) => (
-                <MenuItem key={quarter} value={quarter}>
-                  {quarter}
-                </MenuItem>
-              ))}
-            </TextField>
+            />
           </Grid>
           <Grid item xs={6}>
             <TextField
-              label="End Quarter"
-              name="endQuarter"
-              select
-              value={formData.endQuarter}
+              label="Section"
+              name="section"
+              placeholder="Enter section (e.g., A, B, C)"
+              value={formData.section}
               onChange={handleInputChange}
               variant="outlined"
               fullWidth
-              SelectProps={{
-                MenuProps: {
-                  sx: { zIndex: 15000 }, // Ensure dropdown is above other elements
-                },
-              }}
-            >
-              {filteredEndQuarters().map((quarter) => (
-                <MenuItem key={quarter} value={quarter}>
-                  {quarter}
-                </MenuItem>
-              ))}
-            </TextField>
+            />
           </Grid>
         </Grid>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, MenuItem, Snackbar, Grid, Typography, IconButton, Alert } from '@mui/material';
-import axios from 'axios';
+import { Box, TextField, Button, Snackbar, Grid, Typography, IconButton, Alert } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import axios from 'axios';
 
 const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
   const [formData, setFormData] = useState({
@@ -9,27 +9,17 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
     lastName: '',
     idNumber: '',
     subject: '',
-    startQuarter: '',  // Initialize as empty string
-    endQuarter: '',    // Initialize as empty string
-    role: 'Teacher'    // Default role set to 'Teacher'
+    grade: '', // Single grade as a text field
+    section: '', // Single section as a text field
+    role: 'Teacher', // Default role set to 'Teacher'
   });
 
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
-    severity: ''
+    severity: '',
   });
-
-  const subjects = ["Math", "Science", "History", "English", "Art", "Physical Education"];
-  const quarters = ["Q1", "Q2", "Q3", "Q4"];
-  const roles = ["Teacher"]; // You can expand the roles as needed
-
-  // This function will return the available end quarters based on the selected startQuarter
-  const getAvailableEndQuarters = (startQuarter) => {
-    const startIndex = quarters.indexOf(startQuarter);
-    return quarters.slice(startIndex);  // Return all quarters starting from the selected startQuarter
-  };
 
   useEffect(() => {
     if (teacherData) {
@@ -38,62 +28,63 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
         lastName: teacherData.lastName || '',
         idNumber: teacherData.idNumber || '',
         subject: teacherData.subject || '',
-        startQuarter: teacherData.startQuarter || '',  // Ensure default if empty
-        endQuarter: teacherData.endQuarter || '',      // Ensure default if empty
-        role: teacherData.role || 'Teacher' // Default to 'Teacher' if no role
+        grade: teacherData.grade || '',
+        section: teacherData.section || '',
+        role: teacherData.role || 'Teacher',
       });
     }
   }, [teacherData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Automatically prefix "Grade" for the grade field
+    const newValue = name === 'grade' && value ? `Grade ${value.replace(/Grade\s*/i, '')}` : value;
+
     setFormData((prevData) => ({
       ...prevData,
-      [name]: value
+      [name]: newValue,
     }));
   };
 
   const handleSubmit = async () => {
     // Validate form fields
-    if (!formData.firstName || !formData.lastName || !formData.idNumber || !formData.subject || !formData.startQuarter || !formData.endQuarter || !formData.role) {
+    if (
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.idNumber ||
+      !formData.subject ||
+      !formData.grade ||
+      !formData.section ||
+      !formData.role
+    ) {
       setSnackbar({ open: true, message: 'All fields are required!', severity: 'warning' });
       return;
     }
 
-    setLoading(true);
-
     const payload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        subject: formData.subject,
-        quarter: `${formData.startQuarter}-${formData.endQuarter}`, // Combine start and end quarters
-        idNumber: formData.idNumber,
-      };
-  
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      idNumber: formData.idNumber,
+      subject: formData.subject,
+      grade: formData.grade, // Single grade
+      section: formData.section, // Single section
+      role: formData.role,
+    };
 
     try {
-      // Make API request to update teacher data
+      setLoading(true);
       const response = await axios.put(`http://localhost:8080/api/teachers/${teacherData.id}`, payload);
       setSnackbar({ open: true, message: 'Teacher updated successfully!', severity: 'success' });
       onUpdate(); // Refresh the data after successful update
       onClose(); // Close the form
     } catch (error) {
       console.error('Error updating teacher:', error);
-
-      // Log detailed error information to help debug the problem
-      if (error.response) {
-        console.error('Error Response:', error.response.data);
-        setSnackbar({
-          open: true,
-          message: error.response.data.error || 'Failed to update teacher. Please try again.',
-          severity: 'error'
-        });
-      } else {
-        setSnackbar({ open: true, message: 'Network error. Please try again later.', severity: 'error' });
-      }
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.error || 'Failed to update teacher. Please try again.',
+        severity: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -172,91 +163,45 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
         <TextField
           label="Subject"
           name="subject"
-          select
           value={formData.subject}
           onChange={handleInputChange}
           variant="outlined"
           fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 15000 }, // Ensure dropdown is above other elements
-            },
-          }}
-        >
-          {subjects.map((subject) => (
-            <MenuItem key={subject} value={subject}>
-              {subject}
-            </MenuItem>
-          ))}
-        </TextField>
-
+        />
         <Grid container spacing={2}>
           <Grid item xs={6}>
             <TextField
-              label="Start Quarter"
-              name="startQuarter"
-              select
-              value={formData.startQuarter}
+              label="Grade Level"
+              name="grade"
+              placeholder="Enter grade number (e.g., 1, 2, 3)"
+              value={formData.grade}
               onChange={handleInputChange}
               variant="outlined"
               fullWidth
-              SelectProps={{
-                MenuProps: {
-                  sx: { zIndex: 15000 },
-                },
-              }}
-            >
-              {quarters.map((quarter) => (
-                <MenuItem key={quarter} value={quarter}>
-                  {quarter}
-                </MenuItem>
-              ))}
-            </TextField>
+            />
           </Grid>
           <Grid item xs={6}>
             <TextField
-              label="End Quarter"
-              name="endQuarter"
-              select
-              value={formData.endQuarter}
+              label="Section"
+              name="section"
+              placeholder="Enter section (e.g., A, B, C)"
+              value={formData.section}
               onChange={handleInputChange}
               variant="outlined"
               fullWidth
-              SelectProps={{
-                MenuProps: {
-                  sx: { zIndex: 15000 },
-                },
-              }}
-            >
-              {getAvailableEndQuarters(formData.startQuarter).map((quarter) => (
-                <MenuItem key={quarter} value={quarter}>
-                  {quarter}
-                </MenuItem>
-              ))}
-            </TextField>
+            />
           </Grid>
         </Grid>
 
         <TextField
           label="Role"
           name="role"
-          select
           value={formData.role}
           onChange={handleInputChange}
           variant="outlined"
           fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 15000 },
-            },
-          }}
-        >
-          {roles.map((role) => (
-            <MenuItem key={role} value={role}>
-              {role}
-            </MenuItem>
-          ))}
-        </TextField>
+          disabled
+        />
 
         <Button
           variant="contained"

@@ -23,6 +23,7 @@ import LibrarianManageTeacher from "./Librarian/ManageTeacher";
 import LibrarianManageRecords from "./Librarian/ManageRecords";
 import LibrarianManageBooks from "./Librarian/ManageBooks";
 import LibrarianManageStudent from "./Librarian/ManageStudent";
+import LibrarianManageNASStudent from "./Librarian/ManageNASStudent";
 import ProtectedRoute from './ProtectedRoute';
 import { Routes, Route, Link } from "react-router-dom";
 
@@ -50,14 +51,15 @@ export default function TheRoutes() {
             <Route path="/TeacherDashboard/StudentRecords" element={<StudentRecords />} />
             <Route path="/TeacherDashboard/CompletedLibraryHours" element={<CompletedLibraryHours />} />
             <Route path="/TeacherDashboard/Analytics" element={<Analytics />} />
-            <Route path="/librarianDashboard/Home" element={<LibrarianDashboard />} />
-            <Route path="/librarianDashboard/LibrarianAnalytics" element={<LibrarianAnalytics/>} />
-            <Route path="/librarianDashboard/LibrarianStudentLibraryHours" element={<LibrarianStudentLibraryHours />} />
-            <Route path="/librarianDashboard/LibrarianNASActivityLog" element={<LibrarianNASActivityLog />} />
-            <Route path="/librarianDashboard/LibrarianManageTeacher" element={<LibrarianManageTeacher />} />
-            <Route path="/librarianDashboard/LibrarianManageRecords" element={<LibrarianManageRecords />} />
-            <Route path="/librarianDashboard/LibrarianManageBooks" element={<LibrarianManageBooks/>} />
-            <Route path="/librarianDashboard/LibrarianManageStudent" element={<LibrarianManageStudent/>} />
+            <Route path="/librarian/Home" element={<LibrarianDashboard />} />
+            <Route path="/librarian/LibrarianAnalytics" element={<LibrarianAnalytics/>} />
+            <Route path="/librarian/LibrarianStudentLibraryHours" element={<LibrarianStudentLibraryHours />} />
+            <Route path="/librarian/LibrarianNASActivityLog" element={<LibrarianNASActivityLog />} />
+            <Route path="/librarian/LibrarianManageTeacher" element={<LibrarianManageTeacher />} />
+            <Route path="/librarian/LibrarianManageRecords" element={<LibrarianManageRecords />} />
+            <Route path="/librarian/LibrarianManageBooks" element={<LibrarianManageBooks/>} />
+            <Route path="/librarian/LibrarianManageStudent" element={<LibrarianManageStudent/>} />
+            <Route path="/librarian/LibrarianManageNASStudent" element={<LibrarianManageNASStudent/>} />
             
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>
