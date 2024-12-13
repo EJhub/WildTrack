@@ -8,26 +8,30 @@ import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+ 
 const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
   const [formData, setFormData] = useState({
     minutes: '',
     gradeLevel: '',
+    subject: 'English', // Default subject
     month: '',
     day: '',
     year: '',
   });
-
+ 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
-
+ 
   const onSubmit = () => {
     handleSubmit(formData);
     handleClose();
   };
-
+ 
   return (
     <Dialog
       open={open}
@@ -38,7 +42,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
         '& .MuiPaper-root': {
           borderRadius: '15px',
           overflow: 'hidden',
-          border: '2px solid #8B3D3D',
+          border: '2px solid #000',
         },
       }}
     >
@@ -46,7 +50,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
         sx={{
           textAlign: 'center',
           fontWeight: 'bold',
-          backgroundColor: '#8B3D3D',
+          backgroundColor: '#F8C400', // Updated color for title background
           color: '#000',
         }}
       >
@@ -54,11 +58,12 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
       </DialogTitle>
       <DialogContent
         sx={{
-          backgroundColor: '#8B3D3D',
+          backgroundColor: '#F8C400', // Updated color for content background
           padding: '30px',
         }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 2 }}>
+          {/* Minutes Field */}
           <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
             <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Minutes:</Typography>
             <TextField
@@ -71,6 +76,8 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
               inputProps={{ min: 0 }}
             />
           </Box>
+ 
+          {/* Grade Level Field */}
           <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
             <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Grade Level:</Typography>
             <TextField
@@ -86,8 +93,35 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
               ))}
             </TextField>
           </Box>
+ 
+          {/* Subject Field */}
+          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Subject:</Typography>
+            <RadioGroup
+              row
+              name="subject"
+              value={formData.subject}
+              onChange={handleInputChange}
+              sx={{ display: 'flex', gap: 2 }}
+            >
+              <FormControlLabel
+                value="English"
+                control={<Radio sx={{ color: '#000', '&.Mui-checked': { color: '#000' } }} />}
+                label="English"
+                sx={{ color: '#000' }}
+              />
+              <FormControlLabel
+                value="Filipino"
+                control={<Radio sx={{ color: '#000', '&.Mui-checked': { color: '#000' } }} />}
+                label="Filipino"
+                sx={{ color: '#000' }}
+              />
+            </RadioGroup>
+          </Box>
+ 
+          {/* Deadline Fields */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Deadline:</Typography>
+            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Deadline:</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <TextField
                 label="Month"
@@ -130,10 +164,12 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
           </Box>
         </Box>
       </DialogContent>
+ 
+      {/* Dialog Actions */}
       <DialogActions
         sx={{
           justifyContent: 'center',
-          backgroundColor: '#8B3D3D',
+          backgroundColor: '#F8C400', // Updated color for actions background
           padding: 2,
         }}
       >
@@ -144,7 +180,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
             borderRadius: '10px',
             width: '120px',
             backgroundColor: '#BB5252',
-            color: '#000',
+            color: '#fff',
             '&:hover': {
               backgroundColor: '#A44444',
             },
@@ -158,10 +194,10 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
           sx={{
             borderRadius: '10px',
             width: '120px',
-            backgroundColor: '#FFD700',
-            color: '#000',
+            backgroundColor: '#000',
+            color: '#F8C400',
             '&:hover': {
-              backgroundColor: '#FFC107',
+              backgroundColor: '#333',
             },
           }}
         >
@@ -171,5 +207,5 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
     </Dialog>
   );
 };
-
+ 
 export default SetLibraryHours;

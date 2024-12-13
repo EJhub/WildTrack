@@ -20,6 +20,10 @@ import {
   InputLabel,
   TablePagination,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
@@ -32,6 +36,11 @@ const LibrarianManageRecords = () => {
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [grade, setGrade] = useState('');
+
+  // New states for update functionality
+  const [currentRecord, setCurrentRecord] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState(null);
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -68,9 +77,70 @@ const LibrarianManageRecords = () => {
   };
 
   // Handle Update action
-  const handleUpdate = (id) => {
-    console.log(`Updating student with ID: ${id}`);
-    // Add your update logic here, e.g., navigate to an update form or API call
+  const handleUpdate = (record) => {
+    setCurrentRecord(record);
+    setOpen(true);
+  };
+
+  // Convert time to 24-hour format
+  const convertTo24HourTime = (time) => {
+    const [hours, minutes] = time.split(':');
+    const isPM = time.toLowerCase().includes('pm');
+    let formattedHours = parseInt(hours, 10);
+    if (isPM && formattedHours < 12) formattedHours += 12;
+    if (!isPM && formattedHours === 12) formattedHours = 0;
+    return `${String(formattedHours).padStart(2, '0')}:${minutes.trim()}:00`;
+  };
+
+  // Handle Update Submit
+  const handleUpdateSubmit = async () => {
+    try {
+      // Validate input
+      if (!currentRecord.latestLibraryHourDate || 
+          !currentRecord.latestTimeIn || 
+          !currentRecord.latestTimeOut) {
+        setError('Please fill in all required fields');
+        return;
+      }
+
+      const updatedData = {
+        idNumber: currentRecord.idNumber,
+        latestLibraryHourDate: new Date(currentRecord.latestLibraryHourDate)
+          .toISOString()
+          .split('T')[0], // Format date to yyyy-MM-dd
+        latestTimeIn: convertTo24HourTime(currentRecord.latestTimeIn), // Convert to HH:mm:ss
+        latestTimeOut: convertTo24HourTime(currentRecord.latestTimeOut), // Convert to HH:mm:ss
+        totalMinutes: currentRecord.totalMinutes,
+      };
+
+      const response = await fetch('http://localhost:8080/api/library-hours/update-summary', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update the record');
+      }
+
+      const result = await response.json();
+      console.log('Record updated successfully:', result);
+
+      // Update local state to reflect changes
+      setData((prevData) =>
+        prevData.map((record) =>
+          record.idNumber === currentRecord.idNumber ? { ...record, ...updatedData } : record
+        )
+      );
+
+      setOpen(false); // Close the modal
+      setError(null); // Clear any previous errors
+    } catch (error) {
+      console.error('Error updating record:', error);
+      setError(error.message || 'Failed to update record');
+    }
   };
 
   // Handle Delete action
@@ -79,6 +149,79 @@ const LibrarianManageRecords = () => {
     // Add your delete logic here, e.g., make a DELETE API call
     const newData = data.filter((item) => item.id !== id);
     setData(newData); // Update state after deleting
+  };
+
+  // Update Modal Component
+  const UpdateModal = () => {
+    if (!currentRecord) return null;
+
+    return (
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>Update Library Hours Record</DialogTitle>
+        <DialogContent>
+          {error && (
+            <Typography color="error" sx={{ marginBottom: 2 }}>
+              {error}
+            </Typography>
+          )}
+          <TextField
+            label="ID Number"
+            value={currentRecord.idNumber}
+            fullWidth
+            disabled
+            sx={{ marginBottom: 2 }}
+          />
+          <TextField
+            label="Date"
+            type="date"
+            value={currentRecord.latestLibraryHourDate}
+            onChange={(e) => setCurrentRecord(prev => ({
+              ...prev, 
+              latestLibraryHourDate: e.target.value
+            }))}
+            fullWidth
+            sx={{ marginBottom: 2 }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
+          <TextField
+            label="Time In"
+            value={currentRecord.latestTimeIn}
+            onChange={(e) => setCurrentRecord(prev => ({
+              ...prev, 
+              latestTimeIn: e.target.value
+            }))}
+            fullWidth
+            sx={{ marginBottom: 2 }}
+          />
+          <TextField
+            label="Time Out"
+            value={currentRecord.latestTimeOut}
+            onChange={(e) => setCurrentRecord(prev => ({
+              ...prev, 
+              latestTimeOut: e.target.value
+            }))}
+            fullWidth
+            sx={{ marginBottom: 2 }}
+          />
+          <TextField
+            label="Total Minutes"
+            type="number"
+            value={currentRecord.totalMinutes}
+            onChange={(e) => setCurrentRecord(prev => ({
+              ...prev, 
+              totalMinutes: parseInt(e.target.value, 10)
+            }))}
+            fullWidth
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={handleUpdateSubmit} color="primary">Update</Button>
+        </DialogActions>
+      </Dialog>
+    );
   };
 
   if (loading) {
@@ -261,7 +404,7 @@ const LibrarianManageRecords = () => {
                         <Button
                           variant="contained"
                           color="primary"
-                          onClick={() => handleUpdate(student.id)}
+                          onClick={() => handleUpdate(student)}
                           sx={{
                             marginRight: 1,
                             backgroundColor: '#FFB300',
@@ -304,6 +447,9 @@ const LibrarianManageRecords = () => {
               width: '100%',              // Ensures the pagination takes full width
             }}
           />
+
+          {/* Update Modal */}
+          <UpdateModal />
         </Box>
       </Box>
     </>

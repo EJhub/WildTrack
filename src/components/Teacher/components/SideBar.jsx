@@ -3,11 +3,11 @@ import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/m
 import { Link, useLocation } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-
+ 
 const SideBar = () => {
   const location = useLocation();
   const isSmallScreen = useMediaQuery('(max-width:600px)'); // Adjust for smaller screens
-
+ 
   const getListItemStyles = (path) => ({
     paddingY: isSmallScreen ? '0.5rem' : '1.5rem',
     color: '#000',
@@ -32,7 +32,7 @@ const SideBar = () => {
       },
     }),
   });
-
+ 
   return (
     <Box
       sx={{
@@ -47,6 +47,7 @@ const SideBar = () => {
         justifyContent: 'space-between',
       }}
     >
+      <br></br>
       <List component="nav" sx={{ flexGrow: 1, paddingTop: '20px' }}>
         <ListItem
           button
@@ -62,7 +63,7 @@ const SideBar = () => {
             }}
           />
         </ListItem>
-
+ 
         <ListItem
           button
           component={Link}
@@ -77,7 +78,7 @@ const SideBar = () => {
             }}
           />
         </ListItem>
-
+ 
         <ListItem
           button
           component={Link}
@@ -92,7 +93,7 @@ const SideBar = () => {
             }}
           />
         </ListItem>
-
+ 
         <ListItem
           button
           component={Link}
@@ -107,9 +108,9 @@ const SideBar = () => {
             }}
           />
         </ListItem>
-        
+       
       </List>
-
+ 
       <Box
         sx={{
           display: 'flex',
@@ -136,11 +137,11 @@ const SideBar = () => {
         >
           {isSmallScreen ? 'LO' : 'Log Out'}
         </Button>
-
+ 
         <Button component={Link} to="/settings" sx={{ minWidth: 0 }}>
           <SettingsIcon sx={{ color: '#FFD700' }} />
         </Button>
-
+ 
         <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
           <NotificationsIcon sx={{ color: '#FFD700' }} />
         </Button>
@@ -148,5 +149,6 @@ const SideBar = () => {
     </Box>
   );
 };
-
+ 
 export default SideBar;
+ 

@@ -20,14 +20,18 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
- 
+
 const LibrarianManageBooks = () => {
   const [data, setData] = useState([]); // Placeholder for book data
   const [openDialog, setOpenDialog] = useState(false);
- 
+
   // State for form fields
   const [formFields, setFormFields] = useState({
     title: '',
@@ -36,11 +40,11 @@ const LibrarianManageBooks = () => {
     isbn: '',
     genre: '',
   });
- 
+
   // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
- 
+
   // Fetch all books from the backend
   const fetchBooks = async () => {
     try {
@@ -56,40 +60,40 @@ const LibrarianManageBooks = () => {
       console.error('Error fetching books:', error);
     }
   };
- 
+
   // Use `fetchBooks` in useEffect to load books on component mount
   useEffect(() => {
     fetchBooks();
   }, []);
- 
+
   // Handle page change
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
- 
+
   // Handle rows per page change
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
- 
+
   // Handle dialog open
   const handleOpenDialog = () => {
     setOpenDialog(true);
   };
- 
+
   // Handle dialog close
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setFormFields({ title: '', author: '', accessionNumber: '', isbn: '', genre: '' });
   };
- 
+
   // Handle form input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormFields({ ...formFields, [name]: value });
   };
- 
+
   // Handle Add Book form submission
   const handleSubmit = async () => {
     try {
@@ -100,13 +104,13 @@ const LibrarianManageBooks = () => {
         },
         body: JSON.stringify(formFields),
       });
- 
+
       if (!response.ok) {
         const errorMessage = await response.text();
         alert(`Error: ${errorMessage}`);
         return;
       }
- 
+
       const newBook = await response.json();
       setData((prevData) => [...prevData, newBook]); // Add the new book to the table
       setOpenDialog(false);
@@ -116,13 +120,13 @@ const LibrarianManageBooks = () => {
       alert('An unexpected error occurred.');
     }
   };
- 
+
   return (
     <>
       <NavBar />
       <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
- 
+
         <Box
           sx={{
             padding: 4,
@@ -139,8 +143,8 @@ const LibrarianManageBooks = () => {
           >
             Manage Books
           </Typography>
- 
-{/* Search and Filters Section */}
+
+          {/* Search and Filters Section */}
           <Box
             sx={{
               display: 'flex',
@@ -153,7 +157,7 @@ const LibrarianManageBooks = () => {
             <IconButton>
               <MenuIcon />
             </IconButton>
- 
+
             <TextField
               variant="outlined"
               placeholder="Type here..."
@@ -173,8 +177,7 @@ const LibrarianManageBooks = () => {
               }}
             />
           </Box>
- 
- 
+
           {/* Action Buttons Section */}
           <Box
             sx={{
@@ -198,7 +201,7 @@ const LibrarianManageBooks = () => {
               Add Book
             </Button>
           </Box>
- 
+
           {/* Table Section */}
           <TableContainer
             component={Paper}
@@ -251,7 +254,7 @@ const LibrarianManageBooks = () => {
               </TableBody>
             </Table>
           </TableContainer>
- 
+
           {/* Pagination Section */}
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -270,24 +273,72 @@ const LibrarianManageBooks = () => {
           />
         </Box>
       </Box>
- 
+
       {/* Add Book Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Add New Book</DialogTitle>
         <DialogContent>
-          <TextField autoFocus margin="dense" label="Book Title" name="title" value={formFields.title} onChange={handleInputChange} fullWidth />
-          <TextField margin="dense" label="Author" name="author" value={formFields.author} onChange={handleInputChange} fullWidth />
-          <TextField margin="dense" label="Accession Number" name="accessionNumber" value={formFields.accessionNumber} onChange={handleInputChange} fullWidth />
-          <TextField margin="dense" label="ISBN" name="isbn" value={formFields.isbn} onChange={handleInputChange} fullWidth />
-          <TextField margin="dense" label="Genre" name="genre" value={formFields.genre} onChange={handleInputChange} fullWidth />
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Book Title"
+            name="title"
+            value={formFields.title}
+            onChange={handleInputChange}
+            fullWidth
+          />
+          <TextField
+            margin="dense"
+            label="Author"
+            name="author"
+            value={formFields.author}
+            onChange={handleInputChange}
+            fullWidth
+          />
+          <TextField
+            margin="dense"
+            label="Accession Number"
+            name="accessionNumber"
+            value={formFields.accessionNumber}
+            onChange={handleInputChange}
+            fullWidth
+          />
+          <TextField
+            margin="dense"
+            label="ISBN"
+            name="isbn"
+            value={formFields.isbn}
+            onChange={handleInputChange}
+            fullWidth
+          />
+          {/* Dropdown for Genre */}
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Genre</InputLabel>
+            <Select
+              name="genre"
+              value={formFields.genre}
+              onChange={handleInputChange}
+            >
+              <MenuItem value="History">History</MenuItem>
+              <MenuItem value="Literature">Literature</MenuItem>
+              <MenuItem value="Action">Action</MenuItem>
+              <MenuItem value="Fiction">Fiction</MenuItem>
+              <MenuItem value="Poetry">Poetry</MenuItem>
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">Cancel</Button>
-          <Button onClick={handleSubmit} color="primary">Add</Button>
+          <Button onClick={handleCloseDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} color="primary">
+            Add
+          </Button>
         </DialogActions>
       </Dialog>
     </>
   );
 };
- 
+
 export default LibrarianManageBooks;
+    
