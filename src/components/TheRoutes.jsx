@@ -40,7 +40,7 @@ export default function TheRoutes() {
             <Route path="/studentDashboard/TimeRemaining" element={<ProtectedRoute><StudentLibraryHours /></ProtectedRoute> } />
             <Route path="/studentDashboard/TimeRemaining/Addbook" element={<ProtectedRoute><StudentLibraryHours /> </ProtectedRoute>} />
             <Route path="/studentDashboard/booklog" element={<ProtectedRoute><BookLog /></ProtectedRoute>} />
-            <Route path="/studentDashboard/personalInfo" element={<StudentPersonalInfo />} />
+            <Route path="/studentDashboard/personalInfo" element={<ProtectedRoute><StudentPersonalInfo /></ProtectedRoute>} />
             <Route path="/nasDashboard/Home" element={<NasDashboard />} />
             <Route path="/nasDashboard/LibraryAttendance" element={<NasLibraryAttendance />} />
             <Route path="/nasDashboard/BookEntry" element={<NasBookEntry />} />
