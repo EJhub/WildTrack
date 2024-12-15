@@ -6,64 +6,58 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import Box from "@mui/material/Box";
 
 const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
-  const [bookDetails, setBookDetails] = useState({
-    author: "",
-    title: "",
-    accessionNumber: "",
-  });
+  const [searchQuery, setSearchQuery] = useState(""); // For search input
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setBookDetails((prevDetails) => ({ ...prevDetails, [name]: value }));
-    setError(null); // Clear error when editing
-  };
-
-  const validateForm = () => {
-    if (!bookDetails.author || !bookDetails.title || !bookDetails.accessionNumber) {
-      setError("All fields are required. Please fill out the form completely.");
-      return false;
+  // Get books to display based on the search query
+  const getFilteredBooks = () => {
+    if (!searchQuery.trim()) {
+      // If search query is empty, return all registered books
+      return registeredBooks;
     }
-    return true;
+    // Filter books based on the search query
+    return registeredBooks.filter((book) =>
+      book.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   };
 
-  const onSubmit = () => {
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleBookSubmit = (book) => {
     setError(null);
     setSuccess(null);
 
-    if (!validateForm()) return;
-
-    // Validate the entered book against the registered books
-    const book = registeredBooks.find(
-      (b) =>
-        b.author === bookDetails.author &&
-        b.title === bookDetails.title &&
-        b.accessionNumber === bookDetails.accessionNumber
-    );
-
-    if (!book) {
-      setError("The entered book details do not match any registered book.");
-      return;
-    }
-
     try {
-      handleSubmit(book); // Pass the validated book to the parent component
-      setSuccess("Book added successfully!");
-      setBookDetails({ author: "", title: "", accessionNumber: "" }); // Clear form
+      handleSubmit(book); // Pass the selected book to the parent component
+      setSuccess(`Book "${book.title}" added successfully!`);
     } catch (err) {
       console.error("Error adding book:", err);
       setError("Failed to submit book details. Please try again.");
     }
   };
 
+  const filteredBooks = getFilteredBooks();
+
   return (
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="xs"
+      maxWidth="md"
       fullWidth
       sx={{
         "& .MuiPaper-root": {
@@ -77,72 +71,117 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         sx={{
           textAlign: "center",
           fontWeight: "bold",
-          backgroundColor: "#8B3D3D",
+          backgroundColor: "#FFD700",
           color: "#000",
         }}
       >
-        <h2>Add Book</h2>
+        Add Book
       </DialogTitle>
       <DialogContent
         sx={{
-          backgroundColor: "#8B3D3D",
+          backgroundColor: "#FFD700",
           padding: "30px",
+          overflow: "hidden",
         }}
       >
-        <Typography sx={{ textAlign: "left", color: "#000", marginLeft: 4 }}>
-          Author:
-        </Typography>
-        <TextField
-          name="author"
-          fullWidth
-          variant="outlined"
-          value={bookDetails.author}
-          onChange={handleInputChange}
+        {/* Horizontal Alignment for Title and Search Bar */}
+        <Box sx={{ display: "flex", alignItems: "center", marginBottom: 3 }}>
+          <Typography sx={{ textAlign: "left", color: "#000", marginRight: 2, fontWeight: 'bold' }}>
+            Title:
+          </Typography>
+          <TextField
+            name="search"
+            placeholder="Type book title here..."
+            fullWidth
+            variant="outlined"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            sx={{
+              backgroundColor: "#fff",
+              borderRadius: "10px",
+            }}
+          />
+        </Box>
+
+        <Typography
           sx={{
+            textAlign: "center",
+            fontWeight: "bold",
+            color: "#8B3D3D",
             marginBottom: 2,
-            backgroundColor: "#fff",
-            borderRadius: "10px",
-            height: "50px",
-            width: "330px",
-            overflow: "hidden",
           }}
-        />
-        <Typography sx={{ textAlign: "left", color: "#000", marginLeft: 4 }}>
-          Title:
+        >
+          Book Details
         </Typography>
-        <TextField
-          name="title"
-          fullWidth
-          variant="outlined"
-          value={bookDetails.title}
-          onChange={handleInputChange}
-          sx={{
-            marginBottom: 2,
-            backgroundColor: "#fff",
-            borderRadius: "10px",
-            height: "50px",
-            width: "330px",
-            overflow: "hidden",
-          }}
-        />
-        <Typography sx={{ textAlign: "left", color: "#000", marginLeft: 4 }}>
-          Accession Number:
-        </Typography>
-        <TextField
-          name="accessionNumber"
-          fullWidth
-          variant="outlined"
-          value={bookDetails.accessionNumber}
-          onChange={handleInputChange}
-          sx={{
-            marginBottom: 2,
-            backgroundColor: "#fff",
-            borderRadius: "10px",
-            height: "50px",
-            width: "330px",
-            overflow: "hidden",
-          }}
-        />
+
+        {/* Table with Scrollable Body */}
+        <TableContainer component={Paper} sx={{ borderRadius: "10px" }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                  BOOK TITLE
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                  AUTHOR
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                  ACCESSION NUMBER
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                  ISBN
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                  ACTION
+                </TableCell>
+              </TableRow>
+            </TableHead>
+          </Table>
+
+          {/* Scrollable Table Body */}
+          <Box
+            sx={{
+              maxHeight: "300px", // Set max height for the table body
+              overflowY: "auto", // Enable vertical scrolling
+            }}
+          >
+            <Table>
+              <TableBody>
+                {filteredBooks.map((book) => (
+                  <TableRow key={book.accessionNumber}>
+                    <TableCell>{book.title}</TableCell>
+                    <TableCell>{book.author}</TableCell>
+                    <TableCell>{book.accessionNumber}</TableCell>
+                    <TableCell>{book.isbn}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleBookSubmit(book)}
+                        sx={{
+                          backgroundColor: "#FFD700",
+                          color: "#000",
+                          "&:hover": {
+                            backgroundColor: "#FFC107",
+                          },
+                        }}
+                      >
+                        Submit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredBooks.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      No books found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Box>
+        </TableContainer>
+
         {error && (
           <Typography sx={{ color: "red", marginTop: 2, textAlign: "center" }}>
             {error}
@@ -158,7 +197,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       <DialogActions
         sx={{
           justifyContent: "center",
-          backgroundColor: "#8B3D3D",
+          backgroundColor: "#FFD700",
           padding: 2,
         }}
       >
@@ -169,28 +208,13 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
             borderRadius: "10px",
             width: "120px",
             backgroundColor: "#BB5252",
-            color: "#000",
+            color: "#fff",
             "&:hover": {
               backgroundColor: "#A44444",
             },
           }}
         >
           CANCEL
-        </Button>
-        <Button
-          onClick={onSubmit}
-          variant="contained"
-          sx={{
-            borderRadius: "10px",
-            width: "120px",
-            backgroundColor: "#FFD700",
-            color: "#000",
-            "&:hover": {
-              backgroundColor: "#FFC107",
-            },
-          }}
-        >
-          SUBMIT
         </Button>
       </DialogActions>
     </Dialog>
