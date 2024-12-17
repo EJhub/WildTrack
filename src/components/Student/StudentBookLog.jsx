@@ -155,8 +155,10 @@ const BookLog = () => {
 
   const handleAddBookLogSubmit = async (bookLog) => {
     try {
+      const encodedIdNumber = encodeURIComponent(idNumber); // Encode special characters
+  
       const response = await axios.put(
-        `http://localhost:8080/api/booklog/${bookLog.id}/add-to-booklog/${idNumber}`,
+        `http://localhost:8080/api/booklog/${bookLog.id}/add-to-booklog/${encodedIdNumber}`,
         {
           dateRead: bookLog.dateRead,
           rating: bookLog.rating,
@@ -168,7 +170,7 @@ const BookLog = () => {
           },
         }
       );
-
+  
       console.log("Response:", response); // Log the entire response
       if (response.status === 200) {
         alert(response.data.message); // Success message
