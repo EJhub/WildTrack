@@ -248,50 +248,71 @@ const StudentLibraryHours = () => {
           </Box>
 
           {/* Filters and Insert Book Button */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 2,
-              gap: 2,
-            }}
-          >
-            {/* Filters Section */}
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                name="dateFrom"
-                label="Date From"
-                type="date"
-                InputLabelProps={{ shrink: true }}
-                onChange={handleFilterChange}
-              />
-              <TextField
-                name="dateTo"
-                label="Date To"
-                type="date"
-                InputLabelProps={{ shrink: true }}
-                onChange={handleFilterChange}
-              />
-              <Select
-                name="academicYear"
-                value={filters.academicYear}
-                onChange={handleFilterChange}
-                displayEmpty
-                sx={{ minWidth: 150 }}
-              >
-                <MenuItem value="">Select Academic Year</MenuItem>
-                <MenuItem value="2024">2024</MenuItem>
-                <MenuItem value="2023">2023</MenuItem>
-              </Select>
-              <Button
-                variant="contained"
-                onClick={applyFilters}
-                sx={{ backgroundColor: "#FFD700", color: "#000" }}
-              >
-                Filter
-              </Button>
-            </Box>
+            <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: 2,
+                        marginBottom: 2,
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                        <TextField
+                          name="dateFrom"
+                          type="date"
+                          size="small"
+                          label="Date From"
+                          value={filters.dateFrom}
+                          onChange={handleFilterChange}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            backgroundColor: "#fff",
+                            borderRadius: "15px",
+                          }}
+                        />
+                        <TextField
+                          name="dateTo"
+                          type="date"
+                          size="small"
+                          label="Date To"
+                          value={filters.dateTo}
+                          onChange={handleFilterChange}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            backgroundColor: "#fff",
+                            borderRadius: "15px",
+                          }}
+                        />
+                        <Select
+                          name="academicYear"
+                          value={filters.academicYear}
+                          onChange={handleFilterChange}
+                          displayEmpty
+                          size="small"
+                          sx={{
+                            backgroundColor: "#fff",
+                            borderRadius: "15px",
+                            minWidth: "150px",
+                          }}
+                        >
+                          <MenuItem value="">Select Academic Year</MenuItem>
+                          <MenuItem value="2024">2024</MenuItem>
+                          <MenuItem value="2023">2023</MenuItem>
+                        </Select>
+                        <Button
+                          variant="contained"
+                          onClick={applyFilters}
+                          sx={{
+                            backgroundColor: "#FFD700",
+                            color: "#000",
+                            "&:hover": { backgroundColor: "#FFC107" },
+                          }}
+                        >
+                          Filter
+                        </Button>
+                      </Box>
 
             {/* Insert Book Button */}
             <Button

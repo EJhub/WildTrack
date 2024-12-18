@@ -1,57 +1,57 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { AuthContext } from "../AuthContext"; // Ensure you have an AuthContext setup
+import { AuthContext } from "../AuthContext"; // Ensure AuthContext is properly set up
 
 const Login = () => {
-  const [credentials, setCredentials] = useState({ username: "", password: "" });
+  const [credentials, setCredentials] = useState({ idNumber: "", password: "" });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext); // Access AuthContext for user login
+  const { login } = useContext(AuthContext); // Context to handle global login state
 
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setCredentials({ ...credentials, [name]: value });
   };
 
+  // Login Function
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post("http://localhost:8080/api/login", {
-        email: credentials.username, // Backend expects "email" as key
+        idNumber: credentials.idNumber, // Send idNumber instead of email
         password: credentials.password,
       });
-  
-      // Extract data from response
+
+      // Extract the token and user role
       const { token, role, idNumber } = response.data;
-  
-      // Save the token and user info in localStorage
+
+      // Save credentials to localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("idNumber", idNumber);
-  
-      // Call login from AuthContext to update user state
+
+      // Update AuthContext
       login({ token, role, idNumber });
 
-      // Navigate based on user role
-      if (role === 'Student') {
+      // Redirect based on user role
+      if (role === "Student") {
         navigate(`/studentDashboard/TimeRemaining?id=${idNumber}`);
-      } else if (role === 'Librarian') {
-        navigate('/librarianDashboard');
-      } else if (role === 'Teacher') {
-        navigate('/TeacherDashboard/Home');
-      } else if (role === 'NAS') {
-        navigate('/nasDashboard/Home');
-
+      } else if (role === "Librarian") {
+        navigate("/librarianDashboard");
+      } else if (role === "Teacher") {
+        navigate("/TeacherDashboard/Home");
+      } else if (role === "NAS") {
+        navigate("/nasDashboard/Home");
       } else {
         throw new Error("Invalid role returned from the server.");
       }
     } catch (err) {
-      console.error("Login error:", err.response?.data || err);
+      console.error("Login error:", err.response?.data || err.message);
       setError(err.response?.data?.error || "Login failed. Please check your credentials.");
     }
   };
-  
 
   return (
     <div style={styles.background}>
@@ -59,17 +59,19 @@ const Login = () => {
         <div style={styles.blurBorder}>
           <div style={styles.loginBox}>
             <h2 style={styles.title}>Sign in</h2>
-            {error && <p style={{ color: "red" }}>{error}</p>}
+            {error && <p style={{ color: "red", fontSize: "14px" }}>{error}</p>}
             <form onSubmit={handleLogin}>
+              {/* ID Number Input */}
               <input
                 type="text"
-                name="username"
-                placeholder="Email"
+                name="idNumber"
+                placeholder="ID Number"
                 autoComplete="username"
                 style={styles.input}
-                value={credentials.username}
+                value={credentials.idNumber}
                 onChange={handleInputChange}
               />
+              {/* Password Input */}
               <input
                 type="password"
                 name="password"
@@ -79,6 +81,7 @@ const Login = () => {
                 value={credentials.password}
                 onChange={handleInputChange}
               />
+              {/* Sign-in Button */}
               <button type="submit" style={styles.signInButton}>
                 Sign in
               </button>
@@ -93,16 +96,15 @@ const Login = () => {
 const styles = {
   background: {
     position: "relative",
-    backgroundImage: `url('CITU-GLE Building.png')`,
-    backgroundSize: "100% 100%",
+    backgroundImage: `url('CITU-GLE Building.png')`, // Replace with your image path
+    backgroundSize: "cover",
     backgroundPosition: "center",
     width: "100vw",
     height: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
-    filter: "brightness(0.8) contrast(1.5) saturate(1.1)",
+    filter: "brightness(0.85)",
   },
   container: {
     position: "relative",
@@ -116,20 +118,17 @@ const styles = {
     padding: "20px",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: "8px",
-    boxShadow: `
-      0px 0px 15px 5px rgba(255, 255, 255, 0.2), 
-      0px 0px 20px 5px rgba(255, 255, 255, 0.2), 
-      0px 0px 25px 10px rgba(255, 255, 255, 0.2)`,
+    boxShadow: `0px 0px 15px 5px rgba(0, 0, 0, 0.1)`,
     textAlign: "center",
   },
   loginBox: {
     textAlign: "center",
   },
   title: {
-    fontSize: "32px",
+    fontSize: "28px",
     fontWeight: "bold",
     color: "#333",
-    marginBottom: "25px",
+    marginBottom: "20px",
   },
   input: {
     width: "90%",
@@ -148,6 +147,7 @@ const styles = {
     borderRadius: "4px",
     cursor: "pointer",
     fontSize: "16px",
+    marginTop: "10px",
   },
 };
 
