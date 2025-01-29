@@ -6,7 +6,6 @@ import SideBar from "./components/SideBar";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
 import Paper from "@mui/material/Paper";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button"; // Import Button component
