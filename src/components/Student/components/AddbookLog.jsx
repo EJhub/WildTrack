@@ -5,6 +5,8 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
 import Typography from "@mui/material/Typography";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -105,7 +107,7 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         "& .MuiPaper-root": {
           borderRadius: "15px",
           overflow: "hidden",
-          border: "2px solid #8B3D3D",
+
         },
       }}
     >
@@ -113,7 +115,8 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         sx={{
           textAlign: "center",
           fontWeight: "bold",
-          backgroundColor: "#FFD700",
+          fontSize: "25px",
+          backgroundColor: "#FFDF16",
           color: "#000",
         }}
       >
@@ -121,7 +124,7 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       </DialogTitle>
       <DialogContent
         sx={{
-          backgroundColor: "#FFD700",
+          backgroundColor: "#FFDF16",
           padding: "30px",
         }}
       >
@@ -155,7 +158,7 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            color: "#8B3D3D",
+            color: "black",
             marginBottom: 2,
           }}
         >
@@ -373,7 +376,7 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       <DialogActions
   sx={{
     justifyContent: "center",
-    backgroundColor: "#FFD700",
+    backgroundColor: "#FFDF16",
     padding: 2,
   }}
 >
@@ -383,10 +386,10 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
     sx={{
       borderRadius: "10px",
       width: "120px",
-      backgroundColor: "#BB5252",
+      backgroundColor: "#E49B0F",
       color: "#fff",
       "&:hover": {
-        backgroundColor: "#A44444",
+        backgroundColor: "#AA8F0B",
       },
     }}
   >
@@ -398,10 +401,10 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
     sx={{
       borderRadius: "10px",
       width: "120px",
-      backgroundColor: "#FFD700",
-      color: "#000",
+      backgroundColor: "#A44444",
+      color: "#fff",
       "&:hover": {
-        backgroundColor: "#FFC107",
+        backgroundColor: "#BB5252",
       },
     }}
   >

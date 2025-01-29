@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import axios from 'axios';
 
 export const AuthContext = createContext();

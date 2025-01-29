@@ -22,6 +22,7 @@ function LogInHomepage() {
           width: "100vw",
           height: "100vh",
           display: "flex",
+          marginTop: "-6px",
           alignItems: "center",
           justifyContent: "center",
           color: "#fff",

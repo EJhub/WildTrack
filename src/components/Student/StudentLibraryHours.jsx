@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+import SearchIcon from "@mui/icons-material/Search";
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import InputAdornment from "@mui/material/InputAdornment";
+
 import {
   Box,
   Typography,
@@ -92,18 +96,18 @@ const StudentLibraryHours = () => {
       toast.error("Failed to assign book. Invalid data.");
       return;
     }
-  
+
     try {
       const token = localStorage.getItem("token");
-  
+
       // Find the first entry with an empty bookTitle
       const emptyEntry = libraryHours.find((entry) => !entry.bookTitle);
-  
+
       if (!emptyEntry) {
         toast.error("No available entry to assign the book.");
         return;
       }
-  
+
       await axios.put(
         `http://localhost:8080/api/books/${bookDetails.id}/assign-library-hours/${emptyEntry.id}`,
         {},
@@ -113,7 +117,7 @@ const StudentLibraryHours = () => {
           },
         }
       );
-  
+
       // Update the book title in the corresponding entry
       const updatedLibraryHours = libraryHours.map((entry) =>
         entry.id === emptyEntry.id
@@ -138,15 +142,13 @@ const StudentLibraryHours = () => {
   const applyFilters = () => {
     const { dateFrom, dateTo, academicYear } = filters;
     const filtered = libraryHours.filter((entry) => {
-      const entryDate = new Date(entry.timeIn);
-      const fromDate = dateFrom ? new Date(dateFrom) : null;
-      const toDate = dateTo ? new Date(dateTo) : null;
+      const entryDate = new Date(entry.timeIn).setHours(0, 0, 0, 0); // Normalize time part to ignore time
+      const fromDate = dateFrom ? new Date(dateFrom).setHours(0, 0, 0, 0) : null;
+      const toDate = dateTo ? new Date(dateTo).setHours(0, 0, 0, 0) : null;
 
       const matchesDate =
         (!fromDate || entryDate >= fromDate) && (!toDate || entryDate <= toDate);
-      const matchesYear = academicYear
-        ? entry.academicYear === academicYear
-        : true;
+      const matchesYear = academicYear ? entry.academicYear === academicYear : true;
 
       return matchesDate && matchesYear;
     });
@@ -217,7 +219,9 @@ const StudentLibraryHours = () => {
               color: "#FFD700",
               fontWeight: "bold",
               paddingBottom: 3,
-              textAlign: "center",
+              textAlign: "left",
+              marginTop: "15px",
+              fontSize: "40px",
             }}
           >
             Library Hours
@@ -228,93 +232,108 @@ const StudentLibraryHours = () => {
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              marginBottom: 2,
+              marginBottom: 3,
             }}
           >
-            <TextField
+              <TextField
               name="search"
-              label="Search"
-              placeholder="Search by date, time, or book title"
+              value={filters.search}
+              onChange={handleFilterChange}
               variant="outlined"
-              fullWidth
-              onChange={handleSearchChange}
+              placeholder="Search by date, time, or book title.."
+              size="small"
               sx={{
                 backgroundColor: "#fff",
-                borderRadius: "4px",
-                maxWidth: 400,
-                marginRight: 2,
+                borderRadius: "15px",
+                width: { xs: "100%", sm: "360px" },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
               }}
             />
           </Box>
 
           {/* Filters and Insert Book Button */}
-            <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        flexWrap: "wrap",
-                        gap: 2,
-                        marginBottom: 2,
-                      }}
-                    >
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        <TextField
-                          name="dateFrom"
-                          type="date"
-                          size="small"
-                          label="Date From"
-                          value={filters.dateFrom}
-                          onChange={handleFilterChange}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{
-                            backgroundColor: "#fff",
-                            borderRadius: "15px",
-                          }}
-                        />
-                        <TextField
-                          name="dateTo"
-                          type="date"
-                          size="small"
-                          label="Date To"
-                          value={filters.dateTo}
-                          onChange={handleFilterChange}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{
-                            backgroundColor: "#fff",
-                            borderRadius: "15px",
-                          }}
-                        />
-                        <Select
-                          name="academicYear"
-                          value={filters.academicYear}
-                          onChange={handleFilterChange}
-                          displayEmpty
-                          size="small"
-                          sx={{
-                            backgroundColor: "#fff",
-                            borderRadius: "15px",
-                            minWidth: "150px",
-                          }}
-                        >
-                          <MenuItem value="">Select Academic Year</MenuItem>
-                          <MenuItem value="2024">2024</MenuItem>
-                          <MenuItem value="2023">2023</MenuItem>
-                        </Select>
-                        <Button
-                          variant="contained"
-                          onClick={applyFilters}
-                          sx={{
-                            backgroundColor: "#FFD700",
-                            color: "#000",
-                            "&:hover": { backgroundColor: "#FFC107" },
-                          }}
-                        >
-                          Filter
-                        </Button>
-                      </Box>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 2,
+              marginBottom: 2,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <TextField
+                name="dateFrom"
+                type="date"
+                size="small"
+                label="Date From"
+                value={filters.dateFrom}
+                onChange={handleFilterChange}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  backgroundColor: "#fff",
+                  borderRadius: "15px",
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      border: "none",
+                    },
+                  },
+                }}
+              />
+              <TextField
+                name="dateTo"
+                type="date"
+                size="small"
+                label="Date To"
+                value={filters.dateTo}
+                onChange={handleFilterChange}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  backgroundColor: "#fff",
+                  borderRadius: "15px",
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      border: "none",
+                    },
+                  },
+                }}
+              />
+              <Select
+                name="academicYear"
+                value={filters.academicYear}
+                onChange={handleFilterChange}
+                displayEmpty
+                size="small"
+                sx={{
+                  backgroundColor: "#fff",
+                  borderRadius: "15px",
+                  minWidth: "150px",
+                }}
+              >
+                <MenuItem value="">Select Academic Year</MenuItem>
+                <MenuItem value="2024">2024</MenuItem>
+                <MenuItem value="2023">2023</MenuItem>
+              </Select>
+              <Button
+                variant="contained"
+                onClick={applyFilters}
+                sx={{
+                  backgroundColor: "#FFD700",
+                  color: "#000",
+                  "&:hover": { backgroundColor: "#FFC107" },
+                }}
+              >
+                Filter
+              </Button>
+            </Box>
 
-            {/* Insert Book Button */}
             <Button
               variant="contained"
               onClick={handleClickOpen}
@@ -329,64 +348,62 @@ const StudentLibraryHours = () => {
           </Box>
 
           <TableContainer
-            component={Paper}
-            sx={{
-              flexGrow: 1,
-              opacity: 0.9,
-              borderRadius: "15px",
-              overflow: "auto",
-              maxHeight: "calc(100vh - 300px)",
-            }}
-          >
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Time In</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Book Title</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Time Out</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Minutes</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {displayedHours.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
-                    <TableCell>
-                      {entry.bookTitle ? entry.bookTitle : "--"}
-                    </TableCell>
-                    <TableCell>
-                      {entry.timeOut
-                        ? new Date(entry.timeOut).toLocaleTimeString()
-                        : "--"}
-                    </TableCell>
-                    <TableCell>
-                      {calculateMinutes(entry.timeIn, entry.timeOut)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+  component={Paper}
+  sx={{
+    flexGrow: 1,
+    opacity: 0.9,
+    borderRadius: "15px",
+    overflow: "auto",
+    maxHeight: "calc(100vh - 300px)", // Allow scrolling within the table
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    display: "flex",
+    flexDirection: "column", // Ensure table and pagination are stacked vertically
+  }}
+>
+  <Table stickyHeader sx={{ flexGrow: 1 }}>
+    <TableHead>
+      <TableRow>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Date</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Time In</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Book Title</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Time Out</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Minutes</TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {displayedHours.map((entry) => (
+        <TableRow key={entry.id}>
+          <TableCell>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
+          <TableCell>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
+          <TableCell>{entry.bookTitle ? entry.bookTitle : "--"}</TableCell>
+          <TableCell>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
+          <TableCell>{calculateMinutes(entry.timeIn, entry.timeOut)}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
 
-          <Box sx={{ position: "relative", width: "100%" }}>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={filteredHours.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                paddingTop: 2,
-                width: "100%",
-              }}
-            />
-          </Box>
+  <TablePagination
+  rowsPerPageOptions={[5, 10, 25]}
+  component="div"
+  count={filteredHours.length}
+  rowsPerPage={rowsPerPage}
+  page={page}
+  onPageChange={handleChangePage}
+  onRowsPerPageChange={handleChangeRowsPerPage}
+  sx={{
+    paddingTop: 2,
+    backgroundColor: "transparent",  // Make background transparent
+    fontWeight: "bold",
+    display: "flex",  // Use flexbox to align items
+    justifyContent: "center",  // Center the pagination
+    width: "100%",
+  }}
+/>
+
+
+</TableContainer>
+
         </Box>
       </Box>
 

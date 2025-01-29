@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PersonIcon from "@mui/icons-material/Person"; // Import the icon
 import {
   Box,
   TextField,
@@ -81,39 +82,54 @@ function InputIDLogout() {
           maxWidth="md"
           sx={{
             display: "flex",
-            marginTop: -30,
+            marginTop: -20,
             justifyContent: "center",
             alignItems: "center",
           }}
         >
           <Paper
-            elevation={3}
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", md: "row" },
-              width: "100%",
-              maxWidth: 800,
-              borderRadius: 2,
-              overflow: "hidden",
-              padding: 3,
-              background: "linear-gradient(180deg, rgba(215, 101, 101, 0.8) 0%, rgba(140, 56, 56, 0.8) 100%)",
-              boxShadow: `
-                0px 0px 15px 5px rgba(136, 53, 63, 0.5), 
-                0px 0px 20px 5px rgba(130, 53, 63, 0.5), 
-                0px 0px 25px 10px rgba(130, 53, 63, 0.5)`,
-              border: " rgba(136, 53, 63, 0.50)",
-            }}
-          >
-            <Box
+                      elevation={3}
+                      sx={{
+                        display: "flex",
+                        flexDirection: { xs: "column", md: "row" },
+                        width: "100%",
+                        maxWidth: 800,
+                        borderRadius: "2%",
+                        overflow: "hidden",
+                        padding: 3,
+                        background: "linear-gradient(180deg, rgba(255, 255, 255, 0.85 ) 0%, rgba(253, 253, 253, 0.85) 100%)",
+                        position: "relative",
+                        ":before": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "5%",
+                          backgroundColor: "rgba(120, 27, 27, 0.9)",
+                        },
+                        ":after": {
+                          content: '""',
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "5%",
+                          backgroundColor: "rgba(120, 27, 27, 0.9)",
+                        },
+                      }}
+                    >
+           <Box
               sx={{
                 display: "flex",
                 justifyContent: "center",
+                marginTop: 10,
                 alignItems: "center",
                 mr: { md: 3 },
                 mb: { xs: 3, md: 0 },
               }}
             >
-              <Avatar
+             <Avatar
                 src="student-photo.png"
                 alt="Student"
                 sx={{
@@ -124,13 +140,14 @@ function InputIDLogout() {
                   marginTop: -15,
                   borderRadius: 2,
                 }}
-              />
+              >
+                {!studentDetails?.src && <PersonIcon sx={{ fontSize: 80, color: "#333" }} />}
+              </Avatar>
             </Box>
-
             <Box sx={{ flex: 1 }}>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
-                  <Box sx={{ color: "white", textAlign: "left" }}>
+                  <Box sx={{ color: "white", textAlign: "left", marginTop: 6 }}>
                     <TextField
                       variant="outlined"
                       placeholder="Input your ID Number"
@@ -140,86 +157,90 @@ function InputIDLogout() {
                       fullWidth
                       sx={{
                         mb: 2,
-                        bgcolor: "white",
-                        border: "1px solid black",
+                        bgcolor: "#FFFFFF",
+                        border: "1px solid black", 
                         borderRadius: "10px",
                       }}
+                      
                       InputProps={{
                         sx: {
                           height: 45,
                         },
                       }}
                     />
-                    {error && (
-                      <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                        {error}
-                      </Typography>
-                    )}
-                    <Typography variant="body1">
-                      <strong>Name:</strong> {studentDetails.name}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>ID Number:</strong> {studentDetails.idNumber}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>Grade Level & Section:</strong> {studentDetails.grade} - {studentDetails.section}
-                    </Typography>
-                    <br /> <br />
-                    <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, mb: 0.5 }}>
-                      TIME OUT
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Date:</strong> {studentDetails.date}
-                    </Typography>
-                    <Typography variant="body2">{studentDetails.timeOut}</Typography>
+                      {error && (
+                                          <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                                            {error}
+                                          </Typography>
+                                        )}
+                                        <Typography variant="body1" sx={{ color: "black" }}>
+                                          <strong>Name:</strong> {studentDetails.name}
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ color: "black" }}>
+                                          <strong>ID Number:</strong> {studentDetails.idNumber}
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ color: "black" }}>
+                                          <strong>Grade Level & Section:</strong> {studentDetails.grade} - {studentDetails.section}
+                                        </Typography>
+                                        <br /> <br />
+                                        <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, mb: 0.5, color: "black" }}>
+                                          TIME IN
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: "black" }}>
+                                          <strong>Date:</strong> {studentDetails.date}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: "black" }}>
+                                      <strong>Time Out:</strong> {studentDetails.timeOut}
+                                    </Typography>
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
-                  <Box>
-                    <List>
-                      {[
-                        { id: "24-3214-432", name: "Anya Forger", program: "BSCE - 3" },
-                        { id: "24-4231-132", name: "Jinwoo Sung", program: "BSHM - 2" },
-                        { id: "24-5213-341", name: "Ymir Fritz", program: "BSTM - 4" },
-                        { id: "24-7652-253", name: "Eren Yeager", program: "BSTM - 4" },
-                      ].map((student, index) => (
-                        <ListItem
-                          key={index}
-                          sx={{
-                            padding: 1,
-                            border: "1px solid #333",
-                            borderRadius: 1,
-                            mb: 1,
-                            display: "flex",
-                            backgroundColor: "white",
-                            boxShadow: "0px 0px 5px rgba(0, 0, 0, 0.1)",
-                            alignItems: "center",
-                          }}
-                        >
-                          <ListItemAvatar>
-                            <Avatar sx={{ bgcolor: "#ccc" }} />
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <Typography variant="body2" fontWeight="bold">
-                                {student.id}
-                              </Typography>
-                            }
-                            secondary={
-                              <>
-                                <Typography variant="body2">{student.name}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {student.program}
-                                </Typography>
-                              </>
-                            }
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                </Grid>
+               
+                               <Grid item xs={12} md={6}>
+                                 <Box>
+                                   <List>
+                                     {[
+                                       { id: "24-3214-432", name: "Anya Forger", program: "BSCE - 3" },
+                                       { id: "24-4231-132", name: "Jinwoo Sung", program: "BSHM - 2" },
+                                       { id: "24-5213-341", name: "Ymir Fritz", program: "BSTM - 4" },
+                                       { id: "24-7652-253", name: "Eren Yeager", program: "BSTM - 4" },
+                                     ].map((student, index) => (
+                                       <ListItem
+                                         key={index}
+                                         sx={{
+                                           padding: 1,
+                                           border: "1px solid #333",
+                                           borderRadius: 1,
+                                           mb: 1,
+                                           display: "flex",
+                                           backgroundColor: "white",
+                                           boxShadow: "0px 0px 5px rgba(0, 0, 0, 0.1)",
+                                           alignItems: "center",
+                                         }}
+                                       >
+                                         <ListItemAvatar>
+                                           <Avatar sx={{ bgcolor: "#ccc" }} />
+                                         </ListItemAvatar>
+                                         <ListItemText
+                                           primary={
+                                             <Typography variant="body2" fontWeight="bold">
+                                               {student.id}
+                                             </Typography>
+                                           }
+                                           secondary={
+                                             <>
+                                               <Typography variant="body2">{student.name}</Typography>
+                                               <Typography variant="body2" color="text.secondary">
+                                                 {student.program}
+                                               </Typography>
+                                             </>
+                                           }
+                                         />
+                                       </ListItem>
+                                     ))}
+                                   </List>
+                                 </Box>
+                               </Grid>
               </Grid>
             </Box>
           </Paper>

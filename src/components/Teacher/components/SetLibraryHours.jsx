@@ -10,6 +10,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
 import FormControlLabel from '@mui/material/FormControlLabel';
  
 const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
@@ -42,7 +44,6 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
         '& .MuiPaper-root': {
           borderRadius: '15px',
           overflow: 'hidden',
-          border: '2px solid #000',
         },
       }}
     >
@@ -50,7 +51,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
         sx={{
           textAlign: 'center',
           fontWeight: 'bold',
-          backgroundColor: '#F8C400', // Updated color for title background
+          backgroundColor: '#FFDF16', // Updated color for title background
           color: '#000',
         }}
       >
@@ -58,7 +59,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
       </DialogTitle>
       <DialogContent
         sx={{
-          backgroundColor: '#F8C400', // Updated color for content background
+          backgroundColor: '#FFDF16', // Updated color for content background
           padding: '30px',
         }}
       >
@@ -67,32 +68,40 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
           <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
             <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Minutes:</Typography>
             <TextField
-              name="minutes"
-              type="number"
-              variant="outlined"
-              value={formData.minutes}
-              onChange={handleInputChange}
-              sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '100px' }}
-              inputProps={{ min: 0 }}
-            />
+                name="minutes"
+                type="number"
+                variant="outlined"
+                value={formData.minutes === "" ? "" : formData.minutes} // Ensures "00" appears when empty
+                onChange={handleInputChange}
+                placeholder="00"
+                sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '100px' }}
+                inputProps={{ min: 0, style: { textAlign: 'center' } }}
+              />
+
           </Box>
  
-          {/* Grade Level Field */}
-          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Grade Level:</Typography>
-            <TextField
-              name="gradeLevel"
-              select
-              variant="outlined"
-              value={formData.gradeLevel}
-              onChange={handleInputChange}
-              sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
-            >
-              {[...Array(12).keys()].map((grade) => (
-                <MenuItem key={grade} value={grade + 1}>{`Grade ${grade + 1}`}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
+              {/* Grade Level Field */}
+              <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Grade Level:</Typography>
+                <TextField
+                  name="gradeLevel"
+                  select
+                  label="Select Grade Level"
+                  variant="outlined"
+                  value={formData.gradeLevel}
+                  onChange={handleInputChange}
+                  sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
+                  InputLabelProps={{
+                    shrink: formData.gradeLevel !== "", // Label disappears when grade is selected
+                  }}
+                >
+                  {[...Array(4).keys()].map((grade) => (
+                    <MenuItem key={grade} value={grade + 1}>{`Grade ${grade + 1}`}</MenuItem>
+                  ))}
+                </TextField>
+              </Box>
+
+
  
           {/* Subject Field */}
           <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
@@ -169,7 +178,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
       <DialogActions
         sx={{
           justifyContent: 'center',
-          backgroundColor: '#F8C400', // Updated color for actions background
+          backgroundColor: '#FFDF16', // Updated color for actions background
           padding: 2,
         }}
       >
@@ -179,10 +188,10 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
           sx={{
             borderRadius: '10px',
             width: '120px',
-            backgroundColor: '#BB5252',
+            backgroundColor: '#E49B0F',
             color: '#fff',
             '&:hover': {
-              backgroundColor: '#A44444',
+              backgroundColor: '#AA8F0B',
             },
           }}
         >
@@ -194,10 +203,10 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
           sx={{
             borderRadius: '10px',
             width: '120px',
-            backgroundColor: '#000',
-            color: '#F8C400',
-            '&:hover': {
-              backgroundColor: '#333',
+            backgroundColor: "#A44444",
+            color: "#fff",
+            "&:hover": {
+              backgroundColor: "#BB5252",
             },
           }}
         >
