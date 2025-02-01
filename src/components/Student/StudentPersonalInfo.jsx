@@ -8,7 +8,9 @@ import Typography from "@mui/material/Typography";
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import Paper from "@mui/material/Paper";
 import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button"; // Import Button component
+import Button from "@mui/material/Button";
+import Modal from "@mui/material/Modal";
+import TextField from "@mui/material/TextField";
 
 const PersonalInformation = () => {
   const location = useLocation();
@@ -18,6 +20,9 @@ const PersonalInformation = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -41,6 +46,36 @@ const PersonalInformation = () => {
     fetchUserInfo();
   }, [idNumber]);
 
+  const handleChangePassword = () => {
+    setShowChangePasswordModal(true);
+  };
+
+  const handleCloseChangePasswordModal = () => {
+    setShowChangePasswordModal(false);
+    setCurrentPassword("");
+    setNewPassword("");
+  };
+
+  const handleSubmitChangePassword = async (e) => {
+    e.preventDefault();
+
+    try {
+      await axios.put("http://localhost:8080/api/users/change-password", {
+        id: userInfo.id,
+        currentPassword,
+        newPassword,
+      });
+
+      // Password change successful
+      alert("Password changed successfully!");
+      handleCloseChangePasswordModal();
+    } catch (error) {
+      // Handle error
+      console.error("Error changing password:", error);
+      alert("Failed to change password. Please try again.");
+    }
+  };
+
   if (loading) {
     return <Typography variant="h6">Loading...</Typography>;
   }
@@ -48,11 +83,6 @@ const PersonalInformation = () => {
   if (error) {
     return <Typography variant="h6" color="error">{error}</Typography>;
   }
-
-  const handleChangePassword = () => {
-    // Here, you can implement the functionality to change the password (e.g., opening a modal or redirecting)
-    alert("Change password functionality not implemented yet.");
-  };
 
   return (
     <>
@@ -85,7 +115,6 @@ const PersonalInformation = () => {
               boxShadow: "0px 8px 20px rgba(150, 33, 33, 0.8)", // Stronger, more prominent outer shadow
             }}
           >
-
             <Typography
               variant="h4"
               sx={{ color: "white", fontWeight: "bold", marginBottom: 2 }}
@@ -201,9 +230,7 @@ const PersonalInformation = () => {
               </Box>
             </Box>
 
-            {/* Password field with Change Password button */}
             <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between", marginBottom: 2, alignItems: "center" }}>
-              {/* Password field */}
               <Box sx={{ display: "flex", flexDirection: "column", width: "70%" }}>
                 <Typography variant="body1" sx={{ color: "white", marginBottom: 1, textAlign: "left" }}>
                   Password:
@@ -215,27 +242,25 @@ const PersonalInformation = () => {
                     borderRadius: "5px",
                     padding: 1,
                     textAlign: "center",
-                    width: "90%", // Ensures the password field takes up the full width
+                    width: "90%",
                     boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",
                   }}
                 >
-                  ****** {/* Masked value */}
+                  ******
                 </Box>
               </Box>
-
-              {/* Change Password Button */}
               <Box sx={{ display: "flex", alignItems: "center", marginLeft: 0 }}>
                 <Button
                   variant="contained"
                   color="primary"
                   onClick={handleChangePassword}
                   sx={{
-                    width: "140px",  // Set width to a fixed value
+                    width: "140px",
                     height: "35px",
                     fontSize: "12px",
-                   marginTop: "30px",  // Set height to a fixed value
+                    marginTop: "30px",
                     padding: "6px 16px",
-                    marginLeft: "10px",  // Adjust padding if needed
+                    marginLeft: "10px",
                   }}
                 >
                   Change Pas...
@@ -245,6 +270,48 @@ const PersonalInformation = () => {
           </Paper>
         </Box>
       </Box>
+
+      <Modal open={showChangePasswordModal} onClose={handleCloseChangePasswordModal}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+            width: 400,
+          }}
+        >
+          <Typography variant="h6" gutterBottom>
+            Change Password
+          </Typography>
+          <form onSubmit={handleSubmitChangePassword}>
+            <TextField
+              type="password"
+              label="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              fullWidth
+              required
+              margin="normal"
+            />
+            <TextField
+              type="password"
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              fullWidth
+              required
+              margin="normal"
+            />
+            <Button type="submit" variant="contained" color="primary">
+              Save New Password
+            </Button>
+          </form>
+        </Box>
+      </Modal>
     </>
   );
 };

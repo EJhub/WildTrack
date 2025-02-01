@@ -36,7 +36,7 @@ function InputIDLogout() {
     if (e.key === "Enter") {
       try {
         // Call backend API with the entered ID Number for time-out
-        const response = await axios.post("http://localhost:8080/api/library-hours/time-out", { idNumber: idInput });
+        const response = await axios.post("http://localhost:8080/api/time-out", { idNumber: idInput });
 
         const { student } = response.data;
 

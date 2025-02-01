@@ -1,4 +1,4 @@
-import StudentLibraryHours from "./Student/StudentLibraryHours";
+import StudentLibraryHours from "./Student/StudentLibraryHoursDashboard";
 import NasDashboard from "./NAS/NasDashboard";
 import TeacherDashboard from "./Teacher/TeacherDashboard";
 import LibrarianDashboard from "./Librarian/LibrarianDashboard";

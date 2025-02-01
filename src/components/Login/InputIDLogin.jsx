@@ -37,7 +37,7 @@ function InputIdLogin() {
     if (e.key === "Enter") {
       try {
         // Call backend API with the entered ID Number
-        const response = await axios.post("http://localhost:8080/api/library-hours/time-in", { idNumber: idInput });
+        const response = await axios.post("http://localhost:8080/api/time-in", { idNumber: idInput });
 
         const { student } = response.data;
 
