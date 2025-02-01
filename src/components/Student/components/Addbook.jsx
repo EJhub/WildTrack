@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
@@ -63,7 +65,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         "& .MuiPaper-root": {
           borderRadius: "15px",
           overflow: "hidden",
-          border: "2px solid #8B3D3D",
+
         },
       }}
     >
@@ -71,7 +73,8 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         sx={{
           textAlign: "center",
           fontWeight: "bold",
-          backgroundColor: "#FFD700",
+          fontSize: "25px",
+          backgroundColor: "#FFDF16",
           color: "#000",
         }}
       >
@@ -79,7 +82,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       </DialogTitle>
       <DialogContent
         sx={{
-          backgroundColor: "#FFD700",
+          backgroundColor: "#FFDF16",
           padding: "30px",
           overflow: "hidden",
         }}
@@ -90,24 +93,26 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
             Title:
           </Typography>
           <TextField
-            name="search"
-            placeholder="Type book title here..."
-            fullWidth
-            variant="outlined"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            sx={{
-              backgroundColor: "#fff",
-              borderRadius: "10px",
-            }}
-          />
-        </Box>
+  name="search"
+  placeholder="Type book title here..."
+  fullWidth
+  value={searchQuery}
+  onChange={handleSearchChange}
+  sx={{
+    backgroundColor: "#fff",
+    borderRadius: "10px",
+    "& .MuiOutlinedInput-root": {
+      border: "none",
+    },
+  }}
+/>
+</Box>
 
         <Typography
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            color: "#8B3D3D",
+            color: "black",
             marginBottom: 2,
           }}
         >
@@ -158,10 +163,10 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                         variant="contained"
                         onClick={() => handleBookSubmit(book)}
                         sx={{
-                          backgroundColor: "#FFD700",
+                          backgroundColor: "#FFDF16",
                           color: "#000",
                           "&:hover": {
-                            backgroundColor: "#FFC107",
+                            backgroundColor: "##FFDF16",
                           },
                         }}
                       >
@@ -197,7 +202,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       <DialogActions
         sx={{
           justifyContent: "center",
-          backgroundColor: "#FFD700",
+          backgroundColor: "#FFDF16",
           padding: 2,
         }}
       >
@@ -207,14 +212,29 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           sx={{
             borderRadius: "10px",
             width: "120px",
-            backgroundColor: "#BB5252",
+            backgroundColor: "#E49B0F",
             color: "#fff",
             "&:hover": {
-              backgroundColor: "#A44444",
+              backgroundColor: "#AA8F0B",
             },
           }}
         >
           CANCEL
+        </Button>
+        <Button
+          onClick={handleClose}
+          variant="contained"
+          sx={{
+            borderRadius: "10px",
+            width: "120px",
+            backgroundColor: "#A44444",
+            color: "#fff",
+            "&:hover": {
+              backgroundColor: "#BB5252",
+            },
+          }}
+        >
+         SUBMIT
         </Button>
       </DialogActions>
     </Dialog>

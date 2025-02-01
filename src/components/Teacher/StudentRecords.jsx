@@ -9,6 +9,7 @@ import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
@@ -196,21 +197,9 @@ const StudentRecords = () => {
               <MenuItem value="2022-2023">2022-2023</MenuItem>
               <MenuItem value="2021-2022">2021-2022</MenuItem>
             </TextField>
-            <Button
-              onClick={handleFilter}
-              variant="outlined"
-              size="small"
-              sx={{
-                borderRadius: '5px',
-                backgroundColor: '#A85858',
-                color: '#fff',
-                '&:hover': {
-                  backgroundColor: '#8B3D3D',
-                },
-              }}
-            >
-              Filter
-            </Button>
+            <Button size="small" sx={{ backgroundColor: "#FFD700", color: "#000", height: '40px', "&:hover": { backgroundColor: "#FFC107" } }}>
+                Filter
+              </Button>
           </Box>
  
           {loading ? (
@@ -223,10 +212,10 @@ const StudentRecords = () => {
                 component={Paper}
                 sx={{
                   flexGrow: 1,
-                  borderRadius: '15px',
+                  borderRadius: '10px',
                   overflow: 'auto',
                   maxHeight: 'calc(100vh - 250px)', // Ensures the table fits the remaining space
-                  border: '1px solid #A85858',
+                  border: "0.1px solidrgb(96, 92, 92)",
                 }}
               >
                 <Table stickyHeader>
@@ -236,7 +225,7 @@ const StudentRecords = () => {
                         sx={{
                           fontWeight: 'bold',
                           color: '#fff',
-                          backgroundColor: '#A85858',
+                          backgroundColor: '#781B1B',
                         }}
                       >
                         ID Number
@@ -245,7 +234,7 @@ const StudentRecords = () => {
                         sx={{
                           fontWeight: 'bold',
                           color: '#fff',
-                          backgroundColor: '#A85858',
+                          backgroundColor: '#781B1B',
                         }}
                       >
                         Name
@@ -254,7 +243,7 @@ const StudentRecords = () => {
                         sx={{
                           fontWeight: 'bold',
                           color: '#fff',
-                          backgroundColor: '#A85858',
+                          backgroundColor: '#781B1B',
                         }}
                       >
                         Grade & Section
@@ -263,7 +252,7 @@ const StudentRecords = () => {
                         sx={{
                           fontWeight: 'bold',
                           color: '#fff',
-                          backgroundColor: '#A85858',
+                          backgroundColor: '#781B1B',
                         }}
                       >
                         Progress
@@ -272,20 +261,12 @@ const StudentRecords = () => {
                         sx={{
                           fontWeight: 'bold',
                           color: '#fff',
-                          backgroundColor: '#A85858',
+                          backgroundColor: '#781B1B',
                         }}
                       >
                         Status
                       </TableCell>
-                      <TableCell
-                        sx={{
-                          fontWeight: 'bold',
-                          color: '#fff',
-                          backgroundColor: '#A85858',
-                        }}
-                      >
-                        Edit
-                      </TableCell>
+     
                     </TableRow>
                   </TableHead>
                   <TableBody>

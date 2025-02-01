@@ -1,41 +1,37 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { AuthContext } from "../AuthContext"; // Ensure AuthContext is properly set up
+import { AuthContext } from "../AuthContext";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ idNumber: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext); // Context to handle global login state
+  const { login } = useContext(AuthContext);
 
-  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setCredentials({ ...credentials, [name]: value });
   };
 
-  // Login Function
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post("http://localhost:8080/api/login", {
-        idNumber: credentials.idNumber, // Send idNumber instead of email
+        idNumber: credentials.idNumber,
         password: credentials.password,
       });
 
-      // Extract the token and user role
       const { token, role, idNumber } = response.data;
 
-      // Save credentials to localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("idNumber", idNumber);
 
-      // Update AuthContext
       login({ token, role, idNumber });
 
-      // Redirect based on user role
       if (role === "Student") {
         navigate(`/studentDashboard/TimeRemaining?id=${idNumber}`);
       } else if (role === "Librarian") {
@@ -48,8 +44,15 @@ const Login = () => {
         throw new Error("Invalid role returned from the server.");
       }
     } catch (err) {
-      console.error("Login error:", err.response?.data || err.message);
-      setError(err.response?.data?.error || "Login failed. Please check your credentials.");
+      console.error("Login error:", err.response?.data || err);
+
+      if (err.response?.data?.error === "Invalid credentials") {
+        setError("Incorrect ID Number or Password");
+      } else if (err.response?.status === 404) {
+        setError("User not found. Please check your ID Number.");
+      } else {
+        setError(err.response?.data?.error || "Login failed. Please try again.");
+      }
     }
   };
 
@@ -59,9 +62,8 @@ const Login = () => {
         <div style={styles.blurBorder}>
           <div style={styles.loginBox}>
             <h2 style={styles.title}>Sign in</h2>
-            {error && <p style={{ color: "red", fontSize: "14px" }}>{error}</p>}
+            {error && <p style={{ color: "red" }}>{error}</p>}
             <form onSubmit={handleLogin}>
-              {/* ID Number Input */}
               <input
                 type="text"
                 name="idNumber"
@@ -71,20 +73,41 @@ const Login = () => {
                 value={credentials.idNumber}
                 onChange={handleInputChange}
               />
-              {/* Password Input */}
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                autoComplete="current-password"
-                style={styles.input}
-                value={credentials.password}
-                onChange={handleInputChange}
-              />
-              {/* Sign-in Button */}
-              <button type="submit" style={styles.signInButton}>
-                Sign in
-              </button>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : ""}
+                  name="password"
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  style={styles.input}
+                  value={credentials.password}
+                  onChange={handleInputChange}
+                />
+                {
+                (credentials.password || showPassword) && ( // Show icon if there's content in the password field or password is toggled
+                  <button
+                    type="button"
+                    style={styles.iconButton}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {/* Change the color of the icon based on whether password is entered */}
+                    <span style={{ color: credentials.password ? "#007bff" : "#A9A9A9" }}>
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    </span>
+                  </button>
+                )
+                  }
+
+              </div>
+              <div style={{ ...styles.links, marginTop: "-10px", marginRight: "-200px" }}>
+                <a href="/ResetPassword" style={styles.link}>Forgot Password?</a>
+              </div>
+              <br />
+              <button type="submit" style={styles.signInButton}>Sign in</button>
+              <p>
+                <span style={{ color: 'black' }}>Don't have an account? </span>
+                <a href="/register" style={styles.link}>Sign up</a>
+              </p>
             </form>
           </div>
         </div>
@@ -96,15 +119,16 @@ const Login = () => {
 const styles = {
   background: {
     position: "relative",
-    backgroundImage: `url('CITU-GLE Building.png')`, // Replace with your image path
-    backgroundSize: "cover",
+    backgroundImage: `url('CITU-GLE Building.png')`,
+    backgroundSize: "100% 100%",
     backgroundPosition: "center",
     width: "100vw",
     height: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    filter: "brightness(0.85)",
+    color: "#fff",
+    filter: "brightness(0.8) contrast(1.5) saturate(1.1)",
   },
   container: {
     position: "relative",
@@ -118,17 +142,20 @@ const styles = {
     padding: "20px",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: "8px",
-    boxShadow: `0px 0px 15px 5px rgba(0, 0, 0, 0.1)`,
+    boxShadow: `
+      0px 0px 15px 5px rgba(255, 255, 255, 0.2),
+      0px 0px 20px 5px rgba(255, 255, 255, 0.2),
+      0px 0px 25px 10px rgba(255, 255, 255, 0.2)`,
     textAlign: "center",
   },
   loginBox: {
     textAlign: "center",
   },
   title: {
-    fontSize: "28px",
+    fontSize: "32px",
     fontWeight: "bold",
     color: "#333",
-    marginBottom: "20px",
+    marginBottom: "25px",
   },
   input: {
     width: "90%",
@@ -138,16 +165,34 @@ const styles = {
     borderRadius: "4px",
     fontSize: "16px",
   },
+  iconButton: {
+    position: "absolute",
+    right: "10px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    background: "none",
+    border: "none",
+    color: "#007bff",
+    cursor: "pointer",
+    fontSize: "16px",
+  },
   signInButton: {
     width: "100%",
     padding: "10px",
-    backgroundColor: "#007bff",
+    backgroundColor: "#781B1B",
     color: "white",
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
     fontSize: "16px",
-    marginTop: "10px",
+  },
+  links: {
+    marginTop: "15px",
+    fontSize: "14px",
+  },
+  link: {
+    color: "#007bff",
+    textDecoration: "none",
   },
 };
 

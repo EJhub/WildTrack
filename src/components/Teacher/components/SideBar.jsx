@@ -3,6 +3,8 @@ import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/m
 import { Link, useLocation } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
  
 const SideBar = () => {
   const location = useLocation();
@@ -10,27 +12,13 @@ const SideBar = () => {
  
   const getListItemStyles = (path) => ({
     paddingY: isSmallScreen ? '0.5rem' : '1.5rem',
-    color: '#000',
+    color: 'white',
     textAlign: 'center',
     fontWeight: location.pathname === path ? 'bold' : 'normal',
     position: 'relative',
     '&:hover': {
       color: '#FFD700',
     },
-    ...(location.pathname === path && {
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        top: '50%',
-        left: '100%',
-        transform: 'translateY(-50%)',
-        width: '0',
-        height: '0',
-        borderTop: '20px solid transparent',
-        borderBottom: '20px solid transparent',
-        borderLeft: '30px solid #CD6161',
-      },
-    }),
   });
  
   return (
@@ -38,10 +26,9 @@ const SideBar = () => {
       sx={{
         width: isSmallScreen ? '80px' : '250px',
         height: 'auto',
-        background: 'linear-gradient(to bottom, #CD6161, #8B3D3D)',
+        background: '#781B1B',
         padding: '0px',
         boxSizing: 'border-box',
-        borderRight: '2px solid #000',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -56,7 +43,7 @@ const SideBar = () => {
           sx={getListItemStyles('/TeacherDashboard/Home')}
         >
           <ListItemText
-            primary={isSmallScreen ? 'H' : 'Home'}
+            primary={isSmallScreen ? 'H' : 'Dashboard'}
             primaryTypographyProps={{
               align: 'center',
               fontWeight: location.pathname === '/TeacherDashboard/Home' ? 'bold' : 'normal',
@@ -101,7 +88,7 @@ const SideBar = () => {
           sx={getListItemStyles('/TeacherDashboard/Analytics')}
         >
           <ListItemText
-            primary={isSmallScreen ? 'A' : 'Analytics'}
+            primary={isSmallScreen ? 'A' : 'Analytics and Reports'}
             primaryTypographyProps={{
               align: 'center',
               fontWeight: location.pathname === '/TeacherDashboard/Analytics' ? 'bold' : 'normal',
@@ -151,4 +138,5 @@ const SideBar = () => {
 };
  
 export default SideBar;
+ 
  

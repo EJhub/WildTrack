@@ -9,6 +9,7 @@ import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
@@ -211,9 +212,11 @@ const BookLog = () => {
             <Typography
               variant="h4"
               sx={{
-                color: "#000",
+                color: "#FFD700",
                 fontWeight: "bold",
                 textAlign: "left",
+                fontSize: "40px",
+                marginTop: "15px",
               }}
             >
               Book Log
@@ -225,7 +228,7 @@ const BookLog = () => {
             sx={{
               display: "flex",
               justifyContent: "flex-start",
-              marginBottom: 2,
+              marginBottom: 3,
             }}
           >
             <TextField
@@ -329,52 +332,42 @@ const BookLog = () => {
             </Button>
           </Box>
 
-          {/* Table */}
           <TableContainer
             component={Paper}
             sx={{
+              flexGrow: 1,
               opacity: 0.9,
-              borderRadius: "10px",
-              maxHeight: "calc(100vh - 350px)",
+              borderRadius: "15px",
               overflow: "auto",
+              maxHeight: "calc(100vh - 300px)", // Allow scrolling within the table
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+              display: "flex",
+              flexDirection: "column", // Ensure table and pagination are stacked vertically
             }}
           >
-            <Table stickyHeader>
+            <Table stickyHeader sx={{ flexGrow: 1 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9534F", color: "#FFF" }}>
-                    BOOK TITLE
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9534F", color: "#FFF" }}>
-                    AUTHOR
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9534F", color: "#FFF" }}>
-                    ACCESSION NUMBER
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9534F", color: "#FFF" }}>
-                    DATE READ
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9534F", color: "#FFF" }}>
-                    RATING
-                  </TableCell>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Book Title</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Author</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Accession Number</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Date Read</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Rating</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {displayedLogs.map((log, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{log.title}</TableCell>
+                {displayedLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{new Date(log.dateRead).toLocaleDateString()}</TableCell>
                     <TableCell>{log.author}</TableCell>
-                    <TableCell>{log.accessionNumber}</TableCell>
-                    <TableCell>{log.dateRead}</TableCell>
+                    <TableCell>{log.title}</TableCell>
                     <TableCell>{renderStars(log.rating)}</TableCell>
+                    <TableCell>{log.academicYear}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
 
-          {/* Pagination */}
-          <Box sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}>
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
@@ -384,11 +377,15 @@ const BookLog = () => {
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
               sx={{
-                display: "flex",
-                justifyContent: "center",
+                paddingTop: 2,
+                backgroundColor: "transparent", // Make background transparent
+                fontWeight: "bold",
+                display: "flex", // Use flexbox to align items
+                justifyContent: "center", // Center the pagination
+                width: "100%",
               }}
             />
-          </Box>
+          </TableContainer>
         </Box>
       </Box>
 

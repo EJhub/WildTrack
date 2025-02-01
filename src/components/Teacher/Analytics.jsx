@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import NavBar from './components/NavBar';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import SideBar from './components/SideBar';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
 import {
   Box,
   Typography,
@@ -11,9 +14,9 @@ import {
 } from '@mui/material';
 import { Bar, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
- 
+
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
- 
+
 const Analytics = () => {
   const [timeframe, setTimeframe] = useState('Weekly');
   const [chartType, setChartType] = useState('Bar');
@@ -22,7 +25,7 @@ const Analytics = () => {
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
   const [section, setSection] = useState('');
- 
+
   // Chart Data
   const getChartData = () => {
     switch (timeframe) {
@@ -69,7 +72,7 @@ const Analytics = () => {
         return {};
     }
   };
- 
+
   const chartOptions = {
     maintainAspectRatio: false,
     plugins: {
@@ -101,9 +104,9 @@ const Analytics = () => {
       },
     },
   };
- 
+
   const ChartComponent = chartType === 'Bar' ? Bar : Line;
- 
+
   return (
     <>
       <NavBar />
@@ -123,41 +126,56 @@ const Analytics = () => {
           <br></br>
           {/* Title */}
           <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 'bold',
-            color: '#000',
-            marginBottom: 3,
-            textAlign: 'left', // Explicitly align text to the left
-          }}
-        >
-          Analytics
-        </Typography>
-        <br></br>
- 
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+              color: '#000',
+              marginBottom: 3,
+              textAlign: 'left', // Explicitly align text to the left
+            }}
+          >
+            Analytics and Reports
+          </Typography>
+
           {/* Timeframe Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, marginBottom: 3 }}>
-            {['Weekly', 'Monthly', 'Yearly'].map((period) => (
-              <Button
-                key={period}
-                variant={timeframe === period ? 'contained' : 'outlined'}
-                onClick={() => setTimeframe(period)}
-                sx={{
-                  backgroundColor: timeframe === period ? '#FFD700' : 'transparent',
-                  color: '#000',
-                  border: '1px solid #000',
+          <Box sx={{ display: 'flex', gap: 2, marginBottom: 3, justifyContent: 'flex-end', marginTop: '-40px' }}>
+            <Button
+              variant="outlined"
+              onClick={() => {}}
+              sx={{
+                backgroundColor: '#A85858',
+                color: '#fff',
+                border: '1px solid #A85858',
+                borderRadius: '10px',
+                alignItems: 'center',
+                '&:hover': {
+                  backgroundColor: '#8B3D3D',
+                  color: '#fff',
+                },
+              }}
+            >
+              Student Library Hours
+            </Button>
+
+            <Button
+              variant="outlined"
+              onClick={() => {}}
+              sx={{
+                backgroundColor: '#A85858',
+                color: '#fff',
+                  border: '1px solid #A85858',
                   borderRadius: '10px',
+                  alignItems: 'center',
                   '&:hover': {
-                    backgroundColor: '#FFD700',
-                    color: '#000',
-                  },
-                }}
-              >
-                {period}
-              </Button>
-            ))}
+                    backgroundColor: '#8B3D3D',
+                    color: '#fff',
+                },
+              }}
+            >
+              Active Library Hours Participants
+            </Button>
           </Box>
- 
+
           {/* Filters Section */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 3 }}>
             <TextField
@@ -189,7 +207,7 @@ const Analytics = () => {
               onChange={(e) => setAcademicYear(e.target.value)}
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
             >
-              <MenuItem value="">Select Academic Year</MenuItem>
+
               <MenuItem value="2024">2024</MenuItem>
               <MenuItem value="2023">2023</MenuItem>
               <MenuItem value="2022">2022</MenuItem>
@@ -219,7 +237,7 @@ const Analytics = () => {
               onChange={(e) => setGradeLevel(e.target.value)}
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
             >
-              <MenuItem value="">Choose here...</MenuItem>
+
               <MenuItem value="Grade 1">Grade 1</MenuItem>
               <MenuItem value="Grade 2">Grade 2</MenuItem>
               <MenuItem value="Grade 3">Grade 3</MenuItem>
@@ -233,55 +251,60 @@ const Analytics = () => {
               onChange={(e) => setSection(e.target.value)}
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
             >
-              <MenuItem value="">Choose here...</MenuItem>
+
               <MenuItem value="A">A</MenuItem>
               <MenuItem value="B">B</MenuItem>
               <MenuItem value="C">C</MenuItem>
             </TextField>
-           
           </Box>
- 
-          {/* Chart Section */}
-          <Paper sx={{ padding: 3, borderRadius: '15px', border: '1px solid #A85858', marginBottom: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', textAlign: 'center', marginBottom: 2 }}>
-              {`Students doing Library Hours - ${timeframe}`}
-            </Typography>
-            <Box sx={{ height: '400px' }}>
-              <ChartComponent data={getChartData()} options={chartOptions} />
-            </Box>
-          </Paper>
- 
-          {/* Export Buttons */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: '#FFD700',
-                color: '#000',
-                '&:hover': {
-                  backgroundColor: '#FFC107',
-                },
-              }}
-            >
-              Export PDF
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: '#4CAF50',
-                color: '#fff',
-                '&:hover': {
-                  backgroundColor: '#388E3C',
-                },
-              }}
-            >
-              Export Excel
-            </Button>
-          </Box>
+
+      {/* Chart Section */}
+<Paper sx={{ padding: 3, borderRadius: '15px', border: '1px solid #A85858', marginBottom: 3 }}>
+  {/* Export Buttons */}
+  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, flexWrap: 'wrap', marginTop: 2 }}>
+    <Button
+      variant="contained"
+      sx={{
+        backgroundColor: '#FFD700',
+        color: '#000',
+        '&:hover': {
+          backgroundColor: '#FFC107',
+        },
+      }}
+    >
+      Export PDF
+    </Button>
+    <Button
+      variant="contained"
+        sx={{
+          backgroundColor: '#A85858',
+          color: '#fff',
+          border: '1px solid #A85858',
+          borderRadius: '10px',
+          alignItems: 'center',
+          '&:hover': {
+            backgroundColor: '#8B3D3D',
+            color: '#fff',
+          },
+        }}
+      >
+      Export Excel
+    </Button>
+  </Box>
+  <Typography variant="h6" sx={{ fontWeight: 'bold', textAlign: 'center', marginBottom: 2 }}>
+    {`Students doing Library Hours - ${timeframe}`}
+  </Typography>
+  <Box sx={{ height: '400px' }}>
+    <ChartComponent data={getChartData()} options={chartOptions} />
+  </Box>
+</Paper>
+
+
+          
         </Box>
       </Box>
     </>
   );
 };
- 
+
 export default Analytics;

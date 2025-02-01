@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
+ 
 function Register() {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -15,17 +15,18 @@ function Register() {
   });
   const [focusedInput, setFocusedInput] = useState(null);
   const [message, setMessage] = useState(null);
-
+  const [isSuccess, setIsSuccess] = useState(false);
+ 
   const navigate = useNavigate(); // Hook for navigation
   const location = useLocation(); // Hook for retrieving state from navigation
-
+ 
   // Extract role from state (passed from LoginHomepage)
   useEffect(() => {
     if (location.state?.role) {
       setFormData((prevData) => ({ ...prevData, role: location.state.role }));
     }
   }, [location]);
-
+ 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -33,15 +34,15 @@ function Register() {
       [name]: value,
     }));
   };
-
+ 
   const handleFocus = (inputName) => {
     setFocusedInput(inputName);
   };
-
+ 
   const handleBlur = () => {
     setFocusedInput(null);
   };
-
+ 
   const getInputStyle = (inputName) => ({
     width: "100%",
     maxWidth: "395px",
@@ -53,15 +54,30 @@ function Register() {
     boxSizing: "border-box",
     marginBottom: "10px",
   });
-
+ 
+  // Password validation: at least 8 characters long
+  const validatePassword = (password) => {
+    const passwordPattern = /^.{8,}$/; // Matches any string with at least 8 characters
+    return passwordPattern.test(password);
+  };
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+ 
+    // Password and confirm password must match
     if (formData.password !== formData.confirmPassword) {
-      setMessage("Passwords do not match.");
+      setMessage("Passwords do not match. Please try again.");
+      setIsSuccess(false);
       return;
     }
-
+ 
+    // Validate password length (at least 8 characters)
+    if (!validatePassword(formData.password)) {
+      setMessage("Password must be at least 8 characters long.");
+      setIsSuccess(false);
+      return;
+    }
+ 
     try {
       const response = await fetch("http://localhost:8080/api/users/register", {
         method: "POST",
@@ -81,25 +97,65 @@ function Register() {
           section: formData.role === "Student" ? formData.section : null,
         }),
       });
-
+ 
       if (response.ok) {
-        setMessage("User registered successfully!");
+        setMessage("User registered successfully! .");
+        setIsSuccess(true);
+        setTimeout(() => {
+          navigate("/login"); // Automatically redirect to login page after 2 seconds
+        }, 10000); // You can adjust the time delay before redirecting
       } else {
         const errorData = await response.json();
         setMessage(errorData.error || "Failed to register. Please try again.");
+        setIsSuccess(false);
       }
     } catch (error) {
       setMessage("An error occurred. Please try again.");
+      setIsSuccess(false);
       console.error("Error:", error);
     }
   };
-
+ 
   return (
     <div style={styles.background}>
+      {/* Alert message at the top */}
+      {message && (
+        <div
+          style={{
+            ...styles.alertMessage,
+            backgroundColor: isSuccess ? "#d4edda" : "#f8d7da",
+            color: isSuccess ? "#155724" : "#721c24",
+            position: "absolute",  // Positioning it at the top of the page
+            top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",  // Center the alert
+            zIndex: 1000,  // Make sure it stays on top
+            width: "auto",
+            maxWidth: "350px",
+            padding: "8px",
+            borderRadius: "5px",
+            textAlign: "center",
+          }}
+        >
+          <p>
+            {message}{" "}
+            {isSuccess && (
+              <span
+                style={styles.loginLink}
+                onClick={() => navigate("/login")} // Navigate to Login page
+              >
+                Click here to login.
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+ 
+      {/* Register form */}
       <div style={styles.container}>
         <div style={styles.registerBox}>
           <h2 style={styles.title}>Sign up</h2>
-          {message && <p style={{ color: "red" }}>{message}</p>}
+ 
           <form onSubmit={handleSubmit}>
             <div style={styles.rowInputGroup}>
               <input
@@ -167,11 +223,9 @@ function Register() {
                 onChange={handleInputChange}
                 style={getInputStyle("role")}
               >
-                <option value="User">User</option>
-                <option value="Librarian">Librarian</option>
                 <option value="Student">Student</option>
-                <option value="Teacher">Teacher</option>
-                <option value="NAS">NAS</option>
+
+
               </select>
             </div>
             {/* Conditional Fields for Student and NAS Roles */}
@@ -191,40 +245,40 @@ function Register() {
             )}
             {/* Conditional Fields for Student Role */}
             {formData.role === "Student" && (
-  <div style={styles.rowInputGroup}>
-    <select
-      name="grade"
-      value={formData.grade}
-      onChange={handleInputChange}
-      style={{ ...getInputStyle("grade"), width: "48%" }}
-      onFocus={() => handleFocus("grade")}
-      onBlur={handleBlur}
-    >
-      <option value="">Select Grade</option>
-      {Array.from({ length: 6 }, (_, i) => (
-        <option key={i} value={`Grade ${i + 1}`}>
-          Grade {i + 1}
-        </option>
-      ))}
-    </select>
-    <select
-      name="section"
-      value={formData.section}
-      onChange={handleInputChange}
-      style={{ ...getInputStyle("section"), width: "48%" }}
-      onFocus={() => handleFocus("section")}
-      onBlur={handleBlur}
-    >
-      <option value="">Select Section</option>
-      {["A", "B", "C"].map((section) => (
-        <option key={section} value={section}>
-          {section}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
-
+              <div style={styles.rowInputGroup}>
+                <select
+                  name="grade"
+                  value={formData.grade}
+                  onChange={handleInputChange}
+                  style={{ ...getInputStyle("grade"), width: "48%" }}
+                  onFocus={() => handleFocus("grade")}
+                  onBlur={handleBlur}
+                >
+                  <option value="">Select Grade</option>
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <option key={i} value={`Grade ${i + 1}`}>
+                      Grade {i + 1}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  name="section"
+                  value={formData.section}
+                  onChange={handleInputChange}
+                  style={{ ...getInputStyle("section"), width: "48%" }}
+                  onFocus={() => handleFocus("section")}
+                  onBlur={handleBlur}
+                >
+                  <option value="">Select Section</option>
+                  {["A", "B", "C"].map((section) => (
+                    <option key={section} value={section}>
+                      {section}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+ 
             <button type="submit" style={styles.registerButton}>
               Register
             </button>
@@ -243,7 +297,7 @@ function Register() {
     </div>
   );
 }
-
+ 
 const styles = {
   background: {
     position: "relative",
@@ -260,24 +314,26 @@ const styles = {
   },
   container: {
     position: "relative",
-    zIndex: 2,
+    zIndex: 1,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    maxWidth: "500px",
+    width: "90%",
+    maxWidth: "400px",
+    height: "50vh", // This makes the height relative to the viewport height
     padding: "20px",
   },
+  
   registerBox: {
     width: "90%",
     maxWidth: "400px",
-    padding: "40px 30px",
+    padding: "6px 30px",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: "8px",
     textAlign: "center",
   },
   title: {
-    fontSize: "28px",
+    fontSize: "26px",
     fontWeight: "bold",
     color: "#333",
     marginBottom: "25px",
@@ -287,28 +343,31 @@ const styles = {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: "10px",
+ 
   },
   inputGroup: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     marginBottom: "10px",
+    fontSize: "12px",
   },
   registerButton: {
     width: "100%",
     padding: "10px",
     height: "45px",
-    backgroundColor: "#007bff",
+    backgroundColor: "#781B1B",
     color: "white",
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
-    fontSize: "16px",
+  
+    fontSize: "15px",
     marginTop: "10px",
   },
   loginText: {
     marginTop: "20px",
-    fontSize: "14px",
+    fontSize: "12px",
     color: "#333",
   },
   loginLink: {
@@ -316,6 +375,16 @@ const styles = {
     textDecoration: "none",
     cursor: "pointer",
   },
+  alertMessage: {
+    backgroundColor: "#f8d7da",
+    color: "#721c24",
+    padding: "10px",
+    marginBottom: "20px",
+    marginTop: "-20px",
+    borderRadius: "5px",
+    textAlign: "center",
+    fontSize: "12px", // Alert message text size set to 12px
+  },
 };
-
+ 
 export default Register;
