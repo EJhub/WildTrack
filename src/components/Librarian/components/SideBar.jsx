@@ -139,14 +139,6 @@ const SideBar = () => {
                 <ListItemText primary={isSmallScreen ? 'S' : 'Student'} />
               </ListItem>
  
-              <ListItem
-                button
-                component={Link}
-                to="/librarian/LibrarianManageNASStudent"
-                sx={getListItemStyles('/librarian/LibrarianManageNASStudent')}
-              >
-                <ListItemText primary={isSmallScreen ? 'NAS' : 'NAS Student'} />
-              </ListItem>
  
               <ListItem
                 button

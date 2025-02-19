@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
+import AcademicYearTable from './components/AcademicYearTable';
+// Add this import at the top with your other imports
+import GradeSectionTable from './components/GradeSectionTable';
 import {
   Box,
   Table,
@@ -15,28 +18,29 @@ import {
   InputAdornment,
   Button,
   TablePagination,
-  IconButton,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import AddIcon from '@mui/icons-material/Add';
-import CreateStudentForm from './components/CreateStudentForm'; // Import the CreateStudentForm component
-import UpdateStudentForm from './components/UpdateStudentForm'; // Import the UpdateStudentForm component
+import CreateStudentForm from './components/CreateStudentForm';
+import UpdateStudentForm from './components/UpdateStudentForm';
 import DeleteConfirmation from './components/DeleteConfirmation';
 
 const ManageStudent = () => {
+  // States
+  const [currentView, setCurrentView] = useState('students');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [error, setError] = useState(null);
-  const [isFormOpen, setIsFormOpen] = useState(false); // State to control form visibility
-  const [isUpdateFormOpen, setIsUpdateFormOpen] = useState(false);  // State to control the visibility of the update form
-const [studentToUpdate, setStudentToUpdate] = useState(null); // Store the student data that needs to be updated
-const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false); // State to control the visibility of the delete confirmation
-const [studentToDelete, setStudentToDelete] = useState(null); // Store the student data that needs to be deleted
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isUpdateFormOpen, setIsUpdateFormOpen] = useState(false);
+  const [studentToUpdate, setStudentToUpdate] = useState(null);
+  const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState(null);
 
-  // Fetch students data from the API
+  // Fetch students data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -54,22 +58,43 @@ const [studentToDelete, setStudentToDelete] = useState(null); // Store the stude
       }
     };
     fetchData();
-  }, []); // Fetch students when the component mounts
+  }, []);
 
-  // Handle page change
+  // Event Handlers
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
 
-  // Handle rows per page change
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0); // Reset page to 0 when rows per page changes
+    setPage(0);
   };
 
-  // Handle search input change
+  const handleOpenForm = () => {
+    setIsFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+  };
+
+  const handleDeleteConfirmation = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/students/${studentToDelete.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete student');
+      }
+      setData((prevData) => prevData.filter((student) => student.id !== studentToDelete.id));
+      setIsDeleteConfirmationOpen(false);
+    } catch (error) {
+      console.error('Error deleting student:', error);
+    }
+  };
+
+  // Filter data based on search term
   const filteredData = data.filter((student) => {
-    // Add checks to ensure properties are not null or undefined
     return (
       (student.firstName && student.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (student.lastName && student.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -77,36 +102,7 @@ const [studentToDelete, setStudentToDelete] = useState(null); // Store the stude
     );
   });
 
-  // Open the form modal
-  const handleOpenForm = () => {
-    setIsFormOpen(true);
-  };
-
-  // Close the form modal
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-  };
-
-  const handleDeleteConfirmation = async () => {
-    try {
-      // Optionally, make an API call to delete the student from the server
-      const response = await fetch(`http://localhost:8080/api/students/${studentToDelete.id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete student');
-      }
-  
-      // Remove the student from the local state after successful deletion
-      setData((prevData) => prevData.filter((student) => student.id !== studentToDelete.id));
-      setIsDeleteConfirmationOpen(false); // Close the delete confirmation modal
-    } catch (error) {
-      console.error('Error deleting student:', error);
-      // Handle error (e.g., show an error message)
-    }
-  };
-
-  // Error handling
+  // Loading and Error states
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -139,42 +135,47 @@ const [studentToDelete, setStudentToDelete] = useState(null); // Store the stude
             maxHeight: 'calc(100vh - 140px)',
           }}
         >
-          <Typography
-            variant="h4"
-            sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left' }}
-          >
-            Manage Students
-          </Typography>
+        <Typography
+  variant="h4"
+  sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left' }}
+>
+  {currentView === 'academic' 
+    ? 'Academic Year Management' 
+    : currentView === 'gradeSection' 
+      ? 'Grade and Section Management'
+      : 'Manage Students'}
+</Typography>
 
-          {/* Add Student Button */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
-            <Button
-              variant="outlined"
-              onClick={handleOpenForm}
-              sx={{
-                color: '#FFEB3B',
-                backgroundColor: 'white',
-                border: '1px solid #800000',
-                borderRadius: '50px',
-                paddingX: 3,
-                paddingY: 1.5,
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: 2,
-                '&:hover': {
-                  backgroundColor: '#800000',
+          {currentView === 'students' && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={handleOpenForm}
+                sx={{
                   color: '#FFEB3B',
-                },
-              }}
-            >
-              <AddIcon sx={{ marginRight: 1 }} />
-              Add Student
-            </Button>
-          </Box>
+                  backgroundColor: 'white',
+                  border: '1px solid #800000',
+                  borderRadius: '50px',
+                  paddingX: 3,
+                  paddingY: 1.5,
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: 2,
+                  '&:hover': {
+                    backgroundColor: '#800000',
+                    color: '#FFEB3B',
+                  },
+                }}
+              >
+                <AddIcon sx={{ marginRight: 1 }} />
+                Add Student
+              </Button>
+            </Box>
+          )}
 
-          {/* Search Bar */}
+          {/* Search and View Toggle Section */}
           <Box
             sx={{
               display: 'flex',
@@ -188,8 +189,8 @@ const [studentToDelete, setStudentToDelete] = useState(null); // Store the stude
               variant="outlined"
               placeholder="Search by name or ID..."
               size="small"
-              value={searchTerm} // Updated state variable
-              onChange={(event) => setSearchTerm(event.target.value)} // Update search term
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
@@ -204,144 +205,183 @@ const [studentToDelete, setStudentToDelete] = useState(null); // Store the stude
                 ),
               }}
             />
+
+<Button
+  variant="outlined"
+  onClick={() => setCurrentView(currentView === 'academic' ? 'students' : 'academic')}
+  sx={{
+    color: currentView === 'academic' ? '#800000' : '#FFEB3B',
+    backgroundColor: currentView === 'academic' ? '#FFEB3B' : 'white',
+    border: '1px solid #800000',
+    fontWeight: 'bold',
+    '&:hover': {
+      backgroundColor: '#FFEB3B',
+      color: '#800000',
+    },
+  }}
+>
+  Academic Year
+</Button>
+
+<Button
+  variant="outlined"
+  onClick={() => setCurrentView(currentView === 'gradeSection' ? 'students' : 'gradeSection')}
+  sx={{
+    color: currentView === 'gradeSection' ? '#800000' : '#FFEB3B',
+    backgroundColor: currentView === 'gradeSection' ? '#FFEB3B' : 'white',
+    border: '1px solid #800000',
+    fontWeight: 'bold',
+    '&:hover': {
+      backgroundColor: '#FFEB3B',
+      color: '#800000',
+    },
+  }}
+>
+  Grade and Section
+</Button>
           </Box>
 
-          {/* Table Section */}
-          <TableContainer
-            component={Paper}
-            sx={{
-              borderRadius: '15px',
-              boxShadow: 3,
-              overflow: 'auto',
-              maxHeight: 'calc(100vh - 340px)',
-              marginTop: 3,
-            }}
-          >
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
-                    ID Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
-                    Name
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
-                    GRADE & SECTION
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
-                    LIBRARY HOUR ASSOCIATED SUBJECT
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
-                    ACTION
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredData
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((student, index) => (
-                    <TableRow
-                      key={index}
-                      hover
-                      sx={{
-                        backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFF',
-                        '&:hover': { backgroundColor: '#FCEAEA' },
-                      }}
-                    >
-                      <TableCell>{student.idNumber}</TableCell>
-                      <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
-                      <TableCell>{`${student.grade} - ${student.section}`}</TableCell>
-                      <TableCell>{student.subject}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outlined"
-                          sx={{
-                            color: '#800000',
-                            backgroundColor: 'white',
-                            border: '1px solid #FFEB3B',
-                            marginRight: 1,
-                            fontWeight: 'bold',
-                            '&:hover': {
-                              backgroundColor: '#FFEB3B',
-                              color: '#800000',
-                            },
-                          }}
-                          onClick={() => {
-                            setStudentToUpdate(student);  // Set the student data to be updated
-                            setIsUpdateFormOpen(true); // Open the update form
-                          }}
-                        >
-                          Update
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          sx={{
-                            color: '#800000',
-                            backgroundColor: 'white',
-                            border: '1px solid #FFEB3B',
-                            fontWeight: 'bold',
-                            '&:hover': {
-                              backgroundColor: '#FFEB3B',
-                              color: '#800000',
-                            },
-                          }}
-                          onClick={() => {
-                            setStudentToDelete(student);  // Set the student data to be deleted
-                            setIsDeleteConfirmationOpen(true); // Open the delete confirmation modal
-                          }}
-                        >
-                          Delete
-                        </Button>
+          {/* Content based on current view */}
+          {currentView === 'students' && (
+            <>
+              <TableContainer
+                component={Paper}
+                sx={{
+                  borderRadius: '15px',
+                  boxShadow: 3,
+                  overflow: 'auto',
+                  maxHeight: 'calc(100vh - 340px)',
+                  marginTop: 3,
+                }}
+              >
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                        ID Number
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                        Name
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                        GRADE & SECTION
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                        LIBRARY HOUR ASSOCIATED SUBJECT
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                        ACTION
                       </TableCell>
                     </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {filteredData
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .map((student, index) => (
+                        <TableRow
+                          key={index}
+                          hover
+                          sx={{
+                            backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFF',
+                            '&:hover': { backgroundColor: '#FCEAEA' },
+                          }}
+                        >
+                          <TableCell>{student.idNumber}</TableCell>
+                          <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                          <TableCell>{`${student.grade} - ${student.section}`}</TableCell>
+                          <TableCell>{student.subject}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outlined"
+                              sx={{
+                                color: '#800000',
+                                backgroundColor: 'white',
+                                border: '1px solid #FFEB3B',
+                                marginRight: 1,
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                  backgroundColor: '#FFEB3B',
+                                  color: '#800000',
+                                },
+                              }}
+                              onClick={() => {
+                                setStudentToUpdate(student);
+                                setIsUpdateFormOpen(true);
+                              }}
+                            >
+                              Update
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              sx={{
+                                color: '#800000',
+                                backgroundColor: 'white',
+                                border: '1px solid #FFEB3B',
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                  backgroundColor: '#FFEB3B',
+                                  color: '#800000',
+                                },
+                              }}
+                              onClick={() => {
+                                setStudentToDelete(student);
+                                setIsDeleteConfirmationOpen(true);
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-          {/* Pagination Section */}
-          <Box sx={{ position: 'relative', width: '100%' }}>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={filteredData.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                paddingTop: 2,
-                width: '100%',
-              }}
-            />
-          </Box>
+              <Box sx={{ position: 'relative', width: '100%' }}>
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 25]}
+                  component="div"
+                  count={filteredData.length}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    paddingTop: 2,
+                    width: '100%',
+                  }}
+                />
+              </Box>
+            </>
+          )}
+
+          {currentView === 'academic' && <AcademicYearTable />}
+
+          {currentView === 'gradeSection' && <GradeSectionTable />}
         </Box>
       </Box>
 
-      {/* Create Student Form Modal */}
+      {/* Modals */}
       <CreateStudentForm open={isFormOpen} onClose={handleCloseForm} />
       <UpdateStudentForm
         open={isUpdateFormOpen}
         onClose={() => setIsUpdateFormOpen(false)}
-        user={studentToUpdate} // Pass the selected student data to the update form
+        user={studentToUpdate}
         onUpdate={(updatedStudent) => {
-          // Handle updating the student in the table
           const updatedData = data.map((student) =>
             student.id === updatedStudent.id ? updatedStudent : student
           );
-          setData(updatedData);  // Update the state with the new data
-          setIsUpdateFormOpen(false);  // Close the update form
+          setData(updatedData);
+          setIsUpdateFormOpen(false);
         }}
       />
       <DeleteConfirmation
-      open={isDeleteConfirmationOpen}
-      onClose={() => setIsDeleteConfirmationOpen(false)}
-      onConfirm={handleDeleteConfirmation}
-    />
-
+        open={isDeleteConfirmationOpen}
+        onClose={() => setIsDeleteConfirmationOpen(false)}
+        onConfirm={handleDeleteConfirmation}
+      />
     </>
   );
 };

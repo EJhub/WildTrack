@@ -21,16 +21,16 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
     grade: '',
     section: '',
     role: 'Student',
+    academicYear: '',
   });
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: '' });
   
   const roles = ['Student'];
-
   const grades = [1, 2, 3, 4, 5, 6];
   const sections = ["A", "B", "C"];
+  const academicYears = ['2024-2025', '2025-2026', '2026-2027'];
 
-  // Reset the form when the modal is opened or user changes
   useEffect(() => {
     if (user && open) {
       setUserData({
@@ -40,6 +40,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
         grade: user.grade || '',
         section: user.section || '',
         role: user.role || 'Student',
+        academicYear: user.academicYear || '',
       });
     }
   }, [user, open]);
@@ -54,13 +55,14 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const response = await axios.put(`http://localhost:8080/api/students/${user.id}`, { // Use user.id to target the correct student
+      const response = await axios.put(`http://localhost:8080/api/students/${user.id}`, {
         ...userData,
-        name: `${userData.firstName} ${userData.lastName}`, // Combined name is not necessary unless required by your backend
-        gradeSection: `${userData.grade} - ${userData.section}`, // If needed, this is to represent the combination of grade and section
+        name: `${userData.firstName} ${userData.lastName}`,
+        gradeSection: `${userData.grade} - ${userData.section}`,
+        academicYear: userData.academicYear,
       });
       setLoading(false);
-      onUpdate(response.data); // Update the user in the parent component's list
+      onUpdate(response.data);
       setSnackbar({ open: true, message: 'User updated successfully!', severity: 'success' });
       onClose();
     } catch (error) {
@@ -118,28 +120,29 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
           handleSubmit();
         }}
       >
-      <Grid container spacing={2}>
-        <Grid item xs={6}>
-        <TextField
-          label="First Name"
-          name="firstName"
-          value={userData.firstName}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-        />
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <TextField
+              label="First Name"
+              name="firstName"
+              value={userData.firstName}
+              onChange={handleInputChange}
+              variant="outlined"
+              fullWidth
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Last Name"
+              name="lastName"
+              value={userData.lastName}
+              onChange={handleInputChange}
+              variant="outlined"
+              fullWidth
+            />
+          </Grid>
         </Grid>
-        <Grid item xs={6}>
-        <TextField
-          label="Last Name"
-          name="lastName"
-          value={userData.lastName}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-        />
-        </Grid>
-      </Grid>
+
         <TextField
           label="ID Number"
           name="idNumber"
@@ -148,8 +151,8 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
           variant="outlined"
           fullWidth
         />
-         {/* Grade Dropdown */}
-         <TextField
+
+        <TextField
           label="Grade"
           name="grade"
           select
@@ -164,12 +167,12 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
           }}
         >
           {grades.map((grade) => (
-            <MenuItem key={grade} value={`Grade ${grade}`}> {/* Full grade text like "Grade 1" */}
+            <MenuItem key={grade} value={`Grade ${grade}`}>
               Grade {grade}
             </MenuItem>
           ))}
         </TextField>
-        {/* Section Dropdown */}
+
         <TextField
           label="Section"
           name="section"
@@ -185,11 +188,33 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
           }}
         >
           {sections.map((section) => (
-            <MenuItem key={section} value={section}> {/* Sections A, B, C */}
+            <MenuItem key={section} value={section}>
               Section {section}
             </MenuItem>
           ))}
         </TextField>
+
+        <TextField
+          label="Academic Year"
+          name="academicYear"
+          select
+          value={userData.academicYear}
+          onChange={handleInputChange}
+          variant="outlined"
+          fullWidth
+          SelectProps={{
+            MenuProps: {
+              sx: { zIndex: 1500 },
+            },
+          }}
+        >
+          {academicYears.map((year) => (
+            <MenuItem key={year} value={year}>
+              {year}
+            </MenuItem>
+          ))}
+        </TextField>
+
         <TextField
           label="User Role"
           name="role"
@@ -210,6 +235,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
             </MenuItem>
           ))}
         </TextField>
+
         <Button
           type="submit"
           variant="contained"

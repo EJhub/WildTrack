@@ -1,0 +1,239 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Paper,
+  Button,
+  TablePagination,
+} from '@mui/material';
+import axios from 'axios';
+import AddAcademicYear from './AddAcademicYear';
+import ViewAcademicYear from './ViewAcademicYear';
+
+const AcademicYearTable = () => {
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState(null);
+    const [academicYearData, setAcademicYearData] = useState([]);
+  
+    useEffect(() => {
+      fetchAcademicYearData();
+    }, []);
+  
+    const fetchAcademicYearData = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/academic-years/all');
+        setAcademicYearData(response.data);
+      } catch (error) {
+        console.error('Error fetching academic year data:', error);
+      }
+    };
+  
+    const handleChangePage = (event, newPage) => {
+      setPage(newPage);
+    };
+  
+    const handleChangeRowsPerPage = (event) => {
+      setRowsPerPage(parseInt(event.target.value, 10));
+      setPage(0);
+    };
+  
+    const handleOpenAddModal = () => {
+      setIsAddModalOpen(true);
+    };
+  
+    const handleCloseAddModal = () => {
+      setIsAddModalOpen(false);
+      fetchAcademicYearData();
+    };
+
+    const handleOpenViewModal = (year) => {
+      setSelectedAcademicYear(year);
+      setIsViewModalOpen(true);
+    };
+  
+    const handleCloseViewModal = () => {
+      setIsViewModalOpen(false);
+      setSelectedAcademicYear(null);
+      fetchAcademicYearData();
+    };
+
+    const handleArchiveAcademicYear = async (id) => {
+      try {
+        await axios.put(`http://localhost:8080/api/academic-years/${id}/archive`);
+        fetchAcademicYearData();
+      } catch (error) {
+        console.error('Error archiving academic year:', error);
+      }
+    };
+
+    const formatQuarterDates = (year) => {
+      if (!year) return 'N/A';
+      
+      const firstQuarterStart = year.firstQuarter?.startDate || 'N/A';
+      const fourthQuarterEnd = year.fourthQuarter?.endDate || 'N/A';
+      
+      return `${firstQuarterStart} - ${fourthQuarterEnd}`;
+    };
+
+    return (
+      <Box sx={{ flexGrow: 1, backgroundColor: '#ffffff' }}>
+        {/* Add Academic Year Button */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleOpenAddModal}
+            sx={{
+              color: '#FFEB3B',
+              backgroundColor: 'white',
+              border: '1px solid #800000',
+              borderRadius: '50px',
+              paddingX: 3,
+              paddingY: 1.5,
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 2,
+              '&:hover': {
+                backgroundColor: '#800000',
+                color: '#FFEB3B',
+              },
+            }}
+          >
+            Add Academic Year
+          </Button>
+        </Box>
+
+        {/* Table Section */}
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: '15px',
+            boxShadow: 3,
+            overflow: 'auto',
+            maxHeight: 'calc(100vh - 340px)',
+            marginTop: 3,
+          }}
+        >
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                  ACADEMIC YEAR
+                </TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                  NO. OF QUARTERS
+                </TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                  QUARTER DATES
+                </TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                  STATUS
+                </TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                  ACTION
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {academicYearData
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((year) => (
+                  <TableRow
+                    key={year.id}
+                    hover
+                    sx={{
+                      '&:nth-of-type(odd)': { backgroundColor: '#FFF8F8' },
+                      '&:hover': { backgroundColor: '#FCEAEA' },
+                    }}
+                  >
+                    <TableCell>{`${year.startYear}-${year.endYear}`}</TableCell>
+                    <TableCell>4</TableCell>
+                    <TableCell>{formatQuarterDates(year)}</TableCell>
+                    <TableCell>{year.status || 'Active'}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outlined"
+                        onClick={() => handleOpenViewModal(year)}
+                        sx={{
+                          color: '#800000',
+                          backgroundColor: 'white',
+                          border: '1px solid #FFEB3B',
+                          marginRight: 1,
+                          fontWeight: 'bold',
+                          '&:hover': {
+                            backgroundColor: '#FFEB3B',
+                            color: '#800000',
+                          },
+                        }}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => handleArchiveAcademicYear(year.id)}
+                        sx={{
+                          color: '#800000',
+                          backgroundColor: 'white',
+                          border: '1px solid #FFEB3B',
+                          fontWeight: 'bold',
+                          '&:hover': {
+                            backgroundColor: '#FFEB3B',
+                            color: '#800000',
+                          },
+                        }}
+                      >
+                        Archive
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Pagination */}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={academicYearData.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%',
+            paddingTop: 2,
+          }}
+        />
+
+        {/* Add Academic Year Modal */}
+        <AddAcademicYear 
+          open={isAddModalOpen} 
+          onClose={handleCloseAddModal} 
+        />
+
+        {/* View/Edit Academic Year Modal */}
+        {selectedAcademicYear && (
+          <ViewAcademicYear 
+            open={isViewModalOpen}
+            onClose={handleCloseViewModal}
+            academicYear={selectedAcademicYear}
+          />
+        )}
+      </Box>
+    );
+};
+
+export default AcademicYearTable;
