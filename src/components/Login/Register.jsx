@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
- 
+import { useNavigate } from "react-router-dom";
+import axios from 'axios';
+
 function Register() {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -8,41 +9,97 @@ function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "User", // Default role
-    idNumber: "", // For students and NAS
-    grade: "", // For students
-    section: "", // For students
+    role: "Student",
+    idNumber: "",
+    grade: "",
+    section: "",
+    academicYear: "",
   });
+
+  // State for dropdown options
+  const [gradeOptions, setGradeOptions] = useState([]);
+  const [sectionOptions, setSectionOptions] = useState([]);
+  const [academicYearOptions, setAcademicYearOptions] = useState([]);
+
   const [focusedInput, setFocusedInput] = useState(null);
   const [message, setMessage] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
- 
-  const navigate = useNavigate(); // Hook for navigation
-  const location = useLocation(); // Hook for retrieving state from navigation
- 
-  // Extract role from state (passed from LoginHomepage)
+  const navigate = useNavigate();
+
+  // Sort function for grade levels
+  const sortGradeLevels = (grades) => {
+    const gradeOrder = {
+      'Nursery': 0,
+      'Kinder': 1,
+      'Preparatory': 2,
+      'Grade 1': 3,
+      'Grade 2': 4,
+      'Grade 3': 5,
+      'Grade 4': 6,
+      'Grade 5': 7,
+      'Grade 6': 8
+    };
+
+    return grades.sort((a, b) => gradeOrder[a] - gradeOrder[b]);
+  };
+
+  // Fetch dropdown options when component mounts
   useEffect(() => {
-    if (location.state?.role) {
-      setFormData((prevData) => ({ ...prevData, role: location.state.role }));
-    }
-  }, [location]);
- 
+    const fetchDropdownOptions = async () => {
+      try {
+        // Fetch Grade Sections
+        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
+        const sortedGrades = sortGradeLevels(uniqueGrades);
+        setGradeOptions(sortedGrades);
+
+        // Fetch Sections for the current grade
+        if (formData.grade) {
+          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}`);
+          const sections = sectionsResponse.data.map(section => section.sectionName);
+          setSectionOptions(sections);
+        }
+
+        // Fetch Academic Years
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
+        setAcademicYearOptions(formattedAcademicYears);
+
+      } catch (error) {
+        console.error('Error fetching dropdown options:', error);
+        setMessage('Failed to load registration options');
+      }
+    };
+
+    fetchDropdownOptions();
+  }, [formData.grade]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    
+    // Special handling for grade change
+    if (name === 'grade') {
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value,
+        section: '' // Reset section when grade changes
+      }));
+    } else {
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
   };
- 
+
   const handleFocus = (inputName) => {
     setFocusedInput(inputName);
   };
- 
+
   const handleBlur = () => {
     setFocusedInput(null);
   };
- 
+
   const getInputStyle = (inputName) => ({
     width: "100%",
     maxWidth: "395px",
@@ -54,108 +111,79 @@ function Register() {
     boxSizing: "border-box",
     marginBottom: "10px",
   });
- 
-  // Password validation: at least 8 characters long
+
   const validatePassword = (password) => {
-    const passwordPattern = /^.{8,}$/; // Matches any string with at least 8 characters
-    return passwordPattern.test(password);
+    return password.length >= 8;
   };
- 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
- 
-    // Password and confirm password must match
+
     if (formData.password !== formData.confirmPassword) {
       setMessage("Passwords do not match. Please try again.");
       setIsSuccess(false);
       return;
     }
- 
-    // Validate password length (at least 8 characters)
+
     if (!validatePassword(formData.password)) {
       setMessage("Password must be at least 8 characters long.");
       setIsSuccess(false);
       return;
     }
- 
+
     try {
-      const response = await fetch("http://localhost:8080/api/users/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role, // Include role
-          idNumber: ["Student", "NAS"].includes(formData.role)
-            ? formData.idNumber
-            : null,
-          grade: formData.role === "Student" ? formData.grade : null,
-          section: formData.role === "Student" ? formData.section : null,
-        }),
+      const response = await axios.post("http://localhost:8080/api/users/register", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role: "Student",
+        idNumber: formData.idNumber,
+        grade: formData.grade,
+        section: formData.section,
+        academicYear: formData.academicYear
       });
- 
-      if (response.ok) {
-        setMessage("User registered successfully! .");
-        setIsSuccess(true);
-        setTimeout(() => {
-          navigate("/login"); // Automatically redirect to login page after 2 seconds
-        }, 10000); // You can adjust the time delay before redirecting
-      } else {
-        const errorData = await response.json();
-        setMessage(errorData.error || "Failed to register. Please try again.");
-        setIsSuccess(false);
-      }
+
+      setMessage("Registration successful!");
+      setIsSuccess(true);
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+
     } catch (error) {
-      setMessage("An error occurred. Please try again.");
+      const errorMessage = error.response?.data?.error || "Registration failed. Please try again.";
+      setMessage(errorMessage);
       setIsSuccess(false);
       console.error("Error:", error);
     }
   };
- 
+
   return (
     <div style={styles.background}>
-      {/* Alert message at the top */}
       {message && (
-        <div
-          style={{
-            ...styles.alertMessage,
-            backgroundColor: isSuccess ? "#d4edda" : "#f8d7da",
-            color: isSuccess ? "#155724" : "#721c24",
-            position: "absolute",  // Positioning it at the top of the page
-            top: 20,
-            left: "50%",
-            transform: "translateX(-50%)",  // Center the alert
-            zIndex: 1000,  // Make sure it stays on top
-            width: "auto",
-            maxWidth: "350px",
-            padding: "8px",
-            borderRadius: "5px",
-            textAlign: "center",
-          }}
-        >
-          <p>
-            {message}{" "}
-            {isSuccess && (
-              <span
-                style={styles.loginLink}
-                onClick={() => navigate("/login")} // Navigate to Login page
-              >
-                Click here to login.
-              </span>
-            )}
-          </p>
+        <div style={{
+          ...styles.alertMessage,
+          backgroundColor: isSuccess ? "#d4edda" : "#f8d7da",
+          color: isSuccess ? "#155724" : "#721c24",
+          position: "absolute",
+          top: 20,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+          width: "auto",
+          maxWidth: "350px",
+          padding: "8px",
+          borderRadius: "5px",
+          textAlign: "center",
+        }}>
+          <p>{message}</p>
         </div>
       )}
- 
-      {/* Register form */}
+
       <div style={styles.container}>
         <div style={styles.registerBox}>
-          <h2 style={styles.title}>Sign up</h2>
- 
+          <h2 style={styles.title}>Student Registration</h2>
+
           <form onSubmit={handleSubmit}>
             <div style={styles.rowInputGroup}>
               <input
@@ -167,6 +195,7 @@ function Register() {
                 style={{ ...getInputStyle("firstName"), width: "48%" }}
                 onFocus={() => handleFocus("firstName")}
                 onBlur={handleBlur}
+                required
               />
               <input
                 type="text"
@@ -177,8 +206,10 @@ function Register() {
                 style={{ ...getInputStyle("lastName"), width: "48%" }}
                 onFocus={() => handleFocus("lastName")}
                 onBlur={handleBlur}
+                required
               />
             </div>
+
             <div style={styles.inputGroup}>
               <input
                 type="email"
@@ -189,8 +220,80 @@ function Register() {
                 style={getInputStyle("email")}
                 onFocus={() => handleFocus("email")}
                 onBlur={handleBlur}
+                required
               />
             </div>
+
+            <div style={styles.inputGroup}>
+              <input
+                type="text"
+                name="idNumber"
+                placeholder="ID Number"
+                value={formData.idNumber}
+                onChange={handleInputChange}
+                style={getInputStyle("idNumber")}
+                onFocus={() => handleFocus("idNumber")}
+                onBlur={handleBlur}
+                required
+              />
+            </div>
+
+            <div style={styles.rowInputGroup}>
+              <select
+                name="grade"
+                value={formData.grade}
+                onChange={handleInputChange}
+                style={{ ...getInputStyle("grade"), width: "48%" }}
+                onFocus={() => handleFocus("grade")}
+                onBlur={handleBlur}
+                required
+              >
+                <option value="">Select Grade</option>
+                {gradeOptions.map((grade) => (
+                  <option key={grade} value={grade}>
+                    {grade}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                name="section"
+                value={formData.section}
+                onChange={handleInputChange}
+                style={{ ...getInputStyle("section"), width: "48%" }}
+                onFocus={() => handleFocus("section")}
+                onBlur={handleBlur}
+                required
+                disabled={!formData.grade}
+              >
+                <option value="">
+                  {!formData.grade ? "Select Grade First" : "Select Section"}
+                </option>
+                {sectionOptions.map((section) => (
+                  <option key={section} value={section}>
+                    {section}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <select
+                name="academicYear"
+                value={formData.academicYear}
+                onChange={handleInputChange}
+                style={getInputStyle("academicYear")}
+                onFocus={() => handleFocus("academicYear")}
+                onBlur={handleBlur}
+                required
+              >
+                <option value="">Select Academic Year</option>
+                {academicYearOptions.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+
             <div style={styles.inputGroup}>
               <input
                 type="password"
@@ -201,8 +304,10 @@ function Register() {
                 style={getInputStyle("password")}
                 onFocus={() => handleFocus("password")}
                 onBlur={handleBlur}
+                required
               />
             </div>
+
             <div style={styles.inputGroup}>
               <input
                 type="password"
@@ -213,82 +318,18 @@ function Register() {
                 style={getInputStyle("confirmPassword")}
                 onFocus={() => handleFocus("confirmPassword")}
                 onBlur={handleBlur}
+                required
               />
             </div>
-            {/* Role Selection */}
-            <div style={styles.inputGroup}>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                style={getInputStyle("role")}
-              >
-                <option value="Student">Student</option>
 
-
-              </select>
-            </div>
-            {/* Conditional Fields for Student and NAS Roles */}
-            {["Student", "NAS"].includes(formData.role) && (
-              <div style={styles.inputGroup}>
-                <input
-                  type="text"
-                  name="idNumber"
-                  placeholder="ID Number"
-                  value={formData.idNumber}
-                  onChange={handleInputChange}
-                  style={getInputStyle("idNumber")}
-                  onFocus={() => handleFocus("idNumber")}
-                  onBlur={handleBlur}
-                />
-              </div>
-            )}
-            {/* Conditional Fields for Student Role */}
-            {formData.role === "Student" && (
-              <div style={styles.rowInputGroup}>
-                <select
-                  name="grade"
-                  value={formData.grade}
-                  onChange={handleInputChange}
-                  style={{ ...getInputStyle("grade"), width: "48%" }}
-                  onFocus={() => handleFocus("grade")}
-                  onBlur={handleBlur}
-                >
-                  <option value="">Select Grade</option>
-                  {Array.from({ length: 6 }, (_, i) => (
-                    <option key={i} value={`Grade ${i + 1}`}>
-                      Grade {i + 1}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="section"
-                  value={formData.section}
-                  onChange={handleInputChange}
-                  style={{ ...getInputStyle("section"), width: "48%" }}
-                  onFocus={() => handleFocus("section")}
-                  onBlur={handleBlur}
-                >
-                  <option value="">Select Section</option>
-                  {["A", "B", "C"].map((section) => (
-                    <option key={section} value={section}>
-                      {section}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
- 
             <button type="submit" style={styles.registerButton}>
               Register
             </button>
           </form>
+
           <p style={styles.loginText}>
             Already have an account?{" "}
-            <span
-              style={styles.loginLink}
-              onClick={() => navigate("/login")} // Navigate to Login page
-            >
+            <span style={styles.loginLink} onClick={() => navigate("/login")}>
               Login here
             </span>
           </p>
@@ -297,7 +338,7 @@ function Register() {
     </div>
   );
 }
- 
+
 const styles = {
   background: {
     position: "relative",
@@ -320,14 +361,12 @@ const styles = {
     alignItems: "center",
     width: "90%",
     maxWidth: "400px",
-    height: "50vh", // This makes the height relative to the viewport height
     padding: "20px",
   },
-  
   registerBox: {
     width: "90%",
     maxWidth: "400px",
-    padding: "6px 30px",
+    padding: "20px 30px",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: "8px",
     textAlign: "center",
@@ -343,7 +382,6 @@ const styles = {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: "10px",
- 
   },
   inputGroup: {
     display: "flex",
@@ -361,7 +399,6 @@ const styles = {
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
-  
     fontSize: "15px",
     marginTop: "10px",
   },
@@ -380,11 +417,10 @@ const styles = {
     color: "#721c24",
     padding: "10px",
     marginBottom: "20px",
-    marginTop: "-20px",
     borderRadius: "5px",
     textAlign: "center",
-    fontSize: "12px", // Alert message text size set to 12px
+    fontSize: "12px",
   },
 };
- 
+
 export default Register;
