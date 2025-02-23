@@ -1,8 +1,4 @@
 import React, { useState, useEffect } from "react";
-import SearchIcon from "@mui/icons-material/Search";
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import InputAdornment from "@mui/material/InputAdornment";
-
 import {
   Box,
   Typography,
@@ -96,18 +92,18 @@ const StudentLibraryHours = () => {
       toast.error("Failed to assign book. Invalid data.");
       return;
     }
-
+  
     try {
       const token = localStorage.getItem("token");
-
+  
       // Find the first entry with an empty bookTitle
       const emptyEntry = libraryHours.find((entry) => !entry.bookTitle);
-
+  
       if (!emptyEntry) {
         toast.error("No available entry to assign the book.");
         return;
       }
-
+  
       await axios.put(
         `http://localhost:8080/api/books/${bookDetails.id}/assign-library-hours/${emptyEntry.id}`,
         {},
@@ -117,7 +113,7 @@ const StudentLibraryHours = () => {
           },
         }
       );
-
+  
       // Update the book title in the corresponding entry
       const updatedLibraryHours = libraryHours.map((entry) =>
         entry.id === emptyEntry.id
@@ -142,13 +138,15 @@ const StudentLibraryHours = () => {
   const applyFilters = () => {
     const { dateFrom, dateTo, academicYear } = filters;
     const filtered = libraryHours.filter((entry) => {
-      const entryDate = new Date(entry.timeIn).setHours(0, 0, 0, 0); // Normalize time part to ignore time
-      const fromDate = dateFrom ? new Date(dateFrom).setHours(0, 0, 0, 0) : null;
-      const toDate = dateTo ? new Date(dateTo).setHours(0, 0, 0, 0) : null;
+      const entryDate = new Date(entry.timeIn);
+      const fromDate = dateFrom ? new Date(dateFrom) : null;
+      const toDate = dateTo ? new Date(dateTo) : null;
 
       const matchesDate =
         (!fromDate || entryDate >= fromDate) && (!toDate || entryDate <= toDate);
-      const matchesYear = academicYear ? entry.academicYear === academicYear : true;
+      const matchesYear = academicYear
+        ? entry.academicYear === academicYear
+        : true;
 
       return matchesDate && matchesYear;
     });
@@ -219,9 +217,7 @@ const StudentLibraryHours = () => {
               color: "#FFD700",
               fontWeight: "bold",
               paddingBottom: 3,
-              textAlign: "left",
-              marginTop: "15px",
-              fontSize: "40px",
+              textAlign: "center",
             }}
           >
             Library Hours
@@ -232,108 +228,93 @@ const StudentLibraryHours = () => {
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              marginBottom: 3,
+              marginBottom: 2,
             }}
           >
-              <TextField
+            <TextField
               name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
+              label="Search"
+              placeholder="Search by date, time, or book title"
               variant="outlined"
-              placeholder="Search by date, time, or book title.."
-              size="small"
+              fullWidth
+              onChange={handleSearchChange}
               sx={{
                 backgroundColor: "#fff",
-                borderRadius: "15px",
-                width: { xs: "100%", sm: "360px" },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+                borderRadius: "4px",
+                maxWidth: 400,
+                marginRight: 2,
               }}
             />
           </Box>
 
           {/* Filters and Insert Book Button */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 2,
-              marginBottom: 2,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <TextField
-                name="dateFrom"
-                type="date"
-                size="small"
-                label="Date From"
-                value={filters.dateFrom}
-                onChange={handleFilterChange}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  backgroundColor: "#fff",
-                  borderRadius: "15px",
-                  "& .MuiOutlinedInput-root": {
-                    "& fieldset": {
-                      border: "none",
-                    },
-                  },
-                }}
-              />
-              <TextField
-                name="dateTo"
-                type="date"
-                size="small"
-                label="Date To"
-                value={filters.dateTo}
-                onChange={handleFilterChange}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  backgroundColor: "#fff",
-                  borderRadius: "15px",
-                  "& .MuiOutlinedInput-root": {
-                    "& fieldset": {
-                      border: "none",
-                    },
-                  },
-                }}
-              />
-              <Select
-                name="academicYear"
-                value={filters.academicYear}
-                onChange={handleFilterChange}
-                displayEmpty
-                size="small"
-                sx={{
-                  backgroundColor: "#fff",
-                  borderRadius: "15px",
-                  minWidth: "150px",
-                }}
-              >
-                <MenuItem value="">Select Academic Year</MenuItem>
-                <MenuItem value="2024">2024</MenuItem>
-                <MenuItem value="2023">2023</MenuItem>
-              </Select>
-              <Button
-                variant="contained"
-                onClick={applyFilters}
-                sx={{
-                  backgroundColor: "#FFD700",
-                  color: "#000",
-                  "&:hover": { backgroundColor: "#FFC107" },
-                }}
-              >
-                Filter
-              </Button>
-            </Box>
+            <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: 2,
+                        marginBottom: 2,
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                        <TextField
+                          name="dateFrom"
+                          type="date"
+                          size="small"
+                          label="Date From"
+                          value={filters.dateFrom}
+                          onChange={handleFilterChange}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            backgroundColor: "#fff",
+                            borderRadius: "15px",
+                          }}
+                        />
+                        <TextField
+                          name="dateTo"
+                          type="date"
+                          size="small"
+                          label="Date To"
+                          value={filters.dateTo}
+                          onChange={handleFilterChange}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            backgroundColor: "#fff",
+                            borderRadius: "15px",
+                          }}
+                        />
+                        <Select
+                          name="academicYear"
+                          value={filters.academicYear}
+                          onChange={handleFilterChange}
+                          displayEmpty
+                          size="small"
+                          sx={{
+                            backgroundColor: "#fff",
+                            borderRadius: "15px",
+                            minWidth: "150px",
+                          }}
+                        >
+                          <MenuItem value="">Select Academic Year</MenuItem>
+                          <MenuItem value="2024">2024</MenuItem>
+                          <MenuItem value="2023">2023</MenuItem>
+                        </Select>
+                        <Button
+                          variant="contained"
+                          onClick={applyFilters}
+                          sx={{
+                            backgroundColor: "#FFD700",
+                            color: "#000",
+                            "&:hover": { backgroundColor: "#FFC107" },
+                          }}
+                        >
+                          Filter
+                        </Button>
+                      </Box>
 
+            {/* Insert Book Button */}
             <Button
               variant="contained"
               onClick={handleClickOpen}
@@ -348,6 +329,7 @@ const StudentLibraryHours = () => {
           </Box>
 
           <TableContainer
+
                 component={Paper}
                 sx={{
                   borderRadius: '15px',
@@ -401,6 +383,7 @@ const StudentLibraryHours = () => {
 
 
 </TableContainer>
+
 
         </Box>
       </Box>
