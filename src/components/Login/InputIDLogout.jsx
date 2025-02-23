@@ -184,7 +184,7 @@ function InputIDLogout() {
                                         </Typography>
                                         <br /> <br />
                                         <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, mb: 0.5, color: "black" }}>
-                                          TIME IN
+                                          TIME OUT
                                         </Typography>
                                         <Typography variant="body2" sx={{ color: "black" }}>
                                           <strong>Date:</strong> {studentDetails.date}

@@ -5,6 +5,7 @@ import axios from 'axios';
 function Register() {
   const [formData, setFormData] = useState({
     firstName: "",
+    middleName: "",
     lastName: "",
     email: "",
     password: "",
@@ -134,6 +135,7 @@ function Register() {
     try {
       const response = await axios.post("http://localhost:8080/api/users/register", {
         firstName: formData.firstName,
+        middleName: formData.middleName,
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
@@ -185,30 +187,40 @@ function Register() {
           <h2 style={styles.title}>Student Registration</h2>
 
           <form onSubmit={handleSubmit}>
-            <div style={styles.rowInputGroup}>
-              <input
-                type="text"
-                name="firstName"
-                placeholder="First Name"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                style={{ ...getInputStyle("firstName"), width: "48%" }}
-                onFocus={() => handleFocus("firstName")}
-                onBlur={handleBlur}
-                required
-              />
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Last Name"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                style={{ ...getInputStyle("lastName"), width: "48%" }}
-                onFocus={() => handleFocus("lastName")}
-                onBlur={handleBlur}
-                required
-              />
-            </div>
+          <div style={styles.rowInputGroup}>
+  <input
+    type="text"
+    name="firstName"
+    placeholder="First Name"
+    value={formData.firstName}
+    onChange={handleInputChange}
+    style={{ ...getInputStyle("firstName"), width: "32%" }}
+    onFocus={() => handleFocus("firstName")}
+    onBlur={handleBlur}
+    required
+  />
+  <input
+    type="text"
+    name="middleName"
+    placeholder="Middle Name"
+    value={formData.middleName}
+    onChange={handleInputChange}
+    style={{ ...getInputStyle("middleName"), width: "32%" }}
+    onFocus={() => handleFocus("middleName")}
+    onBlur={handleBlur}
+  />
+  <input
+    type="text"
+    name="lastName"
+    placeholder="Last Name"
+    value={formData.lastName}
+    onChange={handleInputChange}
+    style={{ ...getInputStyle("lastName"), width: "32%" }}
+    onFocus={() => handleFocus("lastName")}
+    onBlur={handleBlur}
+    required
+  />
+</div>
 
             <div style={styles.inputGroup}>
               <input

@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   TextField,
   Button,
-  Typography,
+  Box,
   IconButton,
-  MenuItem,
-  Snackbar,
-  Alert,
+  Typography,
   Grid
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -17,258 +17,352 @@ const CreateStudentForm = ({ open, onClose }) => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    middleName: "",
     email: "",
-    password: "",
-    role: "Student",
     idNumber: "",
+    password: "",
+    confirmPassword: "",
     grade: "",
     section: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "",
+    academicYear: "",
+    role: "Student"
   });
 
-  // Fixed options for grade and section
-  const grades = [1, 2, 3, 4, 5, 6];
-  const sections = ["A", "B", "C"];
+  const [gradeOptions, setGradeOptions] = useState([]);
+  const [sectionOptions, setSectionOptions] = useState([]);
+  const [academicYearOptions, setAcademicYearOptions] = useState([]);
 
-  const roles = ["Student"];
+  // Fetch dropdown options
+  useEffect(() => {
+    const fetchDropdownOptions = async () => {
+      try {
+        // Fetch Grade Levels
+        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
+        setGradeOptions(uniqueGrades);
+
+        // Fetch Sections for the current grade
+        if (formData.grade) {
+          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}`);
+          const sections = sectionsResponse.data.map(section => section.sectionName);
+          setSectionOptions(sections);
+        }
+
+        // Fetch Academic Years
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
+        setAcademicYearOptions(formattedAcademicYears);
+
+      } catch (error) {
+        console.error('Error fetching dropdown options:', error);
+      }
+    };
+
+    fetchDropdownOptions();
+  }, [formData.grade]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    
+    // Special handling for grade change
+    if (name === 'grade') {
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value,
+        section: '' // Reset section when grade changes
+      }));
+    } else {
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
   };
 
-  const resetForm = () => {
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      role: "Student",
-      idNumber: "",
-      grade: "",
-      section: "",
-    });
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const handleSubmit = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.role) {
-      setSnackbar({ open: true, message: "All fields are required!", severity: "warning" });
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match");
       return;
     }
 
-    const payload = {
-      ...formData,
-      idNumber: formData.role === "Student" ? formData.idNumber : null,
-      grade: formData.role === "Student" ? formData.grade : null,
-      section: formData.role === "Student" ? formData.section : null,
-    };
-
     try {
-      setLoading(true);
-      const response = await axios.post("http://localhost:8080/api/students/register", payload);
-      if (response.status === 200) {
-        setSnackbar({ open: true, message: "User created successfully!", severity: "success" });
-        resetForm(); // Reset the form fields after successful creation
-      }
-    } catch (error) {
-      console.error("Error creating user:", error.response?.data);
-      setSnackbar({
-        open: true,
-        message: error.response?.data?.error || "Failed to create user. Please try again.",
-        severity: "error",
+      const response = await axios.post("http://localhost:8080/api/students/register", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName,
+        email: formData.email,
+        idNumber: formData.idNumber,
+        password: formData.password,
+        grade: formData.grade,
+        section: formData.section,
+        academicYear: formData.academicYear,
+        role: formData.role
       });
-    } finally {
-      setLoading(false);
+
+      alert("Student added successfully");
+      onClose();
+    } catch (error) {
+      console.error("Error adding student:", error);
+      alert("Failed to add student");
     }
   };
 
-  if (!open) return null;
-
   return (
-    <Box
-      sx={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: "400px",
-        bgcolor: "#F5F5F5",
-        boxShadow: 24,
-        p: 4,
-        borderRadius: "8px",
-        zIndex: 1500,
-        border: "1px solid #CCC",
-      }}
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
     >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 3,
-        }}
-      >
-        <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-          Create Student
-        </Typography>
-        <IconButton onClick={onClose}>
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        p: 2 
+      }}>
+        <Typography variant="h6">Add Student</Typography>
+        <IconButton onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
-      </Box>
+      </DialogTitle>
 
-      <Box
-        component="form"
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <TextField
-              label="First Name"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              variant="outlined"
-              fullWidth
-            />
+      <DialogContent sx={{ p: 2 }}>
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={2}>
+            <Grid item xs={4}>
+              <TextField
+                name="firstName"
+                label="First Name"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                fullWidth
+                required
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={4}>
+              <TextField
+                name="lastName"
+                label="Last Name"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                fullWidth
+                required
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={4}>
+              <TextField
+                name="middleName"
+                label="Middle Name"
+                value={formData.middleName}
+                onChange={handleInputChange}
+                fullWidth
+                variant="outlined"
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={6}>
-            <TextField
-              label="Last Name"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              variant="outlined"
-              fullWidth
-            />
+
+          <TextField
+            name="idNumber"
+            label="ID Number"
+            value={formData.idNumber}
+            onChange={handleInputChange}
+            fullWidth
+            required
+            variant="outlined"
+            sx={{ mt: 2 }}
+          />
+
+          <TextField
+            name="email"
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            fullWidth
+            required
+            variant="outlined"
+            sx={{ mt: 2 }}
+          />
+
+          <Grid container spacing={2} sx={{ mt: 0 }}>
+            <Grid item xs={6}>
+              <TextField
+                name="password"
+                label="Password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                fullWidth
+                required
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                name="confirmPassword"
+                label="Confirm Password"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                fullWidth
+                required
+                variant="outlined"
+              />
+            </Grid>
           </Grid>
-        </Grid>
-        <TextField
-          label="Email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-        />
-        <TextField
-          label="Password"
-          name="password"
-          type="password"
-          value={formData.password}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-        />
-        <TextField
-          label="User Role"
-          name="role"
-          select
-          value={formData.role}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 15000 } // Ensure dropdown is above other elements
-            }
-          }}
-        >
-          {roles.map((role) => (
-            <MenuItem key={role} value={role}>
-              {role}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          label="ID Number"
-          name="idNumber"
-          value={formData.idNumber}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-        />
-        <TextField
-          label="Grade"
-          name="grade"
-          select
-          value={formData.grade}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 15000 } // Ensure dropdown is above other elements
-            }
-          }}
-        >
-          {grades.map((grade) => (
-            <MenuItem key={grade} value={`Grade ${grade}`}>
-              Grade {grade}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          label="Section"
-          name="section"
-          select
-          value={formData.section}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 15000 } // Ensure dropdown is above other elements
-            }
-          }}
-        >
-          {sections.map((section) => (
-            <MenuItem key={section} value={section}>
-              Section {section}
-            </MenuItem>
-          ))}
-        </TextField>
 
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={loading}
-          sx={{
-            backgroundColor: "#FFD700",
-            color: "#000",
-            '&:hover': { backgroundColor: "#FFC107" },
-          }}
-        >
-          {loading ? "Creating..." : "Create"}
-        </Button>
-      </Box>
+          <Grid container spacing={2} sx={{ mt: 0 }}>
+  <Grid item xs={4}>
+    <TextField
+      name="grade"
+      label="Grade"
+      select
+      value={formData.grade}
+      onChange={handleInputChange}
+      fullWidth
+      required
+      variant="outlined"
+      SelectProps={{
+        native: true,
+      }}
+      InputLabelProps={{ 
+        shrink: true, 
+        style: { 
+          position: 'absolute', 
+          top: -10, 
+          left: -10, 
+          backgroundColor: 'white', 
+          padding: '0 5px', 
+          zIndex: 1 
+        } 
+      }}
+    >
+      <option value="">Select Grade</option>
+      {gradeOptions.map((grade) => (
+        <option key={grade} value={grade}>
+          {grade}
+        </option>
+      ))}
+    </TextField>
+  </Grid>
+  <Grid item xs={4}>
+    <TextField
+      name="section"
+      label="Section"
+      select
+      value={formData.section}
+      onChange={handleInputChange}
+      fullWidth
+      required
+      variant="outlined"
+      disabled={!formData.grade}
+      SelectProps={{
+        native: true,
+      }}
+      InputLabelProps={{ 
+        shrink: true, 
+        style: { 
+          position: 'absolute', 
+          top: -10, 
+          left: -10, 
+          backgroundColor: 'white', 
+          padding: '0 5px', 
+          zIndex: 1 
+        } 
+      }}
+    >
+      <option value="">Select Section</option>
+      {sectionOptions.map((section) => (
+        <option key={section} value={section}>
+          {section}
+        </option>
+      ))}
+    </TextField>
+  </Grid>
+  <Grid item xs={4}>
+    <TextField
+      name="role"
+      label="User Role"
+      select
+      value={formData.role}
+      onChange={handleInputChange}
+      fullWidth
+      required
+      variant="outlined"
+      SelectProps={{
+        native: true,
+      }}
+      InputLabelProps={{ 
+        shrink: true, 
+        style: { 
+          position: 'absolute', 
+          top: -10, 
+          left: -10, 
+          backgroundColor: 'white', 
+          padding: '0 5px', 
+          zIndex: 1 
+        } 
+      }}
+    >
+      <option value="Student">Student</option>
+    </TextField>
+  </Grid>
+</Grid>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ open: false, message: "", severity: "" })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ open: false, message: "", severity: "" })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+<TextField
+  name="academicYear"
+  label="Academic Year"
+  select
+  value={formData.academicYear}
+  onChange={handleInputChange}
+  fullWidth
+  required
+  variant="outlined"
+  sx={{ mt: 2 }}
+  SelectProps={{
+    native: true,
+  }}
+  InputLabelProps={{ 
+    shrink: true, 
+    style: { 
+      position: 'absolute', 
+      top: -10, 
+      left: -10, 
+      backgroundColor: 'white', 
+      padding: '0 5px', 
+      zIndex: 1 
+    } 
+  }}
+>
+  <option value="">Select Academic Year</option>
+  {academicYearOptions.map((year) => (
+    <option key={year} value={year}>
+      {year}
+    </option>
+  ))}
+</TextField>
+
+          <Button 
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{
+              mt: 2,
+              backgroundColor: '#FFD700',
+              color: '#000',
+              '&:hover': { backgroundColor: '#FFC107' }
+            }}
+          >
+            Submit
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

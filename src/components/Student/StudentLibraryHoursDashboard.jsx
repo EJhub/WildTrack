@@ -324,69 +324,67 @@ const StudentLibraryHours = () => {
                 "&:hover": { backgroundColor: "#FFC107" },
               }}
             >
-              Add Book
+              BOOK READ
             </Button>
           </Box>
 
           <TableContainer
-            component={Paper}
-            sx={{
-              flexGrow: 1,
-              opacity: 0.9,
-              borderRadius: "15px",
-              overflow: "auto",
-              maxHeight: "calc(100vh - 300px)",
-            }}
-          >
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Time In</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Book Title</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Time Out</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#D9D9D9" }}>Minutes</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {displayedHours.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
-                    <TableCell>
-                      {entry.bookTitle ? entry.bookTitle : "--"}
-                    </TableCell>
-                    <TableCell>
-                      {entry.timeOut
-                        ? new Date(entry.timeOut).toLocaleTimeString()
-                        : "--"}
-                    </TableCell>
-                    <TableCell>
-                      {calculateMinutes(entry.timeIn, entry.timeOut)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
 
-          <Box sx={{ position: "relative", width: "100%" }}>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={filteredHours.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                paddingTop: 2,
-                width: "100%",
-              }}
-            />
-          </Box>
+                component={Paper}
+                sx={{
+                  borderRadius: '15px',
+                  boxShadow: 3,
+                  overflow: 'auto',
+                  maxHeight: 'calc(100vh - 340px)',
+                  marginTop: 3,
+                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                }}
+              >
+  <Table stickyHeader sx={{ flexGrow: 1 }}>
+    <TableHead>
+      <TableRow>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Date</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Time In</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Book Title</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Time Out</TableCell>
+        <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Minutes</TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {displayedHours.map((entry) => (
+        <TableRow key={entry.id}>
+          <TableCell>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
+          <TableCell>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
+          <TableCell>{entry.bookTitle ? entry.bookTitle : "--"}</TableCell>
+          <TableCell>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
+          <TableCell>{calculateMinutes(entry.timeIn, entry.timeOut)}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+
+  <TablePagination
+  rowsPerPageOptions={[5, 10, 25]}
+  component="div"
+  count={filteredHours.length}
+  rowsPerPage={rowsPerPage}
+  page={page}
+  onPageChange={handleChangePage}
+  onRowsPerPageChange={handleChangeRowsPerPage}
+  sx={{
+    paddingTop: 2,
+    backgroundColor: "transparent",  // Make background transparent
+    fontWeight: "bold",
+    display: "flex",  // Use flexbox to align items
+    justifyContent: "center",  // Center the pagination
+    width: "100%",
+  }}
+/>
+
+
+</TableContainer>
+
+
         </Box>
       </Box>
 

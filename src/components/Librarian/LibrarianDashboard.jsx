@@ -290,8 +290,8 @@ const LibrarianDashboard = () => {
                   label={{ 
                     value: 'Completed Sessions', 
                     angle: -90, 
-                    position: 'insideLeft',
-                    offset: -5
+                    position: 'center',
+                  
                   }}
                 />
                 <CartesianGrid stroke="#ffffff" strokeDasharray="5 5" />
@@ -308,7 +308,7 @@ const LibrarianDashboard = () => {
                   dataKey="participants" 
                   stroke="#000000" 
                   strokeWidth={2}
-                  name="Active Session"
+                  
                   dot={{ fill: '#000000' }}
                   activeDot={{ 
                     r: 8,

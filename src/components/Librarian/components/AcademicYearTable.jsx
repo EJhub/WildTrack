@@ -15,6 +15,7 @@ import {
 import axios from 'axios';
 import AddAcademicYear from './AddAcademicYear';
 import ViewAcademicYear from './ViewAcademicYear';
+import AddIcon from '@mui/icons-material/Add';
 
 const AcademicYearTable = () => {
     const [page, setPage] = useState(0);
@@ -23,6 +24,11 @@ const AcademicYearTable = () => {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedAcademicYear, setSelectedAcademicYear] = useState(null);
     const [academicYearData, setAcademicYearData] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filteredData = academicYearData.filter((year) =>
+      `${year.startYear}-${year.endYear}`.includes(searchTerm)
+    );
   
     useEffect(() => {
       fetchAcademicYearData();
@@ -86,32 +92,7 @@ const AcademicYearTable = () => {
 
     return (
       <Box sx={{ flexGrow: 1, backgroundColor: '#ffffff' }}>
-        {/* Add Academic Year Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={handleOpenAddModal}
-            sx={{
-              color: '#FFEB3B',
-              backgroundColor: 'white',
-              border: '1px solid #800000',
-              borderRadius: '50px',
-              paddingX: 3,
-              paddingY: 1.5,
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 2,
-              '&:hover': {
-                backgroundColor: '#800000',
-                color: '#FFEB3B',
-              },
-            }}
-          >
-            Add Academic Year
-          </Button>
-        </Box>
+       
 
         {/* Table Section */}
         <TableContainer
@@ -166,7 +147,7 @@ const AcademicYearTable = () => {
                         onClick={() => handleOpenViewModal(year)}
                         sx={{
                           color: '#800000',
-                          backgroundColor: 'white',
+                          backgroundColor: '#F5B400',
                           border: '1px solid #FFEB3B',
                           marginRight: 1,
                           fontWeight: 'bold',
@@ -183,7 +164,7 @@ const AcademicYearTable = () => {
                         onClick={() => handleArchiveAcademicYear(year.id)}
                         sx={{
                           color: '#800000',
-                          backgroundColor: 'white',
+                          backgroundColor: '#F5B400',
                           border: '1px solid #FFEB3B',
                           fontWeight: 'bold',
                           '&:hover': {

@@ -11,6 +11,9 @@ import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import Modal from "@mui/material/Modal";
 import TextField from "@mui/material/TextField";
+import IconButton from "@mui/material/IconButton";
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const PersonalInformation = () => {
   const location = useLocation();
@@ -23,6 +26,16 @@ const PersonalInformation = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(null);
+
+  axios.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token'); // or wherever you store your auth token
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -31,21 +44,30 @@ const PersonalInformation = () => {
         setLoading(false);
         return;
       }
-
+  
       try {
-        const response = await axios.get(`http://localhost:8080/api/users/${idNumber}`);
+        const token = localStorage.getItem('token'); // or however you store your auth token
+        const response = await axios.get(`http://localhost:8080/api/users/${idNumber}`, {
+          headers: {
+            Authorization: `Bearer ${token}` // Add auth header
+          }
+        });
         setUserInfo(response.data);
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching user info:", err);
-        setError("Failed to fetch user information. Please try again later.");
+        if (err.response && err.response.status === 401) {
+          // Handle unauthorized error
+          window.location.href = '/login'; // Redirect to login if session expired
+        } else {
+          console.error("Error fetching user info:", err);
+          setError("Failed to fetch user information. Please try again later.");
+        }
         setLoading(false);
       }
     };
-
+  
     fetchUserInfo();
   }, [idNumber]);
-
   const handleChangePassword = () => {
     setShowChangePasswordModal(true);
   };
@@ -66,13 +88,79 @@ const PersonalInformation = () => {
         newPassword,
       });
 
-      // Password change successful
       alert("Password changed successfully!");
       handleCloseChangePasswordModal();
     } catch (error) {
-      // Handle error
       console.error("Error changing password:", error);
       alert("Failed to change password. Please try again.");
+    }
+  };
+
+  const handleProfilePictureClick = () => {
+    setShowProfilePictureModal(true);
+  };
+
+  const handleCloseProfilePictureModal = () => {
+    setShowProfilePictureModal(false);
+    setProfilePicture(null);
+  };
+
+  const handleUploadProfilePicture = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setProfilePicture(file);
+    }
+  };
+
+  const handleSaveProfilePicture = async () => {
+    if (profilePicture) {
+      const formData = new FormData();
+      formData.append('profilePicture', profilePicture);
+      formData.append('userId', userInfo.id);
+  
+      try {
+        const response = await axios.post('http://localhost:8080/api/users/upload-profile-picture', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+  
+        // Update the user info with the new profile picture URL
+        setUserInfo(prevInfo => ({
+          ...prevInfo,
+          profilePictureUrl: response.data.profilePictureUrl
+        }));
+  
+        // Refresh the profile picture display
+        const updatedUserResponse = await axios.get(`http://localhost:8080/api/users/${userInfo.idNumber}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setUserInfo(updatedUserResponse.data);
+  
+        handleCloseProfilePictureModal();
+      } catch (error) {
+        console.error('Error uploading profile picture:', error);
+        alert('Failed to upload profile picture');
+      }
+    }
+  };
+
+  const handleRemoveProfilePicture = async () => {
+    try {
+      await axios.delete(`http://localhost:8080/api/users/${userInfo.id}/profile-picture`);
+      
+      setUserInfo(prevInfo => ({
+        ...prevInfo,
+        profilePictureUrl: null
+      }));
+
+      handleCloseProfilePictureModal();
+    } catch (error) {
+      console.error('Error removing profile picture:', error);
+      alert('Failed to remove profile picture');
     }
   };
 
@@ -104,7 +192,7 @@ const PersonalInformation = () => {
           <br></br>
           <Paper
             sx={{
-              backgroundColor: "rgba(120, 27, 27, 0.8)", // Transparent red with 80% opacity
+              backgroundColor: "rgba(120, 27, 27, 0.8)",
               padding: 4,
               marginTop: "20px",
               borderRadius: 2,
@@ -112,7 +200,7 @@ const PersonalInformation = () => {
               width: "90%",
               height: "auto",
               textAlign: "center",
-              boxShadow: "0px 8px 20px rgba(150, 33, 33, 0.8)", // Stronger, more prominent outer shadow
+              boxShadow: "0px 8px 20px rgba(150, 33, 33, 0.8)",
             }}
           >
             <Typography
@@ -122,17 +210,22 @@ const PersonalInformation = () => {
               Personal Information
             </Typography>
             <Avatar
-              alt={`${userInfo.firstName} ${userInfo.lastName}`}
-              src="/path/to/image.png"
-              sx={{
-                width: 150,
-                height: 150,
-                borderRadius: "10px",
-                margin: "auto",
-                border: "2px solid white",
-                marginBottom: 2,
-              }}
-            />
+  alt={`${userInfo.firstName} ${userInfo.lastName}`}
+  src={userInfo.profilePictureUrl ? 
+    `http://localhost:8080${userInfo.profilePictureUrl}` : 
+    "/default-avatar.png"
+  }
+  sx={{
+    width: 150,
+    height: 150,
+    borderRadius: "10px",
+    margin: "auto",
+    border: "2px solid white",
+    marginBottom: 2,
+    cursor: 'pointer'
+  }}
+  onClick={handleProfilePictureClick}
+/>
             <Box sx={{ marginBottom: 2 }}>
               <Typography variant="body1" sx={{color: "white", marginBottom: 1, textAlign: "left" }}>
                 Name:
@@ -310,6 +403,114 @@ const PersonalInformation = () => {
               Save New Password
             </Button>
           </form>
+        </Box>
+      </Modal>
+
+      <Modal 
+        open={showProfilePictureModal} 
+        onClose={handleCloseProfilePictureModal}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 4,
+            textAlign: 'center'
+          }}
+        >
+          <Typography variant="h6" gutterBottom>
+            Profile Picture
+          </Typography>
+          
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: 250, 
+              border: '2px dashed grey',
+              borderRadius: 2,
+              mb: 2
+            }}
+          >
+           <Avatar
+            src={profilePicture ? 
+              URL.createObjectURL(profilePicture) : 
+              (userInfo.profilePictureUrl ? 
+                `http://localhost:8080${userInfo.profilePictureUrl}` : 
+                "/default-avatar.png"
+              )
+            }
+            sx={{ 
+              width: 200, 
+              height: 200, 
+              borderRadius: 2 
+            }}
+          />
+
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<CloudUploadIcon />}
+              sx={{ 
+                color: '#800000', 
+                borderColor: '#800000',
+                '&:hover': { 
+                  backgroundColor: '#800000',
+                  color: 'white'
+                }
+              }}
+            >
+              Upload
+              <input 
+                type="file" 
+                hidden 
+                accept="image/*"
+                onChange={handleUploadProfilePicture}
+              />
+            </Button>
+
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={handleRemoveProfilePicture}
+              sx={{ 
+                color: '#800000', 
+                borderColor: '#800000',
+                '&:hover': { 
+                  backgroundColor: '#800000',
+                  color: 'white'
+                }
+              }}
+            >
+              Remove
+            </Button>
+          </Box>
+
+          <Button
+            variant="contained"
+            onClick={handleSaveProfilePicture}
+            disabled={!profilePicture}
+            sx={{
+              mt: 2,
+              backgroundColor: '#FFD700',
+              color: '#000',
+              '&:hover': { backgroundColor: '#FFC107' },
+              width: '100%'
+            }}
+          >
+            Save
+          </Button>
         </Box>
       </Modal>
     </>

@@ -292,31 +292,7 @@ const GradeSectionTable = () => {
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button
-          variant="outlined"
-          onClick={() => setIsAddModalOpen(true)}
-          sx={{
-            color: '#FFEB3B',
-            backgroundColor: 'white',
-            border: '1px solid #800000',
-            borderRadius: '50px',
-            paddingX: 3,
-            paddingY: 1.5,
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: 2,
-            '&:hover': {
-              backgroundColor: '#800000',
-              color: '#FFEB3B',
-            },
-          }}
-        >
-          Add Grade and Section
-        </Button>
-      </Box>
+      
 
       <TableContainer component={Paper}>
         <Table>
