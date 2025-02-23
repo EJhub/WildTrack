@@ -17,31 +17,94 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
   const [userData, setUserData] = useState({
     firstName: '',
     lastName: '',
+    middleName: '',
+    email: '',
     idNumber: '',
     grade: '',
     section: '',
     role: 'Student',
     academicYear: '',
   });
+
+  // State for dropdown options
+  const [gradeOptions, setGradeOptions] = useState([]);
+  const [sectionOptions, setSectionOptions] = useState([]);
+  const [academicYearOptions, setAcademicYearOptions] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: '' });
   
   const roles = ['Student'];
-  const grades = [1, 2, 3, 4, 5, 6];
-  const sections = ["A", "B", "C"];
-  const academicYears = ['2024-2025', '2025-2026', '2026-2027'];
 
+  // Fetch dropdown options when component mounts
+  useEffect(() => {
+    const fetchDropdownOptions = async () => {
+      try {
+        // Fetch Grade Levels
+        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
+        setGradeOptions(uniqueGrades);
+
+        // Fetch Academic Years
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
+        setAcademicYearOptions(formattedAcademicYears);
+
+      } catch (error) {
+        console.error('Error fetching dropdown options:', error);
+      }
+    };
+
+    fetchDropdownOptions();
+  }, []);
+
+  // Fetch sections when grade changes
+  useEffect(() => {
+    const fetchSectionsForGrade = async () => {
+      if (userData.grade) {
+        try {
+          const response = await axios.get(`http://localhost:8080/api/grade-sections/grade/${userData.grade}`);
+          const sections = response.data.map(section => section.sectionName);
+          setSectionOptions(sections);
+        } catch (error) {
+          console.error('Error fetching sections:', error);
+        }
+      }
+    };
+
+    fetchSectionsForGrade();
+  }, [userData.grade]);
+
+  // Populate form data when user changes
   useEffect(() => {
     if (user && open) {
-      setUserData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        idNumber: user.idNumber || '',
-        grade: user.grade || '',
-        section: user.section || '',
-        role: user.role || 'Student',
-        academicYear: user.academicYear || '',
-      });
+      const fetchSectionsAndPopulateForm = async () => {
+        try {
+          // Fetch sections for the user's grade
+          if (user.grade) {
+            const response = await axios.get(`http://localhost:8080/api/grade-sections/grade/${user.grade}`);
+            const sections = response.data.map(section => section.sectionName);
+            setSectionOptions(sections);
+          }
+
+          // Set user data
+          setUserData({
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            middleName: user.middleName || '',
+            email: user.email || '',
+            idNumber: user.idNumber || '',
+            grade: user.grade || '',
+            section: user.section || '',
+            role: user.role || 'Student',
+            academicYear: user.academicYear || '',
+          });
+        } catch (error) {
+          console.error('Error fetching sections:', error);
+        }
+      };
+
+      fetchSectionsAndPopulateForm();
     }
   }, [user, open]);
 
@@ -49,7 +112,20 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setUserData(prev => ({ ...prev, [name]: value }));
+    
+    // Special handling for grade change
+    if (name === 'grade') {
+      setUserData(prevData => ({
+        ...prevData,
+        [name]: value,
+        section: '' // Reset section when grade changes
+      }));
+    } else {
+      setUserData(prevData => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -121,7 +197,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
         }}
       >
         <Grid container spacing={2}>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField
               label="First Name"
               name="firstName"
@@ -131,7 +207,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
               fullWidth
             />
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField
               label="Last Name"
               name="lastName"
@@ -141,7 +217,27 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
               fullWidth
             />
           </Grid>
+          <Grid item xs={4}>
+            <TextField
+              label="Middle Name"
+              name="middleName"
+              value={userData.middleName}
+              onChange={handleInputChange}
+              variant="outlined"
+              fullWidth
+            />
+          </Grid>
         </Grid>
+
+        <TextField
+          label="Email"
+          name="email"
+          type="email"
+          value={userData.email}
+          onChange={handleInputChange}
+          variant="outlined"
+          fullWidth
+        />
 
         <TextField
           label="ID Number"
@@ -152,47 +248,75 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
           fullWidth
         />
 
-        <TextField
-          label="Grade"
-          name="grade"
-          select
-          value={userData.grade}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 1500 },
-            },
-          }}
-        >
-          {grades.map((grade) => (
-            <MenuItem key={grade} value={`Grade ${grade}`}>
-              Grade {grade}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          label="Section"
-          name="section"
-          select
-          value={userData.section}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 1500 },
-            },
-          }}
-        >
-          {sections.map((section) => (
-            <MenuItem key={section} value={section}>
-              Section {section}
-            </MenuItem>
-          ))}
-        </TextField>
+        <Grid container spacing={2}>
+          <Grid item xs={4}>
+            <TextField
+              label="Grade"
+              name="grade"
+              select
+              value={userData.grade}
+              onChange={handleInputChange}
+              variant="outlined"
+              fullWidth
+              SelectProps={{
+                MenuProps: {
+                  sx: { zIndex: 1500 },
+                },
+              }}
+            >
+              {gradeOptions.map((grade) => (
+                <MenuItem key={grade} value={grade}>
+                  {grade}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={4}>
+            <TextField
+              label="Section"
+              name="section"
+              select
+              value={userData.section}
+              onChange={handleInputChange}
+              variant="outlined"
+              fullWidth
+              disabled={!userData.grade}
+              SelectProps={{
+                MenuProps: {
+                  sx: { zIndex: 1500 },
+                },
+              }}
+            >
+              {sectionOptions.map((section) => (
+                <MenuItem key={section} value={section}>
+                  {section}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={4}>
+            <TextField
+              label="User Role"
+              name="role"
+              select
+              value={userData.role}
+              onChange={handleInputChange}
+              variant="outlined"
+              fullWidth
+              SelectProps={{
+                MenuProps: {
+                  sx: { zIndex: 1500 },
+                },
+              }}
+            >
+              {roles.map(role => (
+                <MenuItem key={role} value={role}>
+                  {role}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+        </Grid>
 
         <TextField
           label="Academic Year"
@@ -208,30 +332,9 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
             },
           }}
         >
-          {academicYears.map((year) => (
+          {academicYearOptions.map((year) => (
             <MenuItem key={year} value={year}>
               {year}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          label="User Role"
-          name="role"
-          select
-          value={userData.role}
-          onChange={handleInputChange}
-          variant="outlined"
-          fullWidth
-          SelectProps={{
-            MenuProps: {
-              sx: { zIndex: 1500 },
-            },
-          }}
-        >
-          {roles.map(role => (
-            <MenuItem key={role} value={role}>
-              {role}
             </MenuItem>
           ))}
         </TextField>

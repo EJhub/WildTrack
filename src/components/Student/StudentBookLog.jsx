@@ -333,18 +333,16 @@ const BookLog = () => {
           </Box>
 
           <TableContainer
-            component={Paper}
-            sx={{
-              flexGrow: 1,
-              opacity: 0.9,
-              borderRadius: "15px",
-              overflow: "auto",
-              maxHeight: "calc(100vh - 300px)", // Allow scrolling within the table
-              backgroundColor: "rgba(255, 255, 255, 0.8)",
-              display: "flex",
-              flexDirection: "column", // Ensure table and pagination are stacked vertically
-            }}
-          >
+                component={Paper}
+                sx={{
+                  borderRadius: '15px',
+                  boxShadow: 3,
+                  overflow: 'auto',
+                  maxHeight: 'calc(100vh - 340px)',
+                  marginTop: 3,
+                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                }}
+              >
             <Table stickyHeader sx={{ flexGrow: 1 }}>
               <TableHead>
                 <TableRow>

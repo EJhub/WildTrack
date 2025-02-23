@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import AcademicYearTable from './components/AcademicYearTable';
-// Add this import at the top with your other imports
+import AddAcademicYear from './components/AddAcademicYear';
+import AddGradeSection from './components/AddGradeSection';
 import GradeSectionTable from './components/GradeSectionTable';
 import {
   Box,
@@ -30,7 +31,11 @@ const ManageStudent = () => {
   const [currentView, setCurrentView] = useState('students');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState({
+    students: '',
+    academicYear: '',
+    gradeSection: '',
+  });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [error, setError] = useState(null);
@@ -39,6 +44,8 @@ const ManageStudent = () => {
   const [studentToUpdate, setStudentToUpdate] = useState(null);
   const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
+  const [isAddAcademicYearModalOpen, setIsAddAcademicYearModalOpen] = useState(false);
+  const [isAddGradeSectionModalOpen, setIsAddGradeSectionModalOpen] = useState(false);
 
   // Fetch students data
   useEffect(() => {
@@ -96,9 +103,9 @@ const ManageStudent = () => {
   // Filter data based on search term
   const filteredData = data.filter((student) => {
     return (
-      (student.firstName && student.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (student.lastName && student.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (student.idNumber && student.idNumber.includes(searchTerm))
+      (student.firstName && student.firstName.toLowerCase().includes(searchTerm.students.toLowerCase())) ||
+      (student.lastName && student.lastName.toLowerCase().includes(searchTerm.students.toLowerCase())) ||
+      (student.idNumber && student.idNumber.includes(searchTerm.students))
     );
   });
 
@@ -135,45 +142,16 @@ const ManageStudent = () => {
             maxHeight: 'calc(100vh - 140px)',
           }}
         >
-        <Typography
-  variant="h4"
-  sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left' }}
->
-  {currentView === 'academic' 
-    ? 'Academic Year Management' 
-    : currentView === 'gradeSection' 
-      ? 'Grade and Section Management'
-      : 'Manage Students'}
-</Typography>
-
-          {currentView === 'students' && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={handleOpenForm}
-                sx={{
-                  color: '#FFEB3B',
-                  backgroundColor: 'white',
-                  border: '1px solid #800000',
-                  borderRadius: '50px',
-                  paddingX: 3,
-                  paddingY: 1.5,
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: 2,
-                  '&:hover': {
-                    backgroundColor: '#800000',
-                    color: '#FFEB3B',
-                  },
-                }}
-              >
-                <AddIcon sx={{ marginRight: 1 }} />
-                Add Student
-              </Button>
-            </Box>
-          )}
+          <Typography
+            variant="h4"
+            sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left' }}
+          >
+            {currentView === 'academic'
+              ? 'Academic Year Management'
+              : currentView === 'gradeSection'
+              ? 'Grade and Section Management'
+              : 'Manage Students'}
+          </Typography>
 
           {/* Search and View Toggle Section */}
           <Box
@@ -182,63 +160,166 @@ const ManageStudent = () => {
               alignItems: 'center',
               marginBottom: 3,
               gap: 2,
+              justifyContent: 'space-between',
               flexWrap: { xs: 'wrap', md: 'nowrap' },
             }}
           >
-            <TextField
-              variant="outlined"
-              placeholder="Search by name or ID..."
-              size="small"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              sx={{
-                backgroundColor: '#fff',
-                borderRadius: '15px',
-                flexGrow: 1,
-                maxWidth: { xs: '100%', sm: '400px' },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <FilterListIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <TextField
+                variant="outlined"
+                placeholder={
+                  currentView === 'academic'
+                    ? 'Search academic year...'
+                    : currentView === 'gradeSection'
+                    ? 'Search grade level...'
+                    : 'Search by name or ID...'
+                }
+                size="small"
+                value={
+                  currentView === 'academic'
+                    ? searchTerm.academicYear
+                    : currentView === 'gradeSection'
+                    ? searchTerm.gradeSection
+                    : searchTerm.students
+                }
+                onChange={(event) =>
+                  setSearchTerm({
+                    ...searchTerm,
+                    [currentView === 'academic'
+                      ? 'academicYear'
+                      : currentView === 'gradeSection'
+                      ? 'gradeSection'
+                      : 'students']: event.target.value,
+                  })
+                }
+                sx={{
+                  backgroundColor: '#fff',
+                  borderRadius: '15px',
+                  width: '400px',
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <FilterListIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-<Button
-  variant="outlined"
-  onClick={() => setCurrentView(currentView === 'academic' ? 'students' : 'academic')}
-  sx={{
-    color: currentView === 'academic' ? '#800000' : '#FFEB3B',
-    backgroundColor: currentView === 'academic' ? '#FFEB3B' : 'white',
-    border: '1px solid #800000',
-    fontWeight: 'bold',
-    '&:hover': {
-      backgroundColor: '#FFEB3B',
-      color: '#800000',
-    },
-  }}
->
-  Academic Year
-</Button>
+              <Button
+                variant="outlined"
+                onClick={() => setCurrentView(currentView === 'academic' ? 'students' : 'academic')}
+                sx={{
+                  color: currentView === 'academic' ? '#800000' : '#800000',
+                  backgroundColor: currentView === 'academic' ? '#FFEB3B' : 'white',
+                  border: '1px solid #800000',
+                  fontWeight: 'bold',
+                  height: '40px',
+                  '&:hover': {
+                    backgroundColor: '#FFEB3B',
+                    color: '#800000',
+                  },
+                }}
+              >
+                Academic Year
+              </Button>
 
-<Button
-  variant="outlined"
-  onClick={() => setCurrentView(currentView === 'gradeSection' ? 'students' : 'gradeSection')}
-  sx={{
-    color: currentView === 'gradeSection' ? '#800000' : '#FFEB3B',
-    backgroundColor: currentView === 'gradeSection' ? '#FFEB3B' : 'white',
-    border: '1px solid #800000',
-    fontWeight: 'bold',
-    '&:hover': {
-      backgroundColor: '#FFEB3B',
-      color: '#800000',
-    },
-  }}
->
-  Grade and Section
-</Button>
+              <Button
+                variant="outlined"
+                onClick={() => setCurrentView(currentView === 'gradeSection' ? 'students' : 'gradeSection')}
+                sx={{
+                  color: currentView === 'gradeSection' ? '#800000' : '#800000',
+                  backgroundColor: currentView === 'gradeSection' ? '#FFEB3B' : 'white',
+                  border: '1px solid #800000',
+                  fontWeight: 'bold',
+                  height: '40px',
+                  '&:hover': {
+                    backgroundColor: '#FFEB3B',
+                    color: '#800000',
+                  },
+                }}
+              >
+                Grade and Section
+              </Button>
+            </Box>
+
+            {currentView === 'students' && (
+              <Button
+                variant="outlined"
+                onClick={handleOpenForm}
+                sx={{
+                  color: '#FFEB3B',
+                  backgroundColor: '#800000',
+                  border: '1px solid #800000',
+                  borderRadius: '50px',
+                  height: '40px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: 2,
+                  '&:hover': {
+                    backgroundColor: '#940000',
+                    color: '#FFEB3B',
+                  },
+                }}
+              >
+                <AddIcon sx={{ marginRight: 1 }} />
+                Add Student
+              </Button>
+            )}
+
+            {currentView === 'academic' && (
+              <Button
+                variant="outlined"
+                onClick={() => setIsAddAcademicYearModalOpen(true)}
+                sx={{
+                  color: '#FFEB3B',
+                  backgroundColor: '#800000',
+                  border: '1px solid #800000',
+                  borderRadius: '50px',
+                  height: '40px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: 2,
+                  '&:hover': {
+                    backgroundColor: '#940000',
+                    color: '#FFEB3B',
+                  },
+                }}
+              >
+                <AddIcon sx={{ marginRight: 1 }} />
+                Add Academic Year
+              </Button>
+            )}
+
+            {currentView === 'gradeSection' && (
+              <Button
+                variant="outlined"
+                onClick={() => setIsAddGradeSectionModalOpen(true)}
+                sx={{
+                  color: '#FFEB3B',
+                  backgroundColor: '#800000',
+                  border: '1px solid #800000',
+                  borderRadius: '50px',
+                  height: '40px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: 2,
+                  '&:hover': {
+                    backgroundColor: '#940000',
+                    color: '#FFEB3B',
+                  },
+                }}
+              >
+                <AddIcon sx={{ marginRight: 1 }} />
+                Add Grade and Section
+              </Button>
+            )}
           </Box>
 
           {/* Content based on current view */}
@@ -287,7 +368,7 @@ const ManageStudent = () => {
                           }}
                         >
                           <TableCell>{student.idNumber}</TableCell>
-                          <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                          <TableCell>{`${student.firstName} ${student.middleName ? student.middleName.charAt(0) + '.' : ''} ${student.lastName}`}</TableCell>
                           <TableCell>{`${student.grade} - ${student.section}`}</TableCell>
                           <TableCell>{student.subject}</TableCell>
                           <TableCell>
@@ -295,7 +376,7 @@ const ManageStudent = () => {
                               variant="outlined"
                               sx={{
                                 color: '#800000',
-                                backgroundColor: 'white',
+                                backgroundColor: '#F5B400',
                                 border: '1px solid #FFEB3B',
                                 marginRight: 1,
                                 fontWeight: 'bold',
@@ -309,13 +390,13 @@ const ManageStudent = () => {
                                 setIsUpdateFormOpen(true);
                               }}
                             >
-                              Update
+                              View
                             </Button>
                             <Button
                               variant="outlined"
                               sx={{
                                 color: '#800000',
-                                backgroundColor: 'white',
+                                backgroundColor: '#F5B400',
                                 border: '1px solid #FFEB3B',
                                 fontWeight: 'bold',
                                 '&:hover': {
@@ -350,7 +431,7 @@ const ManageStudent = () => {
                     display: 'flex',
                     justifyContent: 'center',
                     paddingTop: 2,
-                    width: '100%',
+                    width: '100%'
                   }}
                 />
               </Box>
@@ -382,6 +463,16 @@ const ManageStudent = () => {
         onClose={() => setIsDeleteConfirmationOpen(false)}
         onConfirm={handleDeleteConfirmation}
       />
+      {/* New Modals */}
+<AddAcademicYear 
+  open={isAddAcademicYearModalOpen}
+  onClose={() => setIsAddAcademicYearModalOpen(false)}
+/>
+
+<AddGradeSection 
+  open={isAddGradeSectionModalOpen}
+  onClose={() => setIsAddGradeSectionModalOpen(false)}
+/>
     </>
   );
 };

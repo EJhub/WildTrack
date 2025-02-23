@@ -78,7 +78,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           color: "#000",
         }}
       >
-        Add Book
+        Add Book Read
       </DialogTitle>
       <DialogContent
         sx={{
@@ -220,21 +220,6 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           }}
         >
           CANCEL
-        </Button>
-        <Button
-          onClick={handleClose}
-          variant="contained"
-          sx={{
-            borderRadius: "10px",
-            width: "120px",
-            backgroundColor: "#A44444",
-            color: "#fff",
-            "&:hover": {
-              backgroundColor: "#BB5252",
-            },
-          }}
-        >
-         SUBMIT
         </Button>
       </DialogActions>
     </Dialog>
