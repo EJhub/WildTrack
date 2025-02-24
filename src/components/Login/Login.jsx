@@ -75,7 +75,7 @@ const Login = () => {
               />
               <div style={{ position: "relative" }}>
                 <input
-                  type={showPassword ? "text" : ""}
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="Password"
                   autoComplete="current-password"
@@ -84,20 +84,17 @@ const Login = () => {
                   onChange={handleInputChange}
                 />
                 {
-                (credentials.password || showPassword) && ( // Show icon if there's content in the password field or password is toggled
+                (credentials.password || showPassword) && (
                   <button
                     type="button"
                     style={styles.iconButton}
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {/* Change the color of the icon based on whether password is entered */}
                     <span style={{ color: credentials.password ? "#007bff" : "#A9A9A9" }}>
                       {showPassword ? <FaEyeSlash /> : <FaEye />}
                     </span>
                   </button>
-                )
-                  }
-
+                )}
               </div>
               <div style={{ ...styles.links, marginTop: "-10px", marginRight: "-200px" }}>
                 <a href="/ResetPassword" style={styles.link}>Forgot Password?</a>

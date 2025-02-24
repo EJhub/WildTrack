@@ -328,7 +328,7 @@ const BookLog = () => {
                 "&:hover": { backgroundColor: "#FFC107" },
               }}
             >
-              Add Book
+              Add Book Log
             </Button>
           </Box>
 
@@ -356,11 +356,11 @@ const BookLog = () => {
               <TableBody>
                 {displayedLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell>{new Date(log.dateRead).toLocaleDateString()}</TableCell>
-                    <TableCell>{log.author}</TableCell>
                     <TableCell>{log.title}</TableCell>
+                    <TableCell>{log.author}</TableCell>
+                    <TableCell>{log.accessionNumber}</TableCell>
+                    <TableCell>{new Date(log.dateRead).toLocaleDateString()}</TableCell>
                     <TableCell>{renderStars(log.rating)}</TableCell>
-                    <TableCell>{log.academicYear}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
