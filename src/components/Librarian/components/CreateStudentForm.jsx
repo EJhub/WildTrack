@@ -293,6 +293,7 @@ const CreateStudentForm = ({ open, onClose }) => {
       onChange={handleInputChange}
       fullWidth
       required
+      disabled
       variant="outlined"
       SelectProps={{
         native: true,

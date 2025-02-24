@@ -65,7 +65,6 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         "& .MuiPaper-root": {
           borderRadius: "15px",
           overflow: "hidden",
-
         },
       }}
     >
@@ -84,7 +83,6 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         sx={{
           backgroundColor: "#FFDF16",
           padding: "30px",
-          overflow: "hidden",
         }}
       >
         {/* Horizontal Alignment for Title and Search Bar */}
@@ -93,27 +91,25 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
             Title:
           </Typography>
           <TextField
-  name="search"
-  placeholder="Type book title here..."
-  fullWidth
-  value={searchQuery}
-  onChange={handleSearchChange}
-  sx={{
-    backgroundColor: "#fff",
-    borderRadius: "10px",
-    "& .MuiOutlinedInput-root": {
-      border: "none",
-    },
-  }}
-/>
-</Box>
+            name="search"
+            placeholder="Type book title here..."
+            fullWidth
+            variant="outlined"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            sx={{
+              backgroundColor: "#fff",
+              borderRadius: "10px",
+            }}
+          />
+        </Box>
 
         <Typography
           sx={{
             textAlign: "center",
             fontWeight: "bold",
             color: "black",
-            marginBottom: 2,
+            marginBottom: 1,
           }}
         >
           Book Details
@@ -124,19 +120,59 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "30%",
+                  }}
+                >
                   BOOK TITLE
                 </TableCell>
-                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "25%",
+                  }}
+                >
                   AUTHOR
                 </TableCell>
-                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "25%",
+                  }}
+                >
                   ACCESSION NUMBER
                 </TableCell>
-                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "25%",
+                  }}
+                >
                   ISBN
                 </TableCell>
-                <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8B3D3D", color: "#FFD700" }}>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "20%",
+                  }}
+                >
                   ACTION
                 </TableCell>
               </TableRow>
@@ -146,7 +182,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           {/* Scrollable Table Body */}
           <Box
             sx={{
-              maxHeight: "300px", // Set max height for the table body
+              maxHeight: "290px", // Set max height for the table body
               overflowY: "auto", // Enable vertical scrolling
             }}
           >
@@ -154,11 +190,19 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
               <TableBody>
                 {filteredBooks.map((book) => (
                   <TableRow key={book.accessionNumber}>
-                    <TableCell>{book.title}</TableCell>
-                    <TableCell>{book.author}</TableCell>
-                    <TableCell>{book.accessionNumber}</TableCell>
-                    <TableCell>{book.isbn}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "30%" }}>
+                      {book.title}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                      {book.author}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                      {book.accessionNumber}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                      {book.isbn}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "10%" }}>
                       <Button
                         variant="contained"
                         onClick={() => handleBookSubmit(book)}
@@ -166,7 +210,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                           backgroundColor: "#FFDF16",
                           color: "#000",
                           "&:hover": {
-                            backgroundColor: "##FFDF16",
+                            backgroundColor: "#FFC107",
                           },
                         }}
                       >
@@ -177,7 +221,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                 ))}
                 {filteredBooks.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={5} sx={{ textAlign: "center" }}>
                       No books found.
                     </TableCell>
                   </TableRow>

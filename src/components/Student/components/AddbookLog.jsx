@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
 import Typography from "@mui/material/Typography";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -17,20 +20,38 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Rating from "@mui/material/Rating";
+import axios from "axios";
 
 const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
-  const [searchQuery, setSearchQuery] = useState(""); // For search input
-  const [selectedBook, setSelectedBook] = useState(null); // To store the selected book
-  const [rating, setRating] = useState(0); // To store the user's rating
-  const [academicYear, setAcademicYear] = useState(""); // Academic year
-  const [dateRead, setDateRead] = useState(""); // Date the book was read
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [academicYear, setAcademicYear] = useState("");
+  const [dateRead, setDateRead] = useState("");
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [academicYearOptions, setAcademicYearOptions] = useState([]);
 
-  // Get books to display based on the search query
+  useEffect(() => {
+    const fetchAcademicYears = async () => {
+      try {
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        const formattedAcademicYears = academicYearsResponse.data.map(year => ({
+          id: year.id,
+          academicYear: `${year.startYear}-${year.endYear}`
+        }));
+        setAcademicYearOptions(formattedAcademicYears);
+      } catch (error) {
+        console.error('Error fetching academic years:', error);
+      }
+    };
+
+    fetchAcademicYears();
+  }, []);
+
   const getFilteredBooks = () => {
     if (!searchQuery.trim()) {
-      return registeredBooks; // If search query is empty, return all registered books
+      return registeredBooks;
     }
     return registeredBooks.filter((book) =>
       book.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -59,8 +80,8 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       return;
     }
 
-    if (!academicYear.trim()) {
-      setError("Please enter the academic year.");
+    if (!academicYear) {
+      setError("Please select an academic year.");
       return;
     }
 
@@ -71,28 +92,26 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       title: selectedBook.title,
       author: selectedBook.author,
       accessionNumber: selectedBook.accessionNumber,
-      isbn: selectedBook.isbn, // Include ISBN field
+      isbn: selectedBook.isbn,
       dateRead,
       rating,
-      academicYear,
+      academicYear
     };
 
-    console.log("Submitting book log: ", bookLog); // Debug log
-    handleSubmit(bookLog); // Pass to parent function
+    console.log("Submitting book log: ", bookLog);
+    handleSubmit(bookLog);
 
-    // Reset fields after successful submission
     setSelectedBook(null);
     setSearchQuery("");
     setRating(0);
     setDateRead("");
     setAcademicYear("");
 
-    // Close the modal
     setSuccess("Book log added successfully!");
     setTimeout(() => {
       setSuccess(null);
       handleClose();
-    }, 1500); // Optional: Add a small delay before closing the modal
+    }, 1500);
   };
 
   const filteredBooks = getFilteredBooks();
@@ -107,7 +126,6 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         "& .MuiPaper-root": {
           borderRadius: "15px",
           overflow: "hidden",
-
         },
       }}
     >
@@ -128,7 +146,6 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           padding: "30px",
         }}
       >
-        {/* Horizontal Alignment for Title and Search Bar */}
         <Box sx={{ display: "flex", alignItems: "center", marginBottom: 3 }}>
           <Typography
             sx={{
@@ -165,160 +182,129 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           Book Details
         </Typography>
 
-        {/* Table with Scrollable Body */}
         <TableContainer component={Paper} sx={{ borderRadius: "10px" }}>
-  <Table stickyHeader>
-    <TableHead>
-      <TableRow>
-        <TableCell
-          sx={{
-            fontWeight: "bold",
-            backgroundColor: "#8B3D3D",
-            color: "#FFD700",
-            textAlign: "center", // Align header text in the center
-            width: "30%",
-          }}
-        >
-          BOOK TITLE
-        </TableCell>
-        <TableCell
-          sx={{
-            fontWeight: "bold",
-            backgroundColor: "#8B3D3D",
-            color: "#FFD700",
-            textAlign: "center", // Align header text in the center
-            width: "20%",
-          }}
-        >
-          AUTHOR
-        </TableCell>
-        <TableCell
-          sx={{
-            fontWeight: "bold",
-            backgroundColor: "#8B3D3D",
-            color: "#FFD700",
-            textAlign: "center", // Align header text in the center
-            width: "20%",
-          }}
-        >
-          ACCESSION NUMBER
-        </TableCell>
-        <TableCell
-          sx={{
-            fontWeight: "bold",
-            backgroundColor: "#8B3D3D",
-            color: "#FFD700",
-            textAlign: "center", // Align header text in the center
-            width: "20%",
-          }}
-        >
-          ISBN
-        </TableCell>
-        <TableCell
-          sx={{
-            fontWeight: "bold",
-            backgroundColor: "#8B3D3D",
-            color: "#FFD700",
-            textAlign: "center", // Align header text in the center
-            width: "10%",
-          }}
-        >
-          ACTION
-        </TableCell>
-      </TableRow>
-    </TableHead>
-  </Table>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "30%",
+                  }}
+                >
+                  BOOK TITLE
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "20%",
+                  }}
+                >
+                  AUTHOR
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "20%",
+                  }}
+                >
+                  ACCESSION NUMBER
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "20%",
+                  }}
+                >
+                  ISBN
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: "bold",
+                    backgroundColor: "#8B3D3D",
+                    color: "#FFD700",
+                    textAlign: "center",
+                    width: "10%",
+                  }}
+                >
+                  ACTION
+                </TableCell>
+              </TableRow>
+            </TableHead>
+          </Table>
 
-  {/* Scrollable Table Body */}
-  <Box
-    sx={{
-      maxHeight: "300px", // Define the height of the scrollable area
-      overflowY: "auto", // Enable vertical scrolling
-    }}
-  >
-    <Table>
-      <TableBody>
-        {filteredBooks.map((book) => (
-          <TableRow
-            key={book.accessionNumber}
-            onClick={() => setSelectedBook(book)}
+          <Box
             sx={{
-              cursor: "pointer",
-              backgroundColor:
-                selectedBook?.accessionNumber === book.accessionNumber
-                  ? "#FFD700"
-                  : "inherit", // Highlight the selected book
+              maxHeight: "290px",
+              overflowY: "auto",
             }}
           >
-            <TableCell
-              sx={{
-                textAlign: "center", // Align data in the center
-                width: "30%",
-              }}
-            >
-              {book.title}
-            </TableCell>
-            <TableCell
-              sx={{
-                textAlign: "center", // Align data in the center
-                width: "20%",
-              }}
-            >
-              {book.author}
-            </TableCell>
-            <TableCell
-              sx={{
-                textAlign: "center", // Align data in the center
-                width: "20%",
-              }}
-            >
-              {book.accessionNumber}
-            </TableCell>
-            <TableCell
-              sx={{
-                textAlign: "center", // Align data in the center
-                width: "20%",
-              }}
-            >
-              {book.isbn}
-            </TableCell>
-            <TableCell
-              sx={{
-                textAlign: "center", // Align action in the center
-                width: "10%",
-              }}
-            >
-              <Button
-                variant="contained"
-                sx={{
-                  backgroundColor: "#FFD700",
-                  color: "#000",
-                  "&:hover": {
-                    backgroundColor: "#FFC107",
-                  },
-                }}
-              >
-                Select
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-        {filteredBooks.length === 0 && (
-          <TableRow>
-            <TableCell colSpan={5} sx={{ textAlign: "center" }}>
-              No books found.
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  </Box>
-</TableContainer>
+            <Table>
+              <TableBody>
+                {filteredBooks.map((book) => (
+                  <TableRow
+                    key={book.accessionNumber}
+                    onClick={() => setSelectedBook(book)}
+                    sx={{
+                      cursor: "pointer",
+                      backgroundColor:
+                        selectedBook?.accessionNumber === book.accessionNumber
+                          ? "#FFD700"
+                          : "inherit",
+                    }}
+                  >
+                    <TableCell sx={{ textAlign: "center", width: "30%" }}>
+                      {book.title}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                      {book.author}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                      {book.accessionNumber}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                      {book.isbn}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "center", width: "10%" }}>
+                      <Button
+                        variant="contained"
+                        sx={{
+                          backgroundColor: "#FFD700",
+                          color: "#000",
+                          "&:hover": {
+                            backgroundColor: "#FFC107",
+                          },
+                        }}
+                      >
+                        Select
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredBooks.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} sx={{ textAlign: "center" }}>
+                      No books found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Box>
+        </TableContainer>
 
-
-
-
-        {/* Rating and Additional Info Section */}
         {selectedBook && (
           <Box sx={{ marginTop: 3, textAlign: "center" }}>
             <Typography sx={{ fontWeight: "bold", color: "#000" }}>
@@ -345,17 +331,29 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                 shrink: true,
               }}
             />
-            <TextField
-              label="Academic Year"
-              value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
+            <FormControl
               fullWidth
               sx={{
                 marginTop: 2,
                 backgroundColor: "#fff",
                 borderRadius: "10px",
               }}
-            />
+            >
+              <InputLabel id="academic-year-label">Academic Year</InputLabel>
+              <Select
+                labelId="academic-year-label"
+                id="academic-year-select"
+                value={academicYear}
+                label="Academic Year"
+                onChange={(e) => setAcademicYear(e.target.value)}
+              >
+                {academicYearOptions.map((year) => (
+                  <MenuItem key={year.id} value={year.academicYear}>
+                    {year.academicYear}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         )}
 
@@ -365,53 +363,50 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           </Typography>
         )}
         {success && (
-          <Typography
-            sx={{ color: "green", marginTop: 2, textAlign: "center" }}
-          >
+          <Typography sx={{ color: "green", marginTop: 2, textAlign: "center" }}>
             {success}
           </Typography>
         )}
       </DialogContent>
 
       <DialogActions
-  sx={{
-    justifyContent: "center",
-    backgroundColor: "#FFDF16",
-    padding: 2,
-  }}
->
-  <Button
-    onClick={handleClose}
-    variant="contained"
-    sx={{
-      borderRadius: "10px",
-      width: "120px",
-      backgroundColor: "#E49B0F",
-      color: "#fff",
-      "&:hover": {
-        backgroundColor: "#AA8F0B",
-      },
-    }}
-  >
-    CANCEL
-  </Button>
-  <Button
-    onClick={handleBookSubmit}
-    variant="contained"
-    sx={{
-      borderRadius: "10px",
-      width: "120px",
-      backgroundColor: "#A44444",
-      color: "#fff",
-      "&:hover": {
-        backgroundColor: "#BB5252",
-      },
-    }}
-  >
-    SUBMIT
-  </Button>
-</DialogActions>
-
+        sx={{
+          justifyContent: "center",
+          backgroundColor: "#FFDF16",
+          padding: 2,
+        }}
+      >
+        <Button
+          onClick={handleClose}
+          variant="contained"
+          sx={{
+            borderRadius: "10px",
+            width: "120px",
+            backgroundColor: "#E49B0F",
+            color: "#fff",
+            "&:hover": {
+              backgroundColor: "#AA8F0B",
+            },
+          }}
+        >
+          CANCEL
+        </Button>
+        <Button
+          onClick={handleBookSubmit}
+          variant="contained"
+          sx={{
+            borderRadius: "10px",
+            width: "120px",
+            backgroundColor: "#A44444",
+            color: "#fff",
+            "&:hover": {
+              backgroundColor: "#BB5252",
+            },
+          }}
+        >
+          SUBMIT
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
