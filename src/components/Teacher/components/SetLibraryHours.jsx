@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -10,30 +11,63 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
 import FormControlLabel from '@mui/material/FormControlLabel';
- 
-const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
+import { toast } from 'react-toastify';
+
+const API_BASE_URL = 'http://localhost:8080/api/set-library-hours';
+
+const SetLibraryHoursDialog = ({ open, handleClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     minutes: '',
     gradeLevel: '',
-    subject: 'English', // Default subject
+    subject: 'English',
+    quarter: '', // Added quarter field
     month: '',
     day: '',
-    year: '',
+    year: ''
   });
- 
+
+  const [loading, setLoading] = useState(false);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
- 
-  const onSubmit = () => {
-    handleSubmit(formData);
-    handleClose();
+
+  const validateForm = () => {
+    const { minutes, gradeLevel, quarter, month, day, year } = formData;
+    if (!minutes || !gradeLevel || !quarter || !month || !day || !year) {
+      toast.error('Please fill in all required fields');
+      return false;
+    }
+    
+    // Validate date
+    const date = new Date(year, month - 1, day);
+    if (date < new Date()) {
+      toast.error('Deadline cannot be in the past');
+      return false;
+    }
+    
+    return true;
   };
- 
+
+  const onSubmit = async () => {
+    if (!validateForm()) return;
+    
+    setLoading(true);
+    try {
+      const response = await axios.post(API_BASE_URL, formData);
+      toast.success('Library hours set successfully!');
+      if (onSuccess) onSuccess(response.data);
+      handleClose();
+    } catch (error) {
+      console.error('Error setting library hours:', error);
+      toast.error('Failed to set library hours. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -51,61 +85,83 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
         sx={{
           textAlign: 'center',
           fontWeight: 'bold',
-          backgroundColor: '#FFDF16', // Updated color for title background
+          backgroundColor: '#FFDF16',
           color: '#000',
         }}
       >
-        <h2>Set Library Hours</h2>
+        Set Library Hours
       </DialogTitle>
       <DialogContent
         sx={{
-          backgroundColor: '#FFDF16', // Updated color for content background
+          backgroundColor: '#FFDF16',
           padding: '30px',
         }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 2 }}>
           {/* Minutes Field */}
           <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Minutes:</Typography>
+            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>
+              Minutes:
+            </Typography>
             <TextField
-                name="minutes"
-                type="number"
-                variant="outlined"
-                value={formData.minutes === "" ? "" : formData.minutes} // Ensures "00" appears when empty
-                onChange={handleInputChange}
-                placeholder="00"
-                sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '100px' }}
-                inputProps={{ min: 0, style: { textAlign: 'center' } }}
-              />
-
+              name="minutes"
+              type="number"
+              variant="outlined"
+              value={formData.minutes}
+              onChange={handleInputChange}
+              placeholder="00"
+              sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '100px' }}
+              inputProps={{ min: 0, style: { textAlign: 'center' } }}
+              required
+            />
           </Box>
- 
-              {/* Grade Level Field */}
-              <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Grade Level:</Typography>
-                <TextField
-                  name="gradeLevel"
-                  select
-                  label="Select Grade Level"
-                  variant="outlined"
-                  value={formData.gradeLevel}
-                  onChange={handleInputChange}
-                  sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
-                  InputLabelProps={{
-                    shrink: formData.gradeLevel !== "", // Label disappears when grade is selected
-                  }}
-                >
-                  {[...Array(4).keys()].map((grade) => (
-                    <MenuItem key={grade} value={grade + 1}>{`Grade ${grade + 1}`}</MenuItem>
-                  ))}
-                </TextField>
-              </Box>
 
+          {/* Grade Level Field */}
+          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>
+              Grade Level:
+            </Typography>
+            <TextField
+              name="gradeLevel"
+              select
+              variant="outlined"
+              value={formData.gradeLevel}
+              onChange={handleInputChange}
+              sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
+              required
+            >
+              {[...Array(4).keys()].map((grade) => (
+                <MenuItem key={grade} value={grade + 1}>{`Grade ${grade + 1}`}</MenuItem>
+              ))}
+            </TextField>
+          </Box>
 
- 
+          {/* Quarter Field */}
+          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>
+              Quarter:
+            </Typography>
+            <TextField
+              name="quarter"
+              select
+              variant="outlined"
+              value={formData.quarter}
+              onChange={handleInputChange}
+              sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
+              required
+            >
+              <MenuItem value="First">First Quarter</MenuItem>
+              <MenuItem value="Second">Second Quarter</MenuItem>
+              <MenuItem value="Third">Third Quarter</MenuItem>
+              <MenuItem value="Fourth">Fourth Quarter</MenuItem>
+            </TextField>
+          </Box>
+
           {/* Subject Field */}
           <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Subject:</Typography>
+            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>
+              Subject:
+            </Typography>
             <RadioGroup
               row
               name="subject"
@@ -127,58 +183,45 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
               />
             </RadioGroup>
           </Box>
- 
+
           {/* Deadline Fields */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>Deadline:</Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <TextField
-                label="Month"
-                name="month"
-                type="number"
-                variant="outlined"
-                value={formData.month}
-                onChange={handleInputChange}
-                sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '60px' }}
-                inputProps={{ min: 1, max: 12 }}
-              />
-              <Typography sx={{ color: '#000', marginTop: 0.5 }}>Month</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <TextField
-                label="Day"
-                name="day"
-                type="number"
-                variant="outlined"
-                value={formData.day}
-                onChange={handleInputChange}
-                sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '60px' }}
-                inputProps={{ min: 1, max: 31 }}
-              />
-              <Typography sx={{ color: '#000', marginTop: 0.5 }}>Day</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <TextField
-                label="Year"
-                name="year"
-                type="number"
-                variant="outlined"
-                value={formData.year}
-                onChange={handleInputChange}
-                sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '80px' }}
-                inputProps={{ min: new Date().getFullYear() }}
-              />
-              <Typography sx={{ color: '#000', marginTop: 0.5 }}>Year</Typography>
+            <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>
+              Deadline:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {[
+                { name: 'month', label: 'Month', max: 12, width: '60px' },
+                { name: 'day', label: 'Day', max: 31, width: '60px' },
+                { name: 'year', label: 'Year', min: new Date().getFullYear(), width: '80px' },
+              ].map((field) => (
+                <Box key={field.name} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <TextField
+                    name={field.name}
+                    type="number"
+                    variant="outlined"
+                    value={formData[field.name]}
+                    onChange={handleInputChange}
+                    sx={{ backgroundColor: '#fff', borderRadius: '10px', width: field.width }}
+                    inputProps={{ 
+                      min: field.min || 1, 
+                      max: field.max,
+                      style: { textAlign: 'center' }
+                    }}
+                    required
+                  />
+                  <Typography sx={{ color: '#000', marginTop: 0.5 }}>{field.label}</Typography>
+                </Box>
+              ))}
             </Box>
           </Box>
         </Box>
       </DialogContent>
- 
-      {/* Dialog Actions */}
+
       <DialogActions
         sx={{
           justifyContent: 'center',
-          backgroundColor: '#FFDF16', // Updated color for actions background
+          backgroundColor: '#FFDF16',
           padding: 2,
         }}
       >
@@ -200,6 +243,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
         <Button
           onClick={onSubmit}
           variant="contained"
+          disabled={loading}
           sx={{
             borderRadius: '10px',
             width: '120px',
@@ -210,11 +254,11 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit }) => {
             },
           }}
         >
-          SUBMIT
+          {loading ? 'SUBMITTING...' : 'SUBMIT'}
         </Button>
       </DialogActions>
     </Dialog>
   );
 };
- 
-export default SetLibraryHours;
+
+export default SetLibraryHoursDialog;
