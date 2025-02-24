@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import Box from '@mui/material/Box';
@@ -31,8 +31,67 @@ const TeacherDashboard = () => {
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
   const [section, setSection] = useState('');
+  const [deadlines, setDeadlines] = useState([]);
+  const [libraryHours, setLibraryHours] = useState([]);
+  const [studentCountData, setStudentCountData] = useState({ labels: [], counts: [] });
 
   const navigate = useNavigate();
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  // Load deadlines from local storage
+  useEffect(() => {
+    const savedDeadlines = localStorage.getItem('deadlines');
+    if (savedDeadlines) setDeadlines(JSON.parse(savedDeadlines));
+  }, []);
+
+  // Save deadlines to local storage when they change
+  useEffect(() => {
+    localStorage.setItem('deadlines', JSON.stringify(deadlines));
+  }, [deadlines]);
+
+  // Fetch library hours data
+  useEffect(() => {
+    const fetchLibraryHours = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/library-hours/all');
+        if (!response.ok) throw new Error('Failed to fetch library hours');
+
+        const data = await response.json();
+
+        // Initialize all months with zero counts
+        const monthCounts = months.reduce((acc, month) => {
+          acc[month] = 0;
+          return acc;
+        }, {});
+
+        // Process library hours and group by month
+        data.forEach((item) => {
+          const timeInMonth = new Date(item.timeIn).toLocaleString('default', { month: 'long' });
+          monthCounts[timeInMonth] += 1;
+
+          if (item.timeOut) {
+            const timeOutMonth = new Date(item.timeOut).toLocaleString('default', { month: 'long' });
+            monthCounts[timeOutMonth] += 1;
+          }
+        });
+
+        setStudentCountData({
+          labels: months,
+          counts: months.map((month) => monthCounts[month]),
+        });
+
+        setLibraryHours(data);
+      } catch (error) {
+        console.error('Error fetching library hours:', error.message);
+      }
+    };
+
+    fetchLibraryHours();
+  }, []);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -42,8 +101,14 @@ const TeacherDashboard = () => {
     setOpen(false);
   };
 
-  const handleAddDeadline = () => {
-    // Add the functionality to handle adding deadlines
+  const handleAddDeadline = (data) => {
+    const newDeadline = {
+      grade: data.gradeLevel,
+      subject: data.subject,
+      minutes: data.minutes,
+      dueDate: `${data.month}/${data.day}/${data.year}`,
+    };
+    setDeadlines((prev) => [...prev, newDeadline]);
   };
 
   const handleChangePage = (event, newPage) => {
@@ -55,15 +120,17 @@ const TeacherDashboard = () => {
     setPage(0);
   };
 
+  const displayedDeadlines = deadlines.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   const chartData = {
-    labels: [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ],
+    labels: studentCountData.labels,
     datasets: [
       {
         label: 'Library Hours',
-        data: [2, 3, 1, 4, 2, 5, 3, 4, 5, 2, 3, 4],
+        data: studentCountData.counts,
         backgroundColor: 'rgba(255, 206, 86, 0.6)',
         borderColor: 'rgba(255, 206, 86, 1)',
         borderWidth: 1,
@@ -80,24 +147,10 @@ const TeacherDashboard = () => {
     },
     plugins: {
       datalabels: {
-        display: false, // Disable data labels
+        display: false,
       },
     },
   };
-
-  const deadlines = [
-    { grade: '5', subject: 'Filipino', minutes: '150', dueDate: '12/15/24' },
-    { grade: '4', subject: 'Filipino', minutes: '110', dueDate: '12/15/24' },
-    { grade: '3', subject: 'Math', minutes: '120', dueDate: '12/16/24' },
-    { grade: '2', subject: 'Science', minutes: '100', dueDate: '12/17/24' },
-    { grade: '1', subject: 'English', minutes: '90', dueDate: '12/18/24' },
-    { grade: 'K', subject: 'Arts', minutes: '80', dueDate: '12/19/24' },
-  ];
-
-  const displayedDeadlines = deadlines.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
 
   return (
     <>
@@ -114,9 +167,9 @@ const TeacherDashboard = () => {
                     <Typography variant="h6" sx={{ color: '#000' }}>⏰</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="h6" sx={{ color: '#000', fontSize: '24px' }}>1032</Typography>
+                    <Typography variant="h6" sx={{ color: '#000', fontSize: '24px' }}>{libraryHours.length}</Typography>
                     <Box sx={{ marginTop: 1, padding: '4px 8px', backgroundColor: '#A44D4D', borderRadius: '8px', color: '#fff', display: 'inline-block' }}>
-                      <Typography variant="body2"> Registered Students</Typography>
+                      <Typography variant="body2">Registered Students</Typography>
                     </Box>
                   </Box>
                 </Box>
@@ -200,118 +253,82 @@ const TeacherDashboard = () => {
 
             {/* Chart */}
             <Paper sx={{ padding: '1px', backgroundColor: 'rgba(215, 101, 101, 0.8)', marginBottom: '24px' }}>
-              <Typography variant="h6" sx={{ color: '#000', marginBottom: '16px' }}>Active Library Hours Participants </Typography>
+              <Typography variant="h6" sx={{ color: '#000', marginBottom: '16px' }}>Active Library Hours Participants</Typography>
               <Box sx={{ height: '350px' }}>
                 <Bar data={chartData} options={chartOptions} />
               </Box>
             </Paper>
 
-           
             {/* Assigned Deadline Table */}
-          
-            <Typography variant="h6" sx={{ textAlign: 'left' }}>
-  Assigned Deadline
-</Typography> 
-<Box sx={{ display: 'flex', gap: 1, marginBottom: 2, justifyContent: 'flex-end', marginTop: '-30px'
-}}>
-  {/* Your content inside the Box */}
-                <select style={{ backgroundColor: '#FFD700', padding: '4px 16px', borderRadius: '4px', cursor: 'pointer', border: 'none' }}>
-                  <option>Grade</option>
-                </select>
-                <select style={{ backgroundColor: '#FFD700', padding: '4px 16px', borderRadius: '4px', cursor: 'pointer', border: 'none' }}>
-                  <option>Subject</option>
-                </select>
-                <select style={{ backgroundColor: '#FFD700', padding: '4px 16px', borderRadius: '4px', cursor: 'pointer', border: 'none' }}>
-                  <option>Minutes</option>
-                </select>
-                <Box sx={{ position: 'relative' }}>
-  <input
-    type="date"
-    value={dateFrom} // You can bind this to state to capture the selected date
-    onChange={(e) => setDateFrom(e.target.value)} // Set the date value on change
-    style={{
-      backgroundColor: '#FFD700',
-      padding: '4px 16px', // Adjust padding as needed
-      borderRadius: '4px',
-      border: 'none',
-      width: '100px', // Adjust width as needed
-    }}
-  />
-</Box>
-
+            <Typography variant="h6" sx={{ textAlign: 'left' }}>Assigned Deadline</Typography>
+            <Box sx={{ display: 'flex', gap: 1, marginBottom: 2, justifyContent: 'flex-end', marginTop: '-30px' }}>
+              <select style={{ backgroundColor: '#FFD700', padding: '4px 16px', borderRadius: '4px', cursor: 'pointer', border: 'none' }}>
+                <option>Grade</option>
+              </select>
+              <select style={{ backgroundColor: '#FFD700', padding: '4px 16px', borderRadius: '4px', cursor: 'pointer', border: 'none' }}>
+                <option>Subject</option>
+              </select>
+              <select style={{ backgroundColor: '#FFD700', padding: '4px 16px', borderRadius: '4px', cursor: 'pointer', border: 'none' }}>
+                <option>Minutes</option>
+              </select>
+              <Box sx={{ position: 'relative' }}>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  style={{
+                    backgroundColor: '#FFD700',
+                    padding: '4px 16px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    width: '100px',
+                  }}
+                />
               </Box>
-           
-            
+            </Box>
+
             <TableContainer>
-  <Table>
-    <TableHead>
-    <TableRow sx={{ backgroundColor: '#781B1B' }}>
-  <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
-  <TableCell sx={{ color: 'white' }}>Subject</TableCell>
-  <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
-  <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Due Date</TableCell>
-</TableRow>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#781B1B' }}>
+                    <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
+                    <TableCell sx={{ color: 'white' }}>Subject</TableCell>
+                    <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
+                    <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Due Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {displayedDeadlines.map((row, index) => (
+                    <TableRow key={index} sx={{ backgroundColor: 'white', color: 'black' }}>
+                      <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.grade}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.subject}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.minutes}
+                      </TableCell>
+                      <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.dueDate}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
 
-    </TableHead>
-
-    <TableBody>
-  {displayedDeadlines.map((row, index) => (
-    <TableRow key={index} sx={{ backgroundColor: 'white', color: 'black' }}>
-    <TableCell
-      sx={{
-        borderLeft: '1px solid rgb(2, 1, 1)', // Add border to the left side of the row
-      
-        borderBottom: '1px solid rgb(4, 4, 4)', // Add border to the bottom side of the row
-      }}
-    >
-      {row.grade}
-    </TableCell>
-    <TableCell
-      sx={{
-       
-        borderBottom: '1px solid rgb(4, 4, 4)', // Add border to the bottom side of the row
-      }}
-    >
-      {row.subject}
-    </TableCell>
-    <TableCell
-      sx={{
-        borderBottom: '1px solid rgb(4, 4, 4)', // Add border to the bottom side of the row
-      }}
-    >
-      {row.minutes}
-    </TableCell>
-    <TableCell
-      sx={{
-        borderRight: '1px solid rgb(4, 4, 4)', // Add border to the right side of the last cell
-        borderBottom: '1px solid rgb(4, 4, 4)', // Add border to the bottom side of the last cell
-     
-      }}
-    >
-      {row.dueDate}
-    </TableCell>
-  </TableRow>
-  
-
-  ))}
-</TableBody>
-
-  </Table>
-</TableContainer>
-
-              <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
-  <TablePagination
-    rowsPerPageOptions={[5, 10, 15]}
-    component="div"
-    count={deadlines.length}
-    rowsPerPage={rowsPerPage}
-    page={page}
-    onPageChange={handleChangePage}
-    onRowsPerPageChange={handleChangeRowsPerPage}
-  />
-</Box>
-
-           
+            <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 15]}
+                component="div"
+                count={deadlines.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            </Box>
           </Box>
         </Box>
       </Box>
