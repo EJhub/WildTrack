@@ -34,7 +34,8 @@ const TeacherDashboard = () => {
   const [deadlines, setDeadlines] = useState([]);
   const [libraryHours, setLibraryHours] = useState([]);
   const [studentCountData, setStudentCountData] = useState({ labels: [], counts: [] });
-
+  const [loading, setLoading] = useState(true);
+  const [quarter, setQuarter] = useState('');
   const navigate = useNavigate();
 
   const months = [
@@ -42,25 +43,14 @@ const TeacherDashboard = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Load deadlines from local storage
   useEffect(() => {
-    const savedDeadlines = localStorage.getItem('deadlines');
-    if (savedDeadlines) setDeadlines(JSON.parse(savedDeadlines));
-  }, []);
-
-  // Save deadlines to local storage when they change
-  useEffect(() => {
-    localStorage.setItem('deadlines', JSON.stringify(deadlines));
-  }, [deadlines]);
-
-  // Fetch library hours data
-  useEffect(() => {
-    const fetchLibraryHours = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/library-hours/all');
-        if (!response.ok) throw new Error('Failed to fetch library hours');
-
-        const data = await response.json();
+        setLoading(true);
+        // Fetch library hours for participants
+        const libraryResponse = await fetch('http://localhost:8080/api/library-hours/all');
+        if (!libraryResponse.ok) throw new Error('Failed to fetch library hours');
+        const libraryData = await libraryResponse.json();
 
         // Initialize all months with zero counts
         const monthCounts = months.reduce((acc, month) => {
@@ -69,7 +59,7 @@ const TeacherDashboard = () => {
         }, {});
 
         // Process library hours and group by month
-        data.forEach((item) => {
+        libraryData.forEach((item) => {
           const timeInMonth = new Date(item.timeIn).toLocaleString('default', { month: 'long' });
           monthCounts[timeInMonth] += 1;
 
@@ -83,14 +73,21 @@ const TeacherDashboard = () => {
           labels: months,
           counts: months.map((month) => monthCounts[month]),
         });
+        setLibraryHours(libraryData);
 
-        setLibraryHours(data);
+        // Fetch deadlines
+        const deadlinesResponse = await fetch('http://localhost:8080/api/set-library-hours');
+        if (!deadlinesResponse.ok) throw new Error('Failed to fetch deadlines');
+        const deadlinesData = await deadlinesResponse.json();
+        setDeadlines(deadlinesData);
       } catch (error) {
-        console.error('Error fetching library hours:', error.message);
+        console.error('Error fetching data:', error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchLibraryHours();
+    fetchData();
   }, []);
 
   const handleClickOpen = () => {
@@ -101,14 +98,27 @@ const TeacherDashboard = () => {
     setOpen(false);
   };
 
-  const handleAddDeadline = (data) => {
-    const newDeadline = {
-      grade: data.gradeLevel,
-      subject: data.subject,
-      minutes: data.minutes,
-      dueDate: `${data.month}/${data.day}/${data.year}`,
-    };
-    setDeadlines((prev) => [...prev, newDeadline]);
+  const handleAddDeadline = async (data) => {
+    try {
+      const response = await fetch('http://localhost:8080/api/set-library-hours', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) throw new Error('Failed to add deadline');
+      
+      // Refresh deadlines
+      const deadlinesResponse = await fetch('http://localhost:8080/api/set-library-hours');
+      const deadlinesData = await deadlinesResponse.json();
+      setDeadlines(deadlinesData);
+      
+      handleClose();
+    } catch (error) {
+      console.error('Error adding deadline:', error);
+    }
   };
 
   const handleChangePage = (event, newPage) => {
@@ -236,6 +246,21 @@ const TeacherDashboard = () => {
                 <MenuItem value="Grade 3">Grade 3</MenuItem>
               </TextField>
               <TextField
+  label="Quarter"
+  select
+  variant="outlined"
+  size="small"
+  value={quarter}
+  onChange={(e) => setQuarter(e.target.value)}
+  sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
+>
+<MenuItem value="">All Quarters</MenuItem>
+  <MenuItem value="First">First Quarter</MenuItem>
+  <MenuItem value="Second">Second Quarter</MenuItem>
+  <MenuItem value="Third">Third Quarter</MenuItem>
+  <MenuItem value="Fourth">Fourth Quarter</MenuItem>
+</TextField>
+              <TextField
                 label="Section"
                 select
                 variant="outlined"
@@ -289,32 +314,46 @@ const TeacherDashboard = () => {
 
             <TableContainer>
               <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#781B1B' }}>
-                    <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
-                    <TableCell sx={{ color: 'white' }}>Subject</TableCell>
-                    <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
-                    <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Due Date</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {displayedDeadlines.map((row, index) => (
-                    <TableRow key={index} sx={{ backgroundColor: 'white', color: 'black' }}>
-                      <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.grade}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.subject}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.minutes}
-                      </TableCell>
-                      <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.dueDate}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+              <TableHead>
+  <TableRow sx={{ backgroundColor: '#781B1B' }}>
+    <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
+    <TableCell sx={{ color: 'white' }}>Subject</TableCell>
+    <TableCell sx={{ color: 'white' }}>Quarter</TableCell>
+    <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
+    <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Due Date</TableCell>
+  </TableRow>
+</TableHead>
+<TableBody>
+  {loading ? (
+    <TableRow>
+      <TableCell colSpan={5} align="center">Loading...</TableCell>
+    </TableRow>
+  ) : displayedDeadlines.length === 0 ? (
+    <TableRow>
+      <TableCell colSpan={5} align="center">No deadlines found</TableCell>
+    </TableRow>
+  ) : (
+    displayedDeadlines.map((row, index) => (
+      <TableRow key={index} sx={{ backgroundColor: 'white', color: 'black' }}>
+        <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+          Grade {row.gradeLevel}
+        </TableCell>
+        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+          {row.subject}
+        </TableCell>
+        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+          {row.quarter} {/* Make sure quarter is coming through correctly here */}
+        </TableCell>
+        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+          {row.minutes}
+        </TableCell>
+        <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+          {new Date(row.deadline).toLocaleDateString()}
+        </TableCell>
+      </TableRow>
+    ))
+  )}
+</TableBody>
               </Table>
             </TableContainer>
 
@@ -334,7 +373,8 @@ const TeacherDashboard = () => {
       </Box>
       <SetLibraryHours open={open} handleClose={handleClose} handleSubmit={handleAddDeadline} />
     </>
-  );
-};
-
-export default TeacherDashboard;
+    
+     );
+    };
+    
+    export default TeacherDashboard;
