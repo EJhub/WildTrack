@@ -19,6 +19,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  DialogContentText,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
@@ -29,8 +30,11 @@ const LibrarianManageGenre = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredData, setFilteredData] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [genreName, setGenreName] = useState('');
   const [title, setTitle] = useState('');
+  const [genreToDelete, setGenreToDelete] = useState(null);
+  const [deleteSearchTerm, setDeleteSearchTerm] = useState('');
 
   // Fetch genres and books data
   useEffect(() => {
@@ -76,12 +80,24 @@ const LibrarianManageGenre = () => {
     }
   }, [searchQuery, data]);
 
-  // Open and close dialog handlers
+  // Dialog handlers
   const handleOpenDialog = () => setOpenDialog(true);
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setGenreName('');
     setTitle('');
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setOpenDeleteDialog(true);
+    setDeleteSearchTerm('');
+    setGenreToDelete(null);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setDeleteSearchTerm('');
+    setGenreToDelete(null);
   };
 
   // Add new genre
@@ -105,6 +121,29 @@ const LibrarianManageGenre = () => {
       handleCloseDialog();
     } catch (error) {
       console.error('Error adding genre:', error);
+    }
+  };
+
+  // Delete genre
+  const handleConfirmDelete = async () => {
+    if (!genreToDelete) return;
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/genres/${genreToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete genre');
+      }
+
+      setData((prevData) => prevData.filter((genre) => genre.id !== genreToDelete.id));
+      setFilteredData((prevData) => prevData.filter((genre) => genre.id !== genreToDelete.id));
+      handleCloseDeleteDialog();
+      alert('Genre deleted successfully');
+    } catch (error) {
+      console.error('Error deleting genre:', error);
+      alert('Failed to delete genre');
     }
   };
 
@@ -159,6 +198,17 @@ const LibrarianManageGenre = () => {
                 ),
               }}
             />
+            <Button
+              variant="contained"
+              sx={{
+                fontWeight: 'bold',
+                backgroundColor: '#CD6161',
+                '&:hover': { backgroundColor: '#ff0000' },
+              }}
+              onClick={handleOpenDeleteDialog}
+            >
+              Delete Genre
+            </Button>
             <Button
               variant="contained"
               sx={{
@@ -244,6 +294,102 @@ const LibrarianManageGenre = () => {
           </Button>
           <Button onClick={handleSubmit} color="primary">
             Add Genre
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Genre Dialog */}
+      <Dialog 
+        open={openDeleteDialog} 
+        onClose={handleCloseDeleteDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle 
+          sx={{ 
+            textAlign: 'center', 
+            fontWeight: 'bold',
+            fontSize: '24px',
+            pb: 1
+          }}
+        >
+          Delete Genre
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 3 }}>
+            <Typography sx={{ mb: 1 }}>Title:</Typography>
+            <TextField
+              fullWidth
+              placeholder="Type genre name here..."
+              size="small"
+              value={deleteSearchTerm}
+              onChange={(e) => setDeleteSearchTerm(e.target.value)}
+            />
+          </Box>
+          
+          <Typography 
+            sx={{ 
+              fontWeight: 'bold', 
+              fontSize: '20px',
+              mb: 2,
+              textAlign: 'center'
+            }}
+          >
+            Genre Details
+          </Typography>
+          
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#8B0000' }}>
+                  <TableCell sx={{ color: '#FFD700', fontWeight: 'bold' }}>GENRE NAME</TableCell>
+                  <TableCell sx={{ color: '#FFD700', fontWeight: 'bold' }}>NUMBER OF BOOKS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {data
+                  .filter(genre => 
+                    !deleteSearchTerm || 
+                    genre.genre.toLowerCase().includes(deleteSearchTerm.toLowerCase())
+                  )
+                  .map((genre) => (
+                    <TableRow 
+                      key={genre.id}
+                      onClick={() => setGenreToDelete(genre)}
+                      selected={genreToDelete?.id === genre.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell>{genre.genre}</TableCell>
+                      <TableCell>{genre.books ? genre.books.length : 0}</TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions sx={{ padding: 2, justifyContent: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleConfirmDelete}
+            sx={{
+              backgroundColor: '#8B0000',
+              '&:hover': { backgroundColor: '#660000' },
+              width: '120px'
+            }}
+          >
+            Delete
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCloseDeleteDialog}
+            sx={{
+              backgroundColor: '#666666',
+              '&:hover': { backgroundColor: '#444444' },
+              width: '120px'
+            }}
+          >
+            Cancel
           </Button>
         </DialogActions>
       </Dialog>
