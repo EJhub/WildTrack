@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import NavBar from './components/NavBar';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import SideBar from './components/SideBar';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
 import {
   Box,
   Typography,
@@ -13,9 +10,24 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Bar, Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const Analytics = () => {
   const [timeframe, setTimeframe] = useState('Weekly');
@@ -74,6 +86,8 @@ const Analytics = () => {
   };
 
   const chartOptions = {
+    aspectRatio: 1.75,
+    responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
@@ -84,8 +98,12 @@ const Analytics = () => {
         display: true,
         text: `Students doing Library Hours - ${timeframe}`,
         font: {
-          size: 18,
+          size: 16,
         },
+        padding: {
+          top: 5,
+          bottom: 10
+        }
       },
     },
     scales: {
@@ -95,6 +113,9 @@ const Analytics = () => {
           display: true,
           text: 'No. of Students',
         },
+        ticks: {
+          maxTicksLimit: 8,
+        }
       },
       x: {
         title: {
@@ -123,7 +144,7 @@ const Analytics = () => {
             backgroundColor: '#fff',
           }}
         >
-          <br></br>
+          <br />
           {/* Title */}
           <Typography
             variant="h4"
@@ -131,7 +152,7 @@ const Analytics = () => {
               fontWeight: 'bold',
               color: '#000',
               marginBottom: 3,
-              textAlign: 'left', // Explicitly align text to the left
+              textAlign: 'left',
             }}
           >
             Analytics and Reports
@@ -163,12 +184,12 @@ const Analytics = () => {
               sx={{
                 backgroundColor: '#A85858',
                 color: '#fff',
-                  border: '1px solid #A85858',
-                  borderRadius: '10px',
-                  alignItems: 'center',
-                  '&:hover': {
-                    backgroundColor: '#8B3D3D',
-                    color: '#fff',
+                border: '1px solid #A85858',
+                borderRadius: '10px',
+                alignItems: 'center',
+                '&:hover': {
+                  backgroundColor: '#8B3D3D',
+                  color: '#fff',
                 },
               }}
             >
@@ -207,7 +228,6 @@ const Analytics = () => {
               onChange={(e) => setAcademicYear(e.target.value)}
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
             >
-
               <MenuItem value="2024">2024</MenuItem>
               <MenuItem value="2023">2023</MenuItem>
               <MenuItem value="2022">2022</MenuItem>
@@ -227,6 +247,7 @@ const Analytics = () => {
               Filter
             </Button>
           </Box>
+
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 3 }}>
             <TextField
               label="Grade Level"
@@ -237,7 +258,6 @@ const Analytics = () => {
               onChange={(e) => setGradeLevel(e.target.value)}
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
             >
-
               <MenuItem value="Grade 1">Grade 1</MenuItem>
               <MenuItem value="Grade 2">Grade 2</MenuItem>
               <MenuItem value="Grade 3">Grade 3</MenuItem>
@@ -251,56 +271,72 @@ const Analytics = () => {
               onChange={(e) => setSection(e.target.value)}
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
             >
-
               <MenuItem value="A">A</MenuItem>
               <MenuItem value="B">B</MenuItem>
               <MenuItem value="C">C</MenuItem>
             </TextField>
           </Box>
 
-      {/* Chart Section */}
-<Paper sx={{ padding: 3, borderRadius: '15px', border: '1px solid #A85858', marginBottom: 3 }}>
-  {/* Export Buttons */}
-  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, flexWrap: 'wrap', marginTop: 2 }}>
-    <Button
-      variant="contained"
-      sx={{
-        backgroundColor: '#FFD700',
-        color: '#000',
-        '&:hover': {
-          backgroundColor: '#FFC107',
-        },
-      }}
-    >
-      Export PDF
-    </Button>
-    <Button
-      variant="contained"
-        sx={{
-          backgroundColor: '#A85858',
-          color: '#fff',
-          border: '1px solid #A85858',
-          borderRadius: '10px',
-          alignItems: 'center',
-          '&:hover': {
-            backgroundColor: '#8B3D3D',
-            color: '#fff',
-          },
-        }}
-      >
-      Export Excel
-    </Button>
-  </Box>
-  <Typography variant="h6" sx={{ fontWeight: 'bold', textAlign: 'center', marginBottom: 2 }}>
-    {`Students doing Library Hours - ${timeframe}`}
-  </Typography>
-  <Box sx={{ height: '400px' }}>
-    <ChartComponent data={getChartData()} options={chartOptions} />
-  </Box>
-</Paper>
+          {/* Chart Section */}
+          <Paper sx={{ 
+            padding: 2, 
+            borderRadius: '15px', 
+            border: '1px solid #A85858', 
+            marginBottom: 3,
+            height: 'auto',
+            maxHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Export Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: 2, 
+              marginBottom: 2 
+            }}>
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: '#FFD700',
+                  color: '#000',
+                  '&:hover': {
+                    backgroundColor: '#FFC107',
+                  },
+                }}
+              >
+                Export PDF
+              </Button>
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: '#A85858',
+                  color: '#fff',
+                  '&:hover': {
+                    backgroundColor: '#8B3D3D',
+                  },
+                }}
+              >
+                Export Excel
+              </Button>
+            </Box>
 
-
-          
+            {/* Chart Container */}
+            <Box sx={{ 
+              flexGrow: 1,
+              height: '300px',
+              width: '100%',
+              position: 'relative',
+              marginTop: '-10px'
+            }}>
+              <ChartComponent 
+                data={getChartData()} 
+                options={chartOptions}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </Box>
+          </Paper>
         </Box>
       </Box>
     </>
