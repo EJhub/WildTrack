@@ -28,6 +28,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
  const [sectionOptions, setSectionOptions] = useState([]);
  const [formVisible, setFormVisible] = useState(true);
  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
  const [snackbar, setSnackbar] = useState({
    open: false,
    message: '',
@@ -36,10 +37,12 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
 
  useEffect(() => {
    if (teacherData) {
+
      setFormVisible(true);
      setFormData({
        firstName: teacherData.firstName || '',
        middleName: teacherData.middleName || '',
+
        lastName: teacherData.lastName || '',
        idNumber: teacherData.idNumber || '',
        subject: teacherData.subject || '',
@@ -107,6 +110,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
    }
  };
 
+
  const handlePasswordChange = (e) => {
    const { name, value } = e.target;
    setPasswordData(prevData => ({
@@ -117,6 +121,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
 
  // Initial submit handler that validates and opens the dialog
  const handleSubmit = () => {
+
    if (
      !formData.firstName ||
      !formData.lastName ||
@@ -126,6 +131,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
      !formData.section ||
      !formData.role
    ) {
+
      setSnackbar({ open: true, message: 'All required fields must be filled!', severity: 'warning' });
      return;
    }
@@ -203,6 +209,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
      // Keep dialog and form closed after successful update
      setConfirmDialogOpen(false);
      // Close the entire form component
+
      onClose();
    } catch (error) {
      console.error('Error updating teacher:', error);
@@ -211,9 +218,11 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
        message: error.response?.data?.error || 'Failed to update teacher. Please try again.',
        severity: 'error',
      });
+
      setLoading(false);
      // Reopen form on error
      setFormVisible(true);
+
    }
  };
 
@@ -497,7 +506,9 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
          {snackbar.message}
        </Alert>
      </Snackbar>
+
    </>
+
  );
 };
 

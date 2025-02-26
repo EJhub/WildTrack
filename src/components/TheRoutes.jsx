@@ -45,7 +45,7 @@ export default function TheRoutes() {
             <Route path="/studentDashboard/booklog" element={<ProtectedRoute><BookLog /></ProtectedRoute>} />
             <Route path="/studentDashboard/personalInfo" element={<ProtectedRoute><StudentPersonalInfo /></ProtectedRoute>} />
             <Route path="/nasDashboard/Home" element={<NasDashboard />} />
-            <Route path="/studentDashboard/StudentAnalyticsAndReports" element={<StudentAnalyticsAndReports/>} />
+            <Route path="/studentDashboard/StudentAnalyticsAndReports" element={<ProtectedRoute><StudentAnalyticsAndReports/></ProtectedRoute>} />
             <Route path="/nasDashboard/LibraryAttendance" element={<NasLibraryAttendance />} />
             <Route path="/nasDashboard/BookEntry" element={<NasBookEntry />} />
             <Route path="/nasDashboard/BookEntry/AddLog" element={<NasBookEntry />} />

@@ -377,6 +377,7 @@ const CreateStudentForm = ({ open, onClose }) => {
               </Grid>
             </Grid>
 
+
             <TextField
               name="academicYear"
               label="Academic Year"
@@ -409,6 +410,7 @@ const CreateStudentForm = ({ open, onClose }) => {
                 </option>
               ))}
             </TextField>
+
 
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Button 

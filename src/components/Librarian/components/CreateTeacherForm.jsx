@@ -19,11 +19,13 @@ import SuccessDialog from './SuccessDialog'; // Import the success dialog compon
 const CreateTeacherForm = ({ open, onClose }) => {
  const [formData, setFormData] = useState({
    firstName: '',
+
    middleName: '',
    lastName: '',
    email: '',
    password: '',
    confirmPassword: '',
+
    role: 'Teacher',
    subject: '',
    grade: '',
@@ -31,17 +33,20 @@ const CreateTeacherForm = ({ open, onClose }) => {
    idNumber: '',
  });
  
+
  // Add state to store teacher name for success message
  const [teacherName, setTeacherName] = useState({ firstName: '', lastName: '' });
  const [loading, setLoading] = useState(false);
  const [gradeOptions, setGradeOptions] = useState([]);
  const [sectionOptions, setSectionOptions] = useState([]);
  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+
  const [snackbar, setSnackbar] = useState({
    open: false,
    message: '',
    severity: '',
  });
+
 
  // Ensure form state is always synchronized with parent open prop
  useEffect(() => {
@@ -431,6 +436,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
        />
      )}
    </>
+
  );
 };
 
