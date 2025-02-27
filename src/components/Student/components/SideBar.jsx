@@ -2,21 +2,21 @@ import React, { useContext } from 'react';
 import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
-import NotificationsIcon from '@mui/icons-material/Notifications';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 import { AuthContext } from '../../AuthContext';
+import NotificationBadge from './NotificationBadge';
 
 const SideBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useContext(AuthContext); // Access user and logout from AuthContext
+  const { user, logout } = useContext(AuthContext);
   const isSmallScreen = useMediaQuery('(max-width:600px)');
-  const isExtraSmallScreen = useMediaQuery('(max-width:400px)'); // For extra small screens
+  const isExtraSmallScreen = useMediaQuery('(max-width:400px)');
 
   const handleLogout = () => {
-    logout(); // Clear authentication data
-    navigate('/login'); // Redirect to login page
+    logout();
+    navigate('/login');
   };
 
   const navigateWithId = (path) => {
@@ -31,15 +31,14 @@ const SideBar = () => {
 
   const getListItemStyles = (path) => ({
     paddingY: '1.5rem',
-    color: '#fff', // Ensures the text is white
+    color: '#fff',
     textAlign: 'center',
     fontWeight: location.pathname.startsWith(path) ? 'bold' : 'normal',
     position: 'relative',
     '&:hover': {
       color: '#FFD700',
     },
-    // Add responsive text size based on screen width
-    fontSize: isExtraSmallScreen ? '0.8rem' : isSmallScreen ? '1rem' : '1.2rem', // Adjust text size for small and extra small screens
+    fontSize: isExtraSmallScreen ? '0.8rem' : isSmallScreen ? '1rem' : '1.2rem',
   });
 
   return (
@@ -53,7 +52,6 @@ const SideBar = () => {
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        
       }}
     >
       <List component="nav" sx={{ flexGrow: 1, paddingTop: '50px' }}>
@@ -84,6 +82,21 @@ const SideBar = () => {
             }}
           />
         </ListItem>
+        
+        {/* New menu item for Library Requirements */}
+        <ListItem
+          button
+          onClick={() => navigateWithId('/student/requirements')}
+          sx={getListItemStyles('/student/requirements')}
+        >
+          <ListItemText
+            primary={isSmallScreen ? 'R' : 'Requirements'}
+            primaryTypographyProps={{
+              align: 'center',
+              fontWeight: location.pathname.startsWith('/student/requirements') ? 'bold' : 'normal',
+            }}
+          />
+        </ListItem>
 
         <ListItem
           button
@@ -105,14 +118,13 @@ const SideBar = () => {
           sx={getListItemStyles('/studentDashboard/StudentAnalyticsAndReports')}
         >
           <ListItemText
-            primary={isSmallScreen ? 'P' : 'Analytics and Reports'}
+            primary={isSmallScreen ? 'A' : 'Analytics and Reports'}
             primaryTypographyProps={{
               align: 'center',
               fontWeight: location.pathname.startsWith('/studentDashboard/StudentAnalyticsAndReports') ? 'bold' : 'normal',
             }}
           />
         </ListItem>
-        
       </List>
 
       <Box
@@ -139,15 +151,12 @@ const SideBar = () => {
         >
           Log Out
         </Button>
-        
 
         <Button onClick={() => navigateWithId('/settings')} sx={{ minWidth: 0 }}>
           <SettingsIcon sx={{ color: '#FFD700' }} />
         </Button>
 
-        <Button onClick={() => navigateWithId('/notifications')} sx={{ minWidth: 0 }}>
-          <NotificationsIcon sx={{ color: '#FFD700' }} />
-        </Button>
+        <NotificationBadge />
       </Box>
     </Box>
   );
