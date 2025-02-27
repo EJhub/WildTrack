@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import Box from '@mui/material/Box';
@@ -15,10 +17,13 @@ import TableRow from '@mui/material/TableRow';
 import TablePagination from '@mui/material/TablePagination';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
+import Chip from '@mui/material/Chip';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import SetLibraryHours from './components/SetLibraryHours';
-import { useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { AuthContext } from '../AuthContext';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -37,6 +42,7 @@ const TeacherDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [quarter, setQuarter] = useState('');
   const navigate = useNavigate();
+  const { user, logout } = useContext(AuthContext);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -44,13 +50,27 @@ const TeacherDashboard = () => {
   ];
 
   useEffect(() => {
+    // Check if user is authenticated and has Teacher role
+    if (!user || user.role !== 'Teacher') {
+      toast.error("Unauthorized access. Please log in as a teacher.");
+      logout();
+      navigate('/login');
+      return;
+    }
+    
     const fetchData = async () => {
       try {
         setLoading(true);
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        
+        // Configure axios with auth token
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
         // Fetch library hours for participants
-        const libraryResponse = await fetch('http://localhost:8080/api/library-hours/all');
-        if (!libraryResponse.ok) throw new Error('Failed to fetch library hours');
-        const libraryData = await libraryResponse.json();
+        const libraryResponse = await axios.get('http://localhost:8080/api/library-hours/all');
+        const libraryData = libraryResponse.data;
+        setLibraryHours(libraryData);
 
         // Initialize all months with zero counts
         const monthCounts = months.reduce((acc, month) => {
@@ -73,22 +93,20 @@ const TeacherDashboard = () => {
           labels: months,
           counts: months.map((month) => monthCounts[month]),
         });
-        setLibraryHours(libraryData);
 
         // Fetch deadlines
-        const deadlinesResponse = await fetch('http://localhost:8080/api/set-library-hours');
-        if (!deadlinesResponse.ok) throw new Error('Failed to fetch deadlines');
-        const deadlinesData = await deadlinesResponse.json();
-        setDeadlines(deadlinesData);
+        const deadlinesResponse = await axios.get('http://localhost:8080/api/set-library-hours');
+        setDeadlines(deadlinesResponse.data);
       } catch (error) {
-        console.error('Error fetching data:', error.message);
+        console.error('Error fetching data:', error);
+        toast.error("Failed to fetch data: " + (error.response?.data?.message || error.message));
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [user, logout, navigate]);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -100,24 +118,27 @@ const TeacherDashboard = () => {
 
   const handleAddDeadline = async (data) => {
     try {
-      const response = await fetch('http://localhost:8080/api/set-library-hours', {
-        method: 'POST',
+      const token = localStorage.getItem('token');
+      const response = await axios.post('http://localhost:8080/api/set-library-hours', data, {
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
+        }
       });
 
-      if (!response.ok) throw new Error('Failed to add deadline');
+      if (!response.data) throw new Error('Failed to add deadline');
+      
+      toast.success("Library hours requirement submitted for approval!");
       
       // Refresh deadlines
-      const deadlinesResponse = await fetch('http://localhost:8080/api/set-library-hours');
-      const deadlinesData = await deadlinesResponse.json();
+      const deadlinesResponse = await axios.get('http://localhost:8080/api/set-library-hours');
+      const deadlinesData = await deadlinesResponse.data;
       setDeadlines(deadlinesData);
       
       handleClose();
     } catch (error) {
       console.error('Error adding deadline:', error);
+      toast.error("Failed to add deadline: " + (error.response?.data?.message || error.message));
     }
   };
 
@@ -128,6 +149,36 @@ const TeacherDashboard = () => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const applyFilters = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
+      if (academicYear) params.append('academicYear', academicYear);
+      if (gradeLevel) params.append('gradeLevel', gradeLevel);
+      if (section) params.append('section', section);
+      if (quarter) params.append('quarter', quarter);
+      
+      const response = await axios.get(`http://localhost:8080/api/set-library-hours?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      setDeadlines(response.data);
+      toast.info("Filters applied successfully");
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      toast.error(`Failed to apply filters: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const displayedDeadlines = deadlines.slice(
@@ -162,8 +213,43 @@ const TeacherDashboard = () => {
     },
   };
 
+  // Generate status chip based on approval status
+  const getStatusChip = (status) => {
+    switch (status) {
+      case 'APPROVED':
+        return (
+          <Chip
+            label="Approved"
+            color="success"
+            size="small"
+            sx={{ fontWeight: 'bold' }}
+          />
+        );
+      case 'REJECTED':
+        return (
+          <Chip
+            label="Rejected"
+            color="error"
+            size="small"
+            sx={{ fontWeight: 'bold' }}
+          />
+        );
+      case 'PENDING':
+      default:
+        return (
+          <Chip
+            label="Pending Approval"
+            color="warning"
+            size="small"
+            sx={{ fontWeight: 'bold' }}
+          />
+        );
+    }
+  };
+
   return (
     <>
+      <ToastContainer />
       <NavBar />
       <Box sx={{ display: 'flex', height: '100vh' }}>
         <SideBar />
@@ -225,7 +311,7 @@ const TeacherDashboard = () => {
                 <MenuItem value="2023">2023</MenuItem>
                 <MenuItem value="2022">2022</MenuItem>
               </TextField>
-              <Button size="small" sx={{ backgroundColor: "#FFD700", color: "#000", "&:hover": { backgroundColor: "#FFC107" } }}>
+              <Button size="small" sx={{ backgroundColor: "#FFD700", color: "#000", "&:hover": { backgroundColor: "#FFC107" } }} onClick={applyFilters}>
                 Filter
               </Button>
             </Box>
@@ -246,20 +332,20 @@ const TeacherDashboard = () => {
                 <MenuItem value="Grade 3">Grade 3</MenuItem>
               </TextField>
               <TextField
-  label="Quarter"
-  select
-  variant="outlined"
-  size="small"
-  value={quarter}
-  onChange={(e) => setQuarter(e.target.value)}
-  sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
->
-<MenuItem value="">All Quarters</MenuItem>
-  <MenuItem value="First">First Quarter</MenuItem>
-  <MenuItem value="Second">Second Quarter</MenuItem>
-  <MenuItem value="Third">Third Quarter</MenuItem>
-  <MenuItem value="Fourth">Fourth Quarter</MenuItem>
-</TextField>
+                label="Quarter"
+                select
+                variant="outlined"
+                size="small"
+                value={quarter}
+                onChange={(e) => setQuarter(e.target.value)}
+                sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '200px' }}
+              >
+                <MenuItem value="">All Quarters</MenuItem>
+                <MenuItem value="First">First Quarter</MenuItem>
+                <MenuItem value="Second">Second Quarter</MenuItem>
+                <MenuItem value="Third">Third Quarter</MenuItem>
+                <MenuItem value="Fourth">Fourth Quarter</MenuItem>
+              </TextField>
               <TextField
                 label="Section"
                 select
@@ -280,7 +366,13 @@ const TeacherDashboard = () => {
             <Paper sx={{ padding: '1px', backgroundColor: 'rgba(215, 101, 101, 0.8)', marginBottom: '24px' }}>
               <Typography variant="h6" sx={{ color: '#000', marginBottom: '16px' }}>Active Library Hours Participants</Typography>
               <Box sx={{ height: '350px' }}>
-                <Bar data={chartData} options={chartOptions} />
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Typography>Loading chart data...</Typography>
+                  </Box>
+                ) : (
+                  <Bar data={chartData} options={chartOptions} />
+                )}
               </Box>
             </Paper>
 
@@ -314,46 +406,57 @@ const TeacherDashboard = () => {
 
             <TableContainer>
               <Table>
-              <TableHead>
-  <TableRow sx={{ backgroundColor: '#781B1B' }}>
-    <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
-    <TableCell sx={{ color: 'white' }}>Subject</TableCell>
-    <TableCell sx={{ color: 'white' }}>Quarter</TableCell>
-    <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
-    <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Due Date</TableCell>
-  </TableRow>
-</TableHead>
-<TableBody>
-  {loading ? (
-    <TableRow>
-      <TableCell colSpan={5} align="center">Loading...</TableCell>
-    </TableRow>
-  ) : displayedDeadlines.length === 0 ? (
-    <TableRow>
-      <TableCell colSpan={5} align="center">No deadlines found</TableCell>
-    </TableRow>
-  ) : (
-    displayedDeadlines.map((row, index) => (
-      <TableRow key={index} sx={{ backgroundColor: 'white', color: 'black' }}>
-        <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-          Grade {row.gradeLevel}
-        </TableCell>
-        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-          {row.subject}
-        </TableCell>
-        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-          {row.quarter} {/* Make sure quarter is coming through correctly here */}
-        </TableCell>
-        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-          {row.minutes}
-        </TableCell>
-        <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-          {new Date(row.deadline).toLocaleDateString()}
-        </TableCell>
-      </TableRow>
-    ))
-  )}
-</TableBody>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#781B1B' }}>
+                    <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
+                    <TableCell sx={{ color: 'white' }}>Subject</TableCell>
+                    <TableCell sx={{ color: 'white' }}>Quarter</TableCell>
+                    <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
+                    <TableCell sx={{ color: 'white' }}>Due Date</TableCell>
+                    <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">Loading...</TableCell>
+                    </TableRow>
+                  ) : displayedDeadlines.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">No deadlines found</TableCell>
+                    </TableRow>
+                  ) : (
+                    displayedDeadlines.map((row, index) => (
+                      <TableRow 
+                        key={index} 
+                        sx={{ 
+                          backgroundColor: row.approvalStatus === 'APPROVED' ? 'rgba(76, 175, 80, 0.1)' : 
+                                          row.approvalStatus === 'REJECTED' ? 'rgba(244, 67, 54, 0.1)' : 'white',
+                          color: 'black' 
+                        }}
+                      >
+                        <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                          {row.gradeLevel}
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                          {row.subject}
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                          {row.quarter}
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                          {row.minutes}
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                          {new Date(row.deadline).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                          {getStatusChip(row.approvalStatus)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
               </Table>
             </TableContainer>
 
@@ -373,8 +476,7 @@ const TeacherDashboard = () => {
       </Box>
       <SetLibraryHours open={open} handleClose={handleClose} handleSubmit={handleAddDeadline} />
     </>
-    
-     );
-    };
-    
-    export default TeacherDashboard;
+  );
+};
+
+export default TeacherDashboard;

@@ -28,12 +28,15 @@ import LibrarianManageGenre from "./Librarian/ManageGenre";
 import LibrarianManageNASStudent from "./Librarian/ManageNASStudent";
 import StudentAnalyticsAndReports from "./Student/StudentAnalyticsAndReports";
 import ProtectedRoute from './ProtectedRoute';
+import NotificationsPage from './Student/NotificationsPage';
 import { Routes, Route, Link } from "react-router-dom";
-
+import LibraryRequirementsProgress from './Student/LibraryRequirementsProgress';
 
 export default function TheRoutes() {
     return (
         <Routes>
+            <Route path="/student/requirements" element={<ProtectedRoute><LibraryRequirementsProgress /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/" element={<InputIDLogin />} />
             <Route path="/Tap-Out" element={<InputIDLogout />} />
             <Route path="/LoginHomepage" element={<LogInHomepage />} />
@@ -51,7 +54,7 @@ export default function TheRoutes() {
             <Route path="/nasDashboard/BookEntry/AddLog" element={<NasBookEntry />} />
             <Route path="/nasDashboard/NasBooklRegistration" element={<NasBooklRegistration />} />
             <Route path="/nasDashboard/ActivityLog" element={<NasActivityLog />} />
-            <Route path="/TeacherDashboard/Home" element={<TeacherDashboard />} />
+            <Route path="/TeacherDashboard/Home" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/TeacherDashboard/Home/SetLibraryHours" element={<TeacherDashboard />} />
             <Route path="/TeacherDashboard/StudentRecords" element={<StudentRecords />} />
             <Route path="/TeacherDashboard/CompletedLibraryHours" element={<CompletedLibraryHours />} />

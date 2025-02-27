@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -21,13 +21,32 @@ const SetLibraryHoursDialog = ({ open, handleClose, onSuccess }) => {
     minutes: '',
     gradeLevel: '',
     subject: 'English',
-    quarter: '', // Added quarter field
+    quarter: '',
     month: '',
     day: '',
     year: ''
   });
 
   const [loading, setLoading] = useState(false);
+  const [gradeOptions, setGradeOptions] = useState([]);
+
+  // Fetch grade levels when dialog opens
+  useEffect(() => {
+    const fetchGradeLevels = async () => {
+      try {
+        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
+        setGradeOptions(uniqueGrades);
+      } catch (error) {
+        console.error('Error fetching grade levels:', error);
+        toast.error('Failed to load grade levels');
+      }
+    };
+
+    if (open) {
+      fetchGradeLevels();
+    }
+  }, [open]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -130,8 +149,11 @@ const SetLibraryHoursDialog = ({ open, handleClose, onSuccess }) => {
               sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
               required
             >
-              {[...Array(4).keys()].map((grade) => (
-                <MenuItem key={grade} value={grade + 1}>{`Grade ${grade + 1}`}</MenuItem>
+              <MenuItem value="">Select Grade</MenuItem>
+              {gradeOptions.map((grade) => (
+                <MenuItem key={grade} value={grade}>
+                  {typeof grade === 'number' ? `Grade ${grade}` : grade}
+                </MenuItem>
               ))}
             </TextField>
           </Box>
