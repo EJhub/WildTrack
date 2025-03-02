@@ -3,22 +3,30 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { CircularProgress } from "@mui/material";
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ idNumber: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setCredentials({ ...credentials, [name]: value });
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
     try {
+      // 1. Make login request to get authentication token
       const response = await axios.post("http://localhost:8080/api/login", {
         idNumber: credentials.idNumber,
         password: credentials.password,
@@ -26,12 +34,19 @@ const Login = () => {
 
       const { token, role, idNumber } = response.data;
 
+      // 2. Store auth data in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("idNumber", idNumber);
 
-      login({ token, role, idNumber });
+      // 3. Configure axios to use the token for future requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
+      // 4. Wait for the login context to be fully updated
+      // This is critical - we need to await this
+      await login({ token, role, idNumber });
+
+      // 5. Navigate to the appropriate dashboard based on role
       if (role === "Student") {
         navigate(`/studentDashboard/TimeRemaining?id=${idNumber}`);
       } else if (role === "Librarian") {
@@ -53,6 +68,8 @@ const Login = () => {
       } else {
         setError(err.response?.data?.error || "Login failed. Please try again.");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,6 +89,7 @@ const Login = () => {
                 style={styles.input}
                 value={credentials.idNumber}
                 onChange={handleInputChange}
+                disabled={isLoading}
               />
               <div style={{ position: "relative" }}>
                 <input
@@ -82,6 +100,7 @@ const Login = () => {
                   style={styles.input}
                   value={credentials.password}
                   onChange={handleInputChange}
+                  disabled={isLoading}
                 />
                 {
                 (credentials.password || showPassword) && (
@@ -89,6 +108,7 @@ const Login = () => {
                     type="button"
                     style={styles.iconButton}
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     <span style={{ color: credentials.password ? "#007bff" : "#A9A9A9" }}>
                       {showPassword ? <FaEyeSlash /> : <FaEye />}
@@ -100,7 +120,17 @@ const Login = () => {
                 <a href="/ResetPassword" style={styles.link}>Forgot Password?</a>
               </div>
               <br />
-              <button type="submit" style={styles.signInButton}>Sign in</button>
+              <button 
+                type="submit" 
+                style={styles.signInButton}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <CircularProgress size={24} style={{ color: "white" }} />
+                ) : (
+                  "Sign in"
+                )}
+              </button>
               <p>
                 <span style={{ color: 'black' }}>Don't have an account? </span>
                 <a href="/register" style={styles.link}>Sign up</a>
@@ -182,6 +212,10 @@ const styles = {
     borderRadius: "4px",
     cursor: "pointer",
     fontSize: "16px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center", 
+    height: "42px",
   },
   links: {
     marginTop: "15px",

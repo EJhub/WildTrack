@@ -135,23 +135,48 @@ const StudentLibraryHours = () => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const applyFilters = () => {
-    const { dateFrom, dateTo, academicYear } = filters;
-    const filtered = libraryHours.filter((entry) => {
+ // Here's the improved applyFilters function to fix the date range filtering
+const applyFilters = () => {
+  const { dateFrom, dateTo, academicYear } = filters;
+  
+  const filtered = libraryHours.filter((entry) => {
+    try {
+      // Extract only the date part from the entry's timeIn for proper comparison
       const entryDate = new Date(entry.timeIn);
-      const fromDate = dateFrom ? new Date(dateFrom) : null;
-      const toDate = dateTo ? new Date(dateTo) : null;
-
-      const matchesDate =
-        (!fromDate || entryDate >= fromDate) && (!toDate || entryDate <= toDate);
-      const matchesYear = academicYear
-        ? entry.academicYear === academicYear
-        : true;
-
+      entryDate.setHours(0, 0, 0, 0); // Set to start of day for proper comparison
+      
+      // Create dates from the filter values
+      let fromDate = null;
+      let toDate = null;
+      
+      if (dateFrom) {
+        fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0); // Set to start of day for proper comparison
+      }
+      
+      if (dateTo) {
+        toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999); // Set to end of day for proper comparison
+      }
+      
+      // Check if entry date falls within the range
+      const matchesDate = 
+        (!fromDate || entryDate >= fromDate) && 
+        (!toDate || entryDate <= toDate);
+      
+      // Check if academic year matches if specified
+      const matchesYear = !academicYear || entry.academicYear === academicYear;
+      
       return matchesDate && matchesYear;
-    });
-    setFilteredHours(filtered);
-  };
+    } catch (error) {
+      console.error("Error comparing dates:", error);
+      return true; // Include entry if date comparison fails
+    }
+  });
+  
+  setFilteredHours(filtered);
+  setPage(0); // Reset to first page after filtering
+};
 
   const handleSearchChange = (e) => {
     const query = e.target.value.toLowerCase();
@@ -217,7 +242,7 @@ const StudentLibraryHours = () => {
               color: "#FFD700",
               fontWeight: "bold",
               paddingBottom: 3,
-              textAlign: "center",
+              textAlign: "Left",
             }}
           >
             Library Hours
@@ -300,6 +325,7 @@ const StudentLibraryHours = () => {
                           <MenuItem value="">Select Academic Year</MenuItem>
                           <MenuItem value="2024">2024</MenuItem>
                           <MenuItem value="2023">2023</MenuItem>
+                          <MenuItem value="2025">2025</MenuItem>
                         </Select>
                         <Button
                           variant="contained"
