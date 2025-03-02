@@ -399,6 +399,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
                   variant="outlined"
                   fullWidth
                   required
+                  disabled
                   SelectProps={{
                     MenuProps: {
                       sx: { zIndex: 1500 },

@@ -25,11 +25,11 @@ const BookLog = () => {
   const [bookLogs, setBookLogs] = useState([]); // Stores book logs for the user
   const [filteredLogs, setFilteredLogs] = useState([]); // Stores filtered logs
   const [filters, setFilters] = useState({
-    search: "",
     dateFrom: "",
     dateTo: "",
     academicYear: "",
   });
+  const [searchQuery, setSearchQuery] = useState(""); // Separate state for search query
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [addBookLogOpen, setAddBookLogOpen] = useState(false);
@@ -92,33 +92,64 @@ const BookLog = () => {
     }));
   };
 
+  // Updated applyFilters function with improved date handling
   const applyFilters = () => {
-    const { search, dateFrom, dateTo, academicYear } = filters;
-
+    const { dateFrom, dateTo, academicYear } = filters;
+    
     let filtered = bookLogs;
 
-    if (search) {
-      filtered = filtered.filter(
-        (log) =>
-          log.title.toLowerCase().includes(search.toLowerCase()) ||
-          log.author.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
+    // Apply date filters with improved handling
     if (dateFrom) {
-      filtered = filtered.filter((log) => new Date(log.dateRead) >= new Date(dateFrom));
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0); // Start of day
+      filtered = filtered.filter(log => {
+        const logDate = new Date(log.dateRead);
+        return logDate >= fromDate;
+      });
     }
 
     if (dateTo) {
-      filtered = filtered.filter((log) => new Date(log.dateRead) <= new Date(dateTo));
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // End of day
+      filtered = filtered.filter(log => {
+        const logDate = new Date(log.dateRead);
+        return logDate <= toDate;
+      });
     }
 
     if (academicYear) {
       filtered = filtered.filter((log) => log.academicYear === academicYear);
     }
 
+    // Apply search filter if there's an active search query
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (log) =>
+          log.title?.toLowerCase().includes(searchQuery) ||
+          log.author?.toLowerCase().includes(searchQuery) ||
+          new Date(log.dateRead).toLocaleDateString().includes(searchQuery)
+      );
+    }
+
     setFilteredLogs(filtered);
     setPage(0);
+  };
+
+  // New search function that immediately filters results (like in StudentLibraryHours)
+  const handleSearchChange = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    // Filter the book logs based on the search query
+    const filtered = bookLogs.filter(
+      (log) =>
+        log.title?.toLowerCase().includes(query) ||
+        log.author?.toLowerCase().includes(query) ||
+        new Date(log.dateRead).toLocaleDateString().includes(query)
+    );
+    
+    setFilteredLogs(filtered);
+    setPage(0); // Reset to first page
   };
 
   const handleChangePage = (event, newPage) => {
@@ -223,7 +254,7 @@ const BookLog = () => {
             </Typography>
           </Box>
 
-          {/* Search Bar */}
+          {/* Search Bar - Updated to match StudentLibraryHours behavior */}
           <Box
             sx={{
               display: "flex",
@@ -232,12 +263,12 @@ const BookLog = () => {
             }}
           >
             <TextField
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              variant="outlined"
+              label="Search"
               placeholder="Type here..."
+              variant="outlined"
               size="small"
+              value={searchQuery}
+              onChange={handleSearchChange}
               sx={{
                 backgroundColor: "#fff",
                 borderRadius: "15px",
@@ -354,15 +385,23 @@ const BookLog = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {displayedLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>{log.title}</TableCell>
-                    <TableCell>{log.author}</TableCell>
-                    <TableCell>{log.accessionNumber}</TableCell>
-                    <TableCell>{new Date(log.dateRead).toLocaleDateString()}</TableCell>
-                    <TableCell>{renderStars(log.rating)}</TableCell>
+                {displayedLogs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      No book logs found matching your criteria
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  displayedLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell>{log.title}</TableCell>
+                      <TableCell>{log.author}</TableCell>
+                      <TableCell>{log.accessionNumber}</TableCell>
+                      <TableCell>{new Date(log.dateRead).toLocaleDateString()}</TableCell>
+                      <TableCell>{renderStars(log.rating)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
 

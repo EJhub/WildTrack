@@ -85,7 +85,7 @@ const TeacherSideBar = () => {
           textShadow: '1px 1px 2px rgba(0,0,0,0.7)'
         }}
       >
-        Welcome Teacher {teacherLastName}
+        Welcome, Teacher {teacherLastName}!
       </Typography>
  
       <Box
