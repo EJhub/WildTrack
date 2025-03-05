@@ -17,19 +17,25 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
           justifyContent: 'center', 
           alignItems: 'center', 
           height: '100vh',
-          backgroundColor: '#f5f5f5' 
+          background: 'linear-gradient(to bottom, #CD6161, #8B3D3D)',
         }}
       >
-        <CircularProgress size={60} sx={{ color: '#781B1B' }} />
-        <Typography variant="h6" sx={{ mt: 2, color: '#781B1B' }}>
-          Loading...
+        <CircularProgress size={60} sx={{ color: '#FFD700' }} />
+        <Typography variant="h6" sx={{ mt: 2, color: '#FFD700', fontWeight: 'bold' }}>
+          Verifying access...
         </Typography>
       </Box>
     );
   }
 
-  // If user is not authenticated, redirect to login
+  // If user is not authenticated, handle redirection
   if (!user) {
+    // Special handling for librarian routes - redirect to librarian login
+    if (location.pathname.startsWith('/librarian/') && location.pathname !== '/librarian/Login') {
+      return <Navigate to="/librarian/Login" state={{ from: location.pathname }} replace />;
+    }
+    
+    // For all other routes, redirect to main login
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
@@ -38,11 +44,11 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     // Redirect based on the user's actual role
     switch (user.role) {
       case 'Student':
-        return <Navigate to={`/studentDashboard/TimeRemaining?id=${user.idNumber}`} replace />;
+        return <Navigate to="/studentDashboard/TimeRemaining" replace />;
       case 'Teacher':
         return <Navigate to="/TeacherDashboard/Home" replace />;
       case 'Librarian':
-        return <Navigate to="/librarianDashboard" replace />;
+        return <Navigate to="/librarian/Home" replace />;
       case 'NAS':
         return <Navigate to="/nasDashboard/Home" replace />;
       default:
