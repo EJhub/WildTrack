@@ -31,6 +31,7 @@ import ProtectedRoute from './ProtectedRoute';
 import NotificationsPage from './Student/NotificationsPage';
 import { Routes, Route, Link } from "react-router-dom";
 import LibraryRequirementsProgress from './Student/LibraryRequirementsProgress';
+import LibrarianLogin from "./Login/LibrarianLogin";
 
 export default function TheRoutes() {
     return (
@@ -59,16 +60,59 @@ export default function TheRoutes() {
             <Route path="/TeacherDashboard/StudentRecords" element={<StudentRecords />} />
             <Route path="/TeacherDashboard/CompletedLibraryHours" element={<CompletedLibraryHours />} />
             <Route path="/TeacherDashboard/Analytics" element={<Analytics />} />
-            <Route path="/librarian/Home" element={<LibrarianDashboard />} />
-            <Route path="/librarian/LibrarianAnalytics" element={<LibrarianAnalytics/>} />
-            <Route path="/librarian/LibrarianStudentLibraryHours" element={<LibrarianStudentLibraryHours />} />
-            <Route path="/librarian/LibrarianNASActivityLog" element={<LibrarianNASActivityLog />} />
-            <Route path="/librarian/LibrarianManageTeacher" element={<LibrarianManageTeacher />} />
-            <Route path="/librarian/LibrarianManageRecords" element={<LibrarianManageRecords />} />
-            <Route path="/librarian/LibrarianManageBooks" element={<LibrarianManageBooks/>} />
-            <Route path="/librarian/LibrarianManageStudent" element={<LibrarianManageStudent/>} />
-            <Route path="/librarian/Genre" element={<LibrarianManageGenre/>} />
-            <Route path="/librarian/LibrarianManageNASStudent" element={<LibrarianManageNASStudent/>} />
+            
+            {/* Librarian routes - protected with role restriction */}
+            <Route path="/librarian/Login" element={<LibrarianLogin />} />
+            <Route path="/librarian/Home" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianDashboard />
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianAnalytics" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianAnalytics/>
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianStudentLibraryHours" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianStudentLibraryHours />
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianNASActivityLog" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianNASActivityLog />
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianManageTeacher" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianManageTeacher />
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianManageRecords" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianManageRecords />
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianManageBooks" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianManageBooks/>
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianManageStudent" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianManageStudent/>
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/Genre" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianManageGenre/>
+                </ProtectedRoute>
+            } />
+            <Route path="/librarian/LibrarianManageNASStudent" element={
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianManageNASStudent/>
+                </ProtectedRoute>
+            } />
             
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>

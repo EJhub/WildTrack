@@ -1,22 +1,32 @@
-import React, { useState } from 'react';
-import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { List, ListItem, ListItemText, Box, Button, useMediaQuery, Typography, Divider } from '@mui/material';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import LogoutIcon from '@mui/icons-material/Logout';
 import Settings from './Settings'; // Import the Settings component
+import { AuthContext } from '../../AuthContext'; // Import AuthContext
  
 const SideBar = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // Add useNavigate hook
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   const [openSettings, setOpenSettings] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const { user, logout } = useContext(AuthContext); // Get user and logout function
  
   const handleOpenSettings = () => setOpenSettings(true);
   const handleCloseSettings = () => setOpenSettings(false);
  
   const toggleManage = () => setManageOpen((prev) => !prev);
+  
+  // Handle logout function
+  const handleLogout = () => {
+    logout(); // Call logout function from AuthContext
+    navigate('/librarian/Login'); // Redirect to login page
+  };
  
   const getListItemStyles = (path) => ({
     paddingY: isSmallScreen ? '0.5rem' : '1.5rem',
@@ -94,7 +104,6 @@ const SideBar = () => {
             />
           </ListItem>
  
-
           <ListItem
             button
             component={Link}
@@ -115,7 +124,7 @@ const SideBar = () => {
           <br></br><br></br>
  
           {/* Manage Section */}
-          <ListItem button onClick={toggleManage} sx={{paddingY: '1rem', marginLeft: '-60px'}}>
+          <ListItem button onClick={toggleManage} sx={{paddingY: '1rem', marginLeft: isSmallScreen ? 0 : '-60px'}}>
             <ListItemText
               primary={isSmallScreen ? 'M' : 'Manage'}
               primaryTypographyProps={{
@@ -125,7 +134,7 @@ const SideBar = () => {
                 textTransform: 'uppercase',
               }}
             />
-            {manageOpen ? <ExpandLessIcon sx={{ color: '#FFD700'}} /> : <ExpandMoreIcon sx={{ color: '#FFD700' }} />}
+            {!isSmallScreen && (manageOpen ? <ExpandLessIcon sx={{ color: '#FFD700'}} /> : <ExpandMoreIcon sx={{ color: '#FFD700' }} />)}
           </ListItem>
  
           {manageOpen && (
@@ -136,9 +145,11 @@ const SideBar = () => {
                 to="/librarian/LibrarianManageStudent"
                 sx={getListItemStyles('/librarian/LibrarianManageStudent')}
               >
-                <ListItemText primary={isSmallScreen ? 'S' : 'Student'} />
+                <ListItemText 
+                  primary={isSmallScreen ? 'S' : 'Student'} 
+                  primaryTypographyProps={{align: 'center'}}
+                />
               </ListItem>
- 
  
               <ListItem
                 button
@@ -146,7 +157,10 @@ const SideBar = () => {
                 to="/librarian/LibrarianManageTeacher"
                 sx={getListItemStyles('/librarian/LibrarianManageTeacher')}
               >
-                <ListItemText primary={isSmallScreen ? 'T' : 'Teacher'} />
+                <ListItemText 
+                  primary={isSmallScreen ? 'T' : 'Teacher'} 
+                  primaryTypographyProps={{align: 'center'}}
+                />
               </ListItem>
  
               <ListItem
@@ -155,7 +169,10 @@ const SideBar = () => {
                 to="/librarian/LibrarianManageRecords"
                 sx={getListItemStyles('/librarian/LibrarianManageRecords')}
               >
-                <ListItemText primary={isSmallScreen ? 'R' : 'Records'} />
+                <ListItemText 
+                  primary={isSmallScreen ? 'R' : 'Records'} 
+                  primaryTypographyProps={{align: 'center'}}
+                />
               </ListItem>
  
               <ListItem
@@ -164,7 +181,10 @@ const SideBar = () => {
                 to="/librarian/LibrarianManageBooks"
                 sx={getListItemStyles('/librarian/LibrarianManageBooks')}
               >
-                <ListItemText primary={isSmallScreen ? 'B' : 'Books'} />
+                <ListItemText 
+                  primary={isSmallScreen ? 'B' : 'Books'} 
+                  primaryTypographyProps={{align: 'center'}}
+                />
               </ListItem>
  
               <ListItem
@@ -173,46 +193,80 @@ const SideBar = () => {
                 to="/librarian/Genre"
                 sx={getListItemStyles('/librarian/Genre')}
               >
-                <ListItemText primary={isSmallScreen ? 'G' : 'Genre'} />
+                <ListItemText 
+                  primary={isSmallScreen ? 'G' : 'Genre'} 
+                  primaryTypographyProps={{align: 'center'}}
+                />
               </ListItem>
             </>
           )}
         </List>
  
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: isSmallScreen ? 'center' : 'space-around',
-            padding: '1rem',
-            flexDirection: isSmallScreen ? 'column' : 'row',
-          }}
-        >
-          <Button
-            component={Link}
-            to="/logout"
+        {/* Bottom Controls with Welcome Message */}
+        <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', pt: 2 }}>
+          {/* Welcome message above logout button */}
+          {user && (
+            <Box sx={{ px: 2, pb: 2, textAlign: 'center' }}>
+              <Typography 
+                sx={{ 
+                  color: '#FFD700', 
+                  fontWeight: 'bold',
+                  fontSize: isSmallScreen ? '0.7rem' : '0.95rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: isSmallScreen ? 'nowrap' : 'normal'
+                }}
+              >
+                {isSmallScreen ? `Librarian ${user?.lastName || ''}` : `Welcome, Librarian ${user?.lastName || ''}!`}
+              </Typography>
+            </Box>
+          )}
+
+          <Box
             sx={{
-              backgroundColor: '#FFD700',
-              color: '#000',
-              border: 'solid 2px',
-              borderRadius: '12px',
-              padding: '4px 12px',
-              minWidth: isSmallScreen ? '50px' : 'auto',
-              '&:hover': {
-                backgroundColor: '#FFC107',
-              },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isSmallScreen ? 'center' : 'space-around',
+              padding: '1rem',
+              flexDirection: isSmallScreen ? 'column' : 'row',
+              gap: 1
             }}
           >
-            {isSmallScreen ? 'LO' : 'Log Out'}
-          </Button>
- 
-          <Button onClick={handleOpenSettings} sx={{ minWidth: 0 }}>
-            <SettingsIcon sx={{ color: '#FFD700' }} />
-          </Button>
- 
-          <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
-            <NotificationsIcon sx={{ color: '#FFD700' }} />
-          </Button>
+            <Button
+              onClick={handleLogout}
+              sx={{
+                backgroundColor: '#FFD700',
+                color: '#000',
+                border: 'solid 2px',
+                borderRadius: '12px',
+                padding: '4px 12px',
+                minWidth: isSmallScreen ? '50px' : 'auto',
+                '&:hover': {
+                  backgroundColor: '#FFC107',
+                },
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              {isSmallScreen ? (
+                <LogoutIcon fontSize="small" />
+              ) : (
+                <>
+                  <LogoutIcon fontSize="small" />
+                  <span>Log Out</span>
+                </>
+              )}
+            </Button>
+    
+            <Button onClick={handleOpenSettings} sx={{ minWidth: 0 }}>
+              <SettingsIcon sx={{ color: '#FFD700' }} />
+            </Button>
+    
+            <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
+              <NotificationsIcon sx={{ color: '#FFD700' }} />
+            </Button>
+          </Box>
         </Box>
       </Box>
  

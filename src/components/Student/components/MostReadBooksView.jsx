@@ -34,6 +34,7 @@ ChartJS.register(
 const MostReadBooksView = () => {
   const [mostReadData, setMostReadData] = useState({ labels: [], datasets: [] });
   const [highestRatedData, setHighestRatedData] = useState({ labels: [], datasets: [] });
+  const [academicYearOptions, setAcademicYearOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     dateFrom: '',
@@ -45,10 +46,36 @@ const MostReadBooksView = () => {
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    if (user && user.idNumber) {
-      fetchUserSpecificData(user.idNumber);
-    }
+    fetchInitialData();
   }, [user]);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch academic years
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+      
+      try {
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', config);
+        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
+        setAcademicYearOptions(formattedAcademicYears);
+      } catch (error) {
+        console.error('Error fetching academic years:', error);
+        // Don't show error toast for this - non-critical
+      }
+      
+      // Fetch user data if available
+      if (user && user.idNumber) {
+        await fetchUserSpecificData(user.idNumber);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchUserSpecificData = async (idNumber) => {
     try {
@@ -166,6 +193,19 @@ const MostReadBooksView = () => {
     }
   };
 
+  const resetFilters = () => {
+    setFilters({
+      dateFrom: '',
+      dateTo: '',
+      academicYear: ''
+    });
+    
+    // Re-fetch original data
+    if (user && user.idNumber) {
+      fetchUserSpecificData(user.idNumber);
+    }
+  };
+
   const exportToPDF = () => {
     // Implement PDF export functionality
     toast.info('PDF export functionality will be implemented soon');
@@ -233,6 +273,8 @@ const MostReadBooksView = () => {
           marginBottom: 4,
           flexWrap: 'wrap',
           alignItems: 'center',
+          justifyContent: 'flex-start',
+          marginLeft: 2
         }}
       >
         <TextField
@@ -245,8 +287,8 @@ const MostReadBooksView = () => {
           size="small"
           sx={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            width: '250px',
+            borderRadius: '15px',
+            width: '200px',
           }}
           InputLabelProps={{ shrink: true }}
         />
@@ -260,8 +302,8 @@ const MostReadBooksView = () => {
           size="small"
           sx={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            width: '250px',
+            borderRadius: '15px',
+            width: '200px',
           }}
           InputLabelProps={{ shrink: true }}
         />
@@ -275,27 +317,45 @@ const MostReadBooksView = () => {
           size="small"
           sx={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            width: '200px',
+            borderRadius: '15px',
+            width: '150px',
           }}
         >
           <MenuItem value="">All Years</MenuItem>
-          <MenuItem value="2023-2024">2023-2024</MenuItem>
-          <MenuItem value="2022-2023">2022-2023</MenuItem>
+          {academicYearOptions.map((year, index) => (
+            <MenuItem key={index} value={year}>
+              {year}
+            </MenuItem>
+          ))}
         </TextField>
-        <Button
-          variant="contained"
-          onClick={applyFilters}
-          sx={{
-            backgroundColor: '#FFD700',
-            color: 'black',
-            fontWeight: 'bold',
-            ':hover': { backgroundColor: '#FFFF00' },
-            width: '100px',
-          }}
-        >
-          Filter
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            onClick={applyFilters}
+            sx={{
+              backgroundColor: '#FFD700',
+              color: 'black',
+              fontWeight: 'bold',
+              ':hover': { backgroundColor: '#FFFF00' },
+            }}
+          >
+            Filter
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={resetFilters}
+            sx={{
+              borderColor: '#FFD700',
+              color: 'black',
+              ':hover': { 
+                backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                borderColor: '#FFD700'
+              },
+            }}
+          >
+            Reset
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (

@@ -34,6 +34,7 @@ ChartJS.register(
 const BooksAndMinutesView = () => {
   const [booksReadData, setBooksReadData] = useState([]);
   const [minutesSpentData, setMinutesSpentData] = useState([]);
+  const [academicYearOptions, setAcademicYearOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     dateFrom: '',
@@ -45,25 +46,47 @@ const BooksAndMinutesView = () => {
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    if (user && user.idNumber) {
-      fetchUserData(user.idNumber);
-    } else {
-      const idNumber = localStorage.getItem('idNumber');
+    // Fetch academic years and user data
+    fetchInitialData();
+  }, [user]);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+      
+      // Fetch Academic Years
+      try {
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', config);
+        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
+        setAcademicYearOptions(formattedAcademicYears);
+      } catch (error) {
+        console.error('Error fetching academic years:', error);
+        // Don't show error toast for this - non-critical
+      }
+      
+      // Get user ID and fetch user data
+      const idNumber = user?.idNumber || localStorage.getItem('idNumber');
       if (idNumber) {
-        fetchUserData(idNumber);
+        await fetchUserData(idNumber, token);
       } else {
         toast.error('User information not available');
         setLoading(false);
       }
-    }
-  }, [user]);
-
-  const fetchUserData = async (idNumber) => {
-    try {
-      setLoading(true);
       
-      // Configure axios with auth token
-      const token = localStorage.getItem('token');
+    } catch (error) {
+      console.error('Error in initial data loading:', error);
+      setLoading(false);
+    }
+  };
+
+  const fetchUserData = async (idNumber, token) => {
+    try {
       const config = {
         headers: { Authorization: `Bearer ${token}` }
       };
@@ -79,14 +102,41 @@ const BooksAndMinutesView = () => {
         config
       );
 
-      setBooksReadData(booksReadResponse.data);
-      setMinutesSpentData(minutesSpentResponse.data);
+      // Sort data by month for proper chronological display
+      const sortedBooksData = sortDataByMonth(booksReadResponse.data);
+      const sortedMinutesData = sortDataByMonth(minutesSpentResponse.data);
+
+      setBooksReadData(sortedBooksData);
+      setMinutesSpentData(sortedMinutesData);
     } catch (error) {
       console.error('Error fetching user data:', error);
       toast.error('Failed to load your reading analytics. Please try again later.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Function to sort data by month chronologically
+  const sortDataByMonth = (data) => {
+    // Define month order for sorting
+    const monthOrder = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    };
+
+    return [...data].sort((a, b) => {
+      // Split month and year
+      const [aMonth, aYear] = a.month.split(' ');
+      const [bMonth, bYear] = b.month.split(' ');
+      
+      // Compare years first
+      if (aYear !== bYear) {
+        return parseInt(aYear) - parseInt(bYear);
+      }
+      
+      // If years are the same, compare months
+      return monthOrder[aMonth] - monthOrder[bMonth];
+    });
   };
 
   const formatChartData = (data, label) => ({
@@ -143,9 +193,12 @@ const BooksAndMinutesView = () => {
         config
       );
       
-      // Update chart data
-      setBooksReadData(booksReadResponse.data);
-      setMinutesSpentData(minutesSpentResponse.data);
+      // Sort and update chart data
+      const sortedBooksData = sortDataByMonth(booksReadResponse.data);
+      const sortedMinutesData = sortDataByMonth(minutesSpentResponse.data);
+      
+      setBooksReadData(sortedBooksData);
+      setMinutesSpentData(sortedMinutesData);
       
       toast.success('Filters applied successfully');
     } catch (error) {
@@ -153,6 +206,21 @@ const BooksAndMinutesView = () => {
       toast.error('Failed to apply filters. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      dateFrom: '',
+      dateTo: '',
+      academicYear: ''
+    });
+    
+    // Re-fetch original data
+    const idNumber = user?.idNumber || localStorage.getItem('idNumber');
+    const token = localStorage.getItem('token');
+    if (idNumber && token) {
+      fetchUserData(idNumber, token);
     }
   };
 
@@ -214,8 +282,6 @@ const BooksAndMinutesView = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', paddingBottom: '2rem' }}>
 
-      
-      {/* Filters Section */}
       <Box
         sx={{
           display: 'flex',
@@ -223,6 +289,8 @@ const BooksAndMinutesView = () => {
           marginBottom: 4,
           flexWrap: 'wrap',
           alignItems: 'center',
+          justifyContent: 'flex-start',
+          marginLeft: 2
         }}
       >
         <TextField
@@ -235,8 +303,8 @@ const BooksAndMinutesView = () => {
           size="small"
           sx={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            width: '250px',
+            borderRadius: '15px',
+            width: '200px',
           }}
           InputLabelProps={{ shrink: true }}
         />
@@ -250,8 +318,8 @@ const BooksAndMinutesView = () => {
           size="small"
           sx={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            width: '250px',
+            borderRadius: '15px',
+            width: '200px',
           }}
           InputLabelProps={{ shrink: true }}
         />
@@ -265,32 +333,50 @@ const BooksAndMinutesView = () => {
           size="small"
           sx={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            width: '200px',
+            borderRadius: '15px',
+            width: '150px',
           }}
         >
           <MenuItem value="">All Years</MenuItem>
-          <MenuItem value="2023-2024">2023-2024</MenuItem>
-          <MenuItem value="2022-2023">2022-2023</MenuItem>
+          {academicYearOptions.map((year, index) => (
+            <MenuItem key={index} value={year}>
+              {year}
+            </MenuItem>
+          ))}
         </TextField>
-        <Button
-          variant="contained"
-          onClick={applyFilters}
-          sx={{
-            backgroundColor: '#FFD700',
-            color: 'black',
-            fontWeight: 'bold',
-            ':hover': { backgroundColor: '#FFFF00' },
-            width: '100px',
-          }}
-        >
-          Filter
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            onClick={applyFilters}
+            sx={{
+              backgroundColor: '#FFD700',
+              color: 'black',
+              fontWeight: 'bold',
+              ':hover': { backgroundColor: '#FFC107' },
+            }}
+          >
+            Filter
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={resetFilters}
+            sx={{
+              borderColor: '#FFD700',
+              color: 'black',
+              ':hover': { 
+                backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                borderColor: '#FFD700'
+              },
+            }}
+          >
+            Reset
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', padding: 5 }}>
-          <CircularProgress />
+          <CircularProgress sx={{ color: '#781B1B' }} />
         </Box>
       ) : (
         <>
@@ -335,7 +421,7 @@ const BooksAndMinutesView = () => {
             </Typography>
             
             {booksReadData.length === 0 ? (
-              <Box sx={{ padding: 4, textAlign: 'center' }}>
+              <Box sx={{ padding: 4, textAlign: 'center', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="body1">
                   No book reading data available for the selected period.
                 </Typography>
@@ -362,6 +448,7 @@ const BooksAndMinutesView = () => {
               position: 'relative',
               margin: '0 auto',
               overflow: 'hidden',
+              marginTop: 4,
             }}
           >
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginBottom: 2 }}>
@@ -392,7 +479,7 @@ const BooksAndMinutesView = () => {
             </Typography>
             
             {minutesSpentData.length === 0 ? (
-              <Box sx={{ padding: 4, textAlign: 'center' }}>
+              <Box sx={{ padding: 4, textAlign: 'center', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="body1">
                   No library hours data available for the selected period.
                 </Typography>

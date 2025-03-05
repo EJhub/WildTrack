@@ -29,26 +29,61 @@ const BookLog = () => {
     dateTo: "",
     academicYear: "",
   });
+  const [academicYearOptions, setAcademicYearOptions] = useState([]);
   const [searchQuery, setSearchQuery] = useState(""); // Separate state for search query
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [addBookLogOpen, setAddBookLogOpen] = useState(false);
   const [registeredBooks, setRegisteredBooks] = useState([]); // List of books
+  const [loading, setLoading] = useState(true);
 
   // Get idNumber directly
   const idNumber = new URLSearchParams(window.location.search).get("id");
   const token = localStorage.getItem("token");
 
-  // Fetch Book Logs Function
-  const fetchBookLogs = async () => {
+  useEffect(() => {
+    fetchInitialData();
+  }, [idNumber, token]);
+
+  // Fetch initial data - academic years, book logs, and registered books
+  const fetchInitialData = async () => {
     try {
+      setLoading(true);
+      
       if (!token || !idNumber) {
         alert("Unauthorized access. Please log in.");
+        setLoading(false);
         return;
       }
 
-      console.log("Token:", token);
-      console.log("ID Number:", idNumber);
+      // Fetch academic years
+      try {
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
+        setAcademicYearOptions(formattedAcademicYears);
+      } catch (error) {
+        console.error('Error fetching academic years:', error);
+        // Don't show error toast for this - non-critical
+      }
+      
+      // Fetch book logs
+      await fetchBookLogs();
+
+      // Fetch registered books
+      await fetchRegisteredBooks();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Book Logs Function
+  const fetchBookLogs = async () => {
+    try {
+      
 
       const response = await axios.get(
         `http://localhost:8080/api/booklog/user/${idNumber}`,
@@ -70,19 +105,14 @@ const BookLog = () => {
     }
   };
 
-  useEffect(() => {
-    fetchBookLogs();
-    const fetchRegisteredBooks = async () => {
-      try {
-        const response = await axios.get("http://localhost:8080/api/books/all");
-        setRegisteredBooks(response.data);
-      } catch (error) {
-        console.error("Error fetching registered books:", error);
-      }
-    };
-
-    fetchRegisteredBooks();
-  }, [idNumber, token]);
+  const fetchRegisteredBooks = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/api/books/all");
+      setRegisteredBooks(response.data);
+    } catch (error) {
+      console.error("Error fetching registered books:", error);
+    }
+  };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -92,7 +122,7 @@ const BookLog = () => {
     }));
   };
 
-  // Updated applyFilters function with improved date handling
+  // Updated applyFilters function with improved academic year handling
   const applyFilters = () => {
     const { dateFrom, dateTo, academicYear } = filters;
     
@@ -117,8 +147,25 @@ const BookLog = () => {
       });
     }
 
-    if (academicYear) {
-      filtered = filtered.filter((log) => log.academicYear === academicYear);
+    // Updated academic year filtering logic to handle year ranges
+    if (academicYear && academicYear !== "") {
+      // Parse the academic year range (e.g., "2025-2026")
+      const years = academicYear.split("-");
+      if (years.length === 2) {
+        const startYear = parseInt(years[0]);
+        const endYear = parseInt(years[1]);
+        
+        filtered = filtered.filter(log => {
+          const logDate = new Date(log.dateRead);
+          const logYear = logDate.getFullYear();
+          
+          // Include if log's year matches either start or end year of the academic year
+          return (logYear === startYear || logYear === endYear);
+        });
+      } else {
+        // Fallback to exact string matching if format is not as expected
+        filtered = filtered.filter(log => log.academicYear === academicYear);
+      }
     }
 
     // Apply search filter if there's an active search query
@@ -135,7 +182,25 @@ const BookLog = () => {
     setPage(0);
   };
 
-  // New search function that immediately filters results (like in StudentLibraryHours)
+  // Reset filters function
+  const resetFilters = () => {
+    setFilters({
+      dateFrom: "",
+      dateTo: "",
+      academicYear: "",
+    });
+    
+    // Reset to original data without filters
+    // but maintain search if present
+    if (searchQuery) {
+      handleSearchChange({ target: { value: searchQuery } });
+    } else {
+      setFilteredLogs(bookLogs);
+    }
+    setPage(0);
+  };
+
+  // Search function that immediately filters results
   const handleSearchChange = (e) => {
     const query = e.target.value.toLowerCase();
     setSearchQuery(query);
@@ -254,7 +319,7 @@ const BookLog = () => {
             </Typography>
           </Box>
 
-          {/* Search Bar - Updated to match StudentLibraryHours behavior */}
+          {/* Search Bar */}
           <Box
             sx={{
               display: "flex",
@@ -335,8 +400,11 @@ const BookLog = () => {
                 }}
               >
                 <MenuItem value="">Select Academic Year</MenuItem>
-                <MenuItem value="2024">2024</MenuItem>
-                <MenuItem value="2023">2023</MenuItem>
+                {academicYearOptions.map((year, index) => (
+                  <MenuItem key={index} value={year}>
+                    {year}
+                  </MenuItem>
+                ))}
               </Select>
               <Button
                 variant="contained"
@@ -348,6 +416,20 @@ const BookLog = () => {
                 }}
               >
                 Filter
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={resetFilters}
+                sx={{
+                  borderColor: "#FFD700",
+                  color: "#000",
+                  "&:hover": { 
+                    backgroundColor: "rgba(255, 215, 0, 0.1)",
+                    borderColor: "#FFD700"
+                  },
+                }}
+              >
+                Reset
               </Button>
             </Box>
             <Button
@@ -364,16 +446,16 @@ const BookLog = () => {
           </Box>
 
           <TableContainer
-                component={Paper}
-                sx={{
-                  borderRadius: '15px',
-                  boxShadow: 3,
-                  overflow: 'auto',
-                  maxHeight: 'calc(100vh - 340px)',
-                  marginTop: 3,
-                  backgroundColor: "rgba(255, 255, 255, 0.8)",
-                }}
-              >
+            component={Paper}
+            sx={{
+              borderRadius: '15px',
+              boxShadow: 3,
+              overflow: 'auto',
+              maxHeight: 'calc(100vh - 340px)',
+              marginTop: 3,
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+            }}
+          >
             <Table stickyHeader sx={{ flexGrow: 1 }}>
               <TableHead>
                 <TableRow>

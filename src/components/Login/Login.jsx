@@ -33,6 +33,16 @@ const Login = () => {
       });
 
       const { token, role, idNumber } = response.data;
+      
+      // If it's a librarian, redirect to librarian login
+      if (role === "Librarian") {
+        setError("Please use the Librarian Login page");
+        setIsLoading(false);
+        setTimeout(() => {
+          navigate("/librarian/Login");
+        }, 1500);
+        return;
+      }
 
       // 2. Store auth data in localStorage
       localStorage.setItem("token", token);
@@ -49,8 +59,6 @@ const Login = () => {
       // 5. Navigate to the appropriate dashboard based on role
       if (role === "Student") {
         navigate(`/studentDashboard/TimeRemaining?id=${idNumber}`);
-      } else if (role === "Librarian") {
-        navigate("/librarianDashboard");
       } else if (role === "Teacher") {
         navigate("/TeacherDashboard/Home");
       } else if (role === "NAS") {
