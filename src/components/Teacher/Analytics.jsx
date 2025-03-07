@@ -24,6 +24,7 @@ const Analytics = () => {
     }
   };
 
+
   return (
     <>
       <NavBar />
@@ -40,6 +41,7 @@ const Analytics = () => {
             backgroundColor: '#f5f5f5',
           }}
         >
+
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
             <Typography
               variant="h4"
