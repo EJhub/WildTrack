@@ -57,8 +57,8 @@ export default function TheRoutes() {
             <Route path="/nasDashboard/ActivityLog" element={<NasActivityLog />} />
             <Route path="/TeacherDashboard/Home" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/TeacherDashboard/Home/SetLibraryHours" element={<TeacherDashboard />} />
-            <Route path="/TeacherDashboard/StudentRecords" element={<StudentRecords />} />
-            <Route path="/TeacherDashboard/CompletedLibraryHours" element={<CompletedLibraryHours />} />
+            <Route path="/TeacherDashboard/StudentRecords" element={<ProtectedRoute><StudentRecords /></ProtectedRoute>} />
+            <Route path="/TeacherDashboard/CompletedLibraryHours" element={<ProtectedRoute><CompletedLibraryHours /></ProtectedRoute>} />
             <Route path="/TeacherDashboard/Analytics" element={<Analytics />} />
             
             {/* Librarian routes - protected with role restriction */}

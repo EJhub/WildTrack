@@ -1,162 +1,248 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
-import { Bar } from 'react-chartjs-2';
+import { Box, Typography, CircularProgress } from '@mui/material';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Cell
+} from 'recharts';
+import axios from 'axios';
 
-const LibraryHoursParticipants = ({ timeframe, gradeLevel, section }) => {
-  const [libraryHoursData, setLibraryHoursData] = useState([]);
-  const [users, setUsers] = useState([]);
+const LibraryHoursParticipants = ({ timeframe = 'weekly', gradeLevel = 'All Grades', section = '', academicYear = '' }) => {
+  const [participantsData, setParticipantsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [processedData, setProcessedData] = useState([]);
 
+  // Define labels for days and months
   const weeklyLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const monthlyLabels = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const dayColors = [
-    '#FF5733', '#33FF57', '#3357FF', '#FF33A8', '#FF8633', '#33FFF5', '#A833FF'
-  ];
-
-  const monthColors = [
-    '#FF5733', '#FF8D33', '#FFC133', '#E8FF33', '#A8FF33', '#33FF57', '#33FF8D',
-    '#33FFC1', '#33E8FF', '#33A8FF', '#3357FF', '#8D33FF'
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 
+    'August', 'September', 'October', 'November', 'December'
   ];
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchParticipantsData = async () => {
       try {
-        // Fetch all users
-        const usersResponse = await fetch('http://localhost:8080/api/users/all');
-        const usersData = await usersResponse.json();
+        setLoading(true);
+        
+        // Build query parameters for filtering
+        const params = new URLSearchParams();
+        if (gradeLevel !== 'All Grades') {
+          params.append('gradeLevel', gradeLevel);
+        }
+        if (timeframe) {
+          params.append('timeframe', timeframe);
+        }
+        if (section) {
+          params.append('section', section);
+        }
+        if (academicYear) {
+          params.append('academicYear', academicYear);
+        }
 
-        // Filter users based on gradeLevel
-        const filteredUsers =
-          gradeLevel === 'All Grades'
-            ? usersData
-            : usersData.filter((user) => user.grade === gradeLevel || `Grade ${user.grade}` === gradeLevel);
-
-        setUsers(filteredUsers);
-
-        // Fetch all library hours
-        const hoursResponse = await fetch('http://localhost:8080/api/library-hours/all');
-        const hoursData = await hoursResponse.json();
-
-        // Cross-match library hours with filtered users
-        const filteredLibraryHours = hoursData.filter((record) =>
-          filteredUsers.some((user) => user.idNumber === record.idNumber)
-        );
-
-        setLibraryHoursData(filteredLibraryHours);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to fetch library hours data.');
+        // Fetch data from the API with query parameters
+        const url = `http://localhost:8080/api/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+        console.log("Fetching participants data from:", url);
+        
+        const response = await axios.get(url);
+        
+        if (response.status !== 200) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        console.log("API Response:", response.data);
+        setParticipantsData(response.data);
+        setError('');
+      } catch (err) {
+        console.error('Error fetching participants data:', err);
+        setError('Failed to fetch library hours participants data.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
-  }, [gradeLevel]);
+    fetchParticipantsData();
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchParticipantsData, 300000);
+    return () => clearInterval(interval);
+  }, [timeframe, gradeLevel, section, academicYear]);
 
-  // Filter and group data for the chart
-  const filteredLibraryHoursData = libraryHoursData.filter((record) => {
-    const recordDate = new Date(record.timeIn);
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1); // Monday of this week
-    startOfWeek.setHours(0, 0, 0, 0);
+  // Process the data for the chart
+  useEffect(() => {
+    if (!participantsData || participantsData.length === 0) {
+      setProcessedData([]);
+      return;
+    }
 
-    const isWithinWeek =
-      timeframe === 'weekly' &&
-      recordDate >= startOfWeek &&
-      recordDate <= new Date();
+    try {
+      if (timeframe === 'weekly') {
+        // For weekly data
+        if (participantsData[0] && participantsData[0].hasOwnProperty('day')) {
+          // Direct use of daily data
+          const dayData = {};
+          
+          // Initialize all days with zero values
+          weeklyLabels.forEach(day => {
+            dayData[day] = 0;
+          });
+          
+          // Fill in actual data where available
+          participantsData.forEach(item => {
+            if (item.day && dayData.hasOwnProperty(item.day)) {
+              dayData[item.day] = item.participants;
+            }
+          });
+          
+          // Format data for chart using real data from API
+          setProcessedData(weeklyLabels.map(day => {
+            return {
+              name: day,
+              value: dayData[day] || 0
+            };
+          }));
+        } else {
+          // If we only have monthly data, create a placeholder weekly distribution
+          setProcessedData(weeklyLabels.map((day, index) => ({
+            name: day,
+            value: 0 // Set all to zero initially
+          })));
+          
+          console.warn("Weekly data not available from API, showing empty chart");
+        }
+      } else {
+        // For monthly data, the API returns month abbreviations
+        // Map the abbreviations to full month names for better display
+        const monthMap = {
+          'JAN': 'January', 'FEB': 'February', 'MAR': 'March', 'APR': 'April',
+          'MAY': 'May', 'JUN': 'June', 'JUL': 'July', 'AUG': 'August',
+          'SEP': 'September', 'OCT': 'October', 'NOV': 'November', 'DEC': 'December'
+        };
+        
+        // Format data for chart
+        setProcessedData(participantsData.map(item => ({
+          name: monthMap[item.month] || item.month,
+          value: item.participants
+        })));
+      }
+    } catch (err) {
+      console.error('Error processing participants data:', err);
+      setError('Failed to process library hours participants data.');
+    }
+  }, [participantsData, timeframe]);
 
-    const isWithinMonth =
-      timeframe === 'monthly' &&
-      recordDate.getFullYear() === new Date().getFullYear();
-
-    return isWithinWeek || isWithinMonth;
-  });
-
-  const groupedLibraryHoursData = filteredLibraryHoursData.reduce((acc, record) => {
-    const recordDate = new Date(record.timeIn);
-    const key =
-      timeframe === 'weekly'
-        ? recordDate.toLocaleString('default', { weekday: 'long' })
-        : recordDate.toLocaleString('default', { month: 'long' });
-
-    const timeIn = new Date(record.timeIn);
-    const timeOut = new Date(record.timeOut);
-    const minutesSpent = timeOut > timeIn ? (timeOut - timeIn) / (1000 * 60) : 0;
-
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(minutesSpent);
-    return acc;
-  }, {});
-
-  const averageLibraryHoursData =
-    timeframe === 'weekly'
-      ? weeklyLabels.map((label) => ({
-          label,
-          average: groupedLibraryHoursData[label]
-            ? groupedLibraryHoursData[label].reduce((sum, minutes) => sum + minutes, 0) / groupedLibraryHoursData[label].length
-            : 0,
-        }))
-      : monthlyLabels.map((label) => ({
-          label,
-          average: groupedLibraryHoursData[label]
-            ? groupedLibraryHoursData[label].reduce((sum, minutes) => sum + minutes, 0) / groupedLibraryHoursData[label].length
-            : 0,
-        }));
-
-  // Apply dynamic colors based on the timeframe
-  const colors = timeframe === 'weekly' ? dayColors : monthColors;
-
-  const chartData = {
-    labels: averageLibraryHoursData.map((item) => item.label),
-    datasets: [
-      {
-        label: 'Average Minutes',
-        data: averageLibraryHoursData.map((item) => item.average),
-        backgroundColor: colors.slice(0, averageLibraryHoursData.length),
-        borderColor: colors.slice(0, averageLibraryHoursData.length),
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        display: true,
-        position: 'right',
-        labels: {
-          generateLabels: (chart) => {
-            const labels = timeframe === 'weekly' ? weeklyLabels : monthlyLabels;
-            const colorSet = timeframe === 'weekly' ? dayColors : monthColors;
-
-            return labels.map((label, index) => ({
-              text: label,
-              fillStyle: colorSet[index % colorSet.length],
-              strokeStyle: colorSet[index % colorSet.length],
-              lineWidth: 1,
-            }));
-          },
-        },
-      },
-      title: {
-        display: true,
-        text: `Active Library Hours Participants (${timeframe === 'weekly' ? 'Weekly' : 'Monthly'})`,
-      },
-    },
-    scales: {
-      y: { beginAtZero: true },
-    },
+  // Calculate the maximum value for y-axis based on real data
+  const getYAxisDomain = () => {
+    if (processedData.length === 0) return [0, 100];
+    
+    const maxValue = Math.max(...processedData.map(item => item.value));
+    // Round up to nearest 100 for a cleaner chart
+    return [0, Math.ceil(maxValue / 100) * 100 || 100];
   };
 
   return (
-    <Box>
-      {error ? (
-        <Typography color="error">{error}</Typography>
+    <Box sx={{ 
+      width: '100%', 
+      height: 400
+    }}>      
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+          <Typography color="error">{error}</Typography>
+        </Box>
+      ) : processedData.length === 0 ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+          <Typography>No participants data available</Typography>
+        </Box>
       ) : (
-        <Bar data={chartData} options={options} />
+        <Box sx={{ position: 'relative', height: 400 }}>
+          {/* Legend at the top right */}
+          <Box sx={{ 
+            position: 'absolute', 
+            right: 20, 
+            top: 0, 
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+              Legend:
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ 
+                width: 12, 
+                height: 12, 
+                backgroundColor: '#E57373', 
+                borderRadius: '2px' 
+              }} />
+              <Typography variant="body2">
+                Students
+              </Typography>
+            </Box>
+          </Box>
+
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart 
+              data={processedData}
+              margin={{ top: 25, right: 30, left: 40, bottom: 50 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <XAxis 
+                dataKey="name" 
+                tick={{ fill: '#000000', fontSize: 12 }}
+                axisLine={{ stroke: '#000000' }}
+                tickLine={{ stroke: '#000000' }}
+                label={{ 
+                  value: 'Days of the Week', 
+                  position: 'insideBottom',
+                  offset: -5,
+                  fontSize: 14,
+                  fill: '#000000'
+                }}
+              />
+              <YAxis 
+                label={{ 
+                  value: 'Number of Students', 
+                  angle: -90, 
+                  position: 'insideLeft',
+                  offset: 0,
+                  fontSize: 14,
+                  fill: '#000000'
+                }}
+                domain={getYAxisDomain()}
+                tick={{ fill: '#000000', fontSize: 12 }}
+                axisLine={{ stroke: '#000000' }}
+                tickLine={{ stroke: '#000000' }}
+              />
+              <RechartsTooltip 
+                formatter={(value) => [`${value} students`, '']}
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  padding: '10px'
+                }}
+              />
+              <Bar 
+                dataKey="value" 
+                name="Students"
+                fill="#E57373"
+                radius={[0, 0, 0, 0]}
+                barSize={40}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </Box>
       )}
     </Box>
   );

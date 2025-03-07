@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
@@ -13,21 +13,14 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
-import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import EditIcon from '@mui/icons-material/Edit';
 import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
 import Button from '@mui/material/Button';
 import TablePagination from '@mui/material/TablePagination';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import InputLabel from '@mui/material/InputLabel';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import { AuthContext } from '../AuthContext';
+import CircularProgress from '@mui/material/CircularProgress';
+import Chip from '@mui/material/Chip';
 
 const StudentRecords = () => {
   const [students, setStudents] = useState([]);
@@ -36,28 +29,88 @@ const StudentRecords = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
+  const [quarter, setQuarter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Edit Modal States
-  const [openModal, setOpenModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
+  const [teacherGradeLevel, setTeacherGradeLevel] = useState('');
+  const [teacherSubject, setTeacherSubject] = useState('');
 
   // Pagination states
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  
+  // Get current user from AuthContext
+  const { user } = useContext(AuthContext);
 
-  // Fetch students with time-in and time-out
+  // First fetch teacher info to get assigned grade level and subject
+  useEffect(() => {
+    const fetchTeacherInfo = async () => {
+      if (!user || user.role !== 'Teacher' || !user.idNumber) {
+        setError('You must be logged in as a teacher to view student records');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data) {
+          // Format grade to match expected format (e.g., "2" to "Grade 2")
+          if (response.data.grade) {
+            const formattedGrade = response.data.grade.includes('Grade') 
+              ? response.data.grade 
+              : `Grade ${response.data.grade}`;
+            
+            setTeacherGradeLevel(formattedGrade);
+          }
+          
+          // Set the teacher's subject
+          if (response.data.subject) {
+            setTeacherSubject(response.data.subject);
+          } else {
+            setError('No subject assigned to this teacher. Please contact an administrator.');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching teacher info:', err);
+        setError('Failed to fetch teacher information');
+      }
+    };
+
+    fetchTeacherInfo();
+  }, [user]);
+
+  // Fetch students only after we have the teacher's subject
   useEffect(() => {
     const fetchStudents = async () => {
+      if (!teacherSubject) return; // Only fetch if we have the teacher's subject
+      
       try {
-        const response = await axios.get('http://localhost:8080/api/library-hours/with-user-details');
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Fetch only students with the teacher's subject
+        const response = await axios.get(`http://localhost:8080/api/students`, {
+          params: {
+            role: 'Student',
+            gradeLevel: teacherGradeLevel,
+            subject: teacherSubject,
+            quarter: quarter || null // Add quarter filter if set
+          },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Process the student data
         const formattedStudents = response.data.map((student) => ({
           idNumber: student.idNumber,
           name: `${student.firstName} ${student.lastName}`,
-          gradeSection: student.gradeSection || 'N/A',
-          progress: student.timeOut ? 'Completed' : 'In-progress',
-          status: student.timeOut ? 'Approved' : 'Pending',
+          gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
+          subject: teacherSubject, // Always use the teacher's subject
+          quarter: student.quarter || '',
+          progress: student.progress || 'Not started',
         }));
 
         setStudents(formattedStudents);
@@ -72,68 +125,9 @@ const StudentRecords = () => {
     };
 
     fetchStudents();
-  }, []);
+  }, [teacherSubject, teacherGradeLevel, quarter]);
 
-  // Handle edit button click
-  const handleEditClick = (student) => {
-    setEditingStudent({ ...student });
-    setOpenModal(true);
-  };
-
-  // Handle modal close
-  const handleCloseModal = () => {
-    setOpenModal(false);
-    setEditingStudent(null);
-  };
-
-  // Handle save changes
-  const handleSaveChanges = async () => {
-    try {
-      setError(null); // Clear any previous errors
-
-      // Validate required fields before sending
-      if (!editingStudent?.idNumber || !editingStudent?.name) {
-        setError('ID Number and Name are required fields');
-        return;
-      }
-
-      const payload = {
-        idNumber: editingStudent.idNumber,
-        name: editingStudent.name,
-        gradeSection: editingStudent.gradeSection,
-        progress: editingStudent.progress,
-        status: editingStudent.status,
-      };
-
-      const response = await axios.put(
-        `http://localhost:8080/api/library-hours/${editingStudent.idNumber}`,
-        editingStudent,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      // Update local state
-      const updatedStudents = students.map((student) =>
-        student.idNumber === editingStudent.idNumber ? editingStudent : student
-      );
-
-      setStudents(updatedStudents);
-      setFilteredStudents(updatedStudents);
-      handleCloseModal();
-
-      // Optional: Show success message
-      setSuccessMessage('Student record updated successfully');
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      console.error('Error updating student:', err);
-      setError('Failed to update student record. Please try again.');
-    }
-  };
-
-  // Rest of your existing functions
+  // Search functionality
   const handleSearch = (event) => {
     const value = event.target.value.toLowerCase();
     setSearch(value);
@@ -146,6 +140,7 @@ const StudentRecords = () => {
     );
   };
 
+  // Pagination handlers
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -155,16 +150,27 @@ const StudentRecords = () => {
     setPage(0);
   };
 
+  // Filter functionality
   const handleFilter = () => {
+    // Apply quarter and date filters
     const filtered = students.filter((student) => {
+      const matchesQuarter = quarter ? student.quarter === quarter : true;
       const matchesDateFrom = dateFrom ? new Date(student.date) >= new Date(dateFrom) : true;
       const matchesDateTo = dateTo ? new Date(student.date) <= new Date(dateTo) : true;
-      const matchesAcademicYear = academicYear
-        ? student.academicYear === academicYear
-        : true;
-      return matchesDateFrom && matchesDateTo && matchesAcademicYear;
+      const matchesAcademicYear = academicYear ? student.academicYear === academicYear : true;
+      return matchesQuarter && matchesDateFrom && matchesDateTo && matchesAcademicYear;
     });
     setFilteredStudents(filtered);
+  };
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setQuarter('');
+    setDateFrom('');
+    setDateTo('');
+    setAcademicYear('');
+    setSearch('');
+    setFilteredStudents(students);
   };
 
   const paginatedRows = filteredStudents.slice(
@@ -191,14 +197,14 @@ const StudentRecords = () => {
             padding: 4,
             backgroundColor: '#fff',
             maxHeight: 'calc(100vh - 140px)',
-            overflow: 'hidden',
+            overflow: 'auto',
           }}
         >
           <Typography
             variant="h4"
             sx={{ fontWeight: 'bold', color: '#000', textAlign: 'left', marginBottom: 3 }}
           >
-            Student Records
+            Student Records - {teacherGradeLevel} - {teacherSubject || "Loading..."}
           </Typography>
 
           {/* Search Bar */}
@@ -232,6 +238,8 @@ const StudentRecords = () => {
 
           {/* Filter Section */}
           <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 3, gap: 2, flexWrap: 'wrap' }}>
+            
+            
             <TextField
               label="Date From"
               type="date"
@@ -242,6 +250,7 @@ const StudentRecords = () => {
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
               InputLabelProps={{ shrink: true }}
             />
+            
             <TextField
               label="Date To"
               type="date"
@@ -252,6 +261,24 @@ const StudentRecords = () => {
               sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
               InputLabelProps={{ shrink: true }}
             />
+
+            {/* Quarter Filter */}
+            <TextField
+              label="Quarter"
+              select
+              variant="outlined"
+              size="small"
+              value={quarter}
+              onChange={(e) => setQuarter(e.target.value)}
+              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', minWidth: '200px' }}
+            >
+              <MenuItem value="">All Quarters</MenuItem>
+              <MenuItem value="First">First</MenuItem>
+              <MenuItem value="Second">Second</MenuItem>
+              <MenuItem value="Third">Third</MenuItem>
+              <MenuItem value="Fourth">Fourth</MenuItem>
+            </TextField>
+            
             <TextField
               label="Academic Year"
               select
@@ -266,24 +293,35 @@ const StudentRecords = () => {
               <MenuItem value="2022-2023">2022-2023</MenuItem>
               <MenuItem value="2021-2022">2021-2022</MenuItem>
             </TextField>
-            <Button 
-              onClick={handleFilter}
-              size="small" 
-              sx={{ 
-                backgroundColor: "#FFD700", 
-                color: "#000", 
-                height: '40px', 
-                "&:hover": { 
-                  backgroundColor: "#FFC107" 
-                } 
-              }}
-            >
-              Filter
-            </Button>
+            
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
+                onClick={handleFilter}
+                size="small" 
+                sx={{ 
+                  backgroundColor: "#FFD700", 
+                  color: "#000", 
+                  "&:hover": { backgroundColor: "#FFC107" } 
+                }}
+              >
+                Apply Filters
+              </Button>
+              
+              <Button 
+                onClick={handleResetFilters}
+                size="small" 
+                variant="outlined"
+              >
+                Reset
+              </Button>
+            </Box>
           </Box>
 
           {loading ? (
-            <Typography>Loading student records...</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+              <CircularProgress />
+              <Typography sx={{ ml: 2 }}>Loading student records...</Typography>
+            </Box>
           ) : error ? (
             <Typography color="error">{error}</Typography>
           ) : (
@@ -294,7 +332,7 @@ const StudentRecords = () => {
                   flexGrow: 1,
                   borderRadius: '10px',
                   overflow: 'auto',
-                  maxHeight: 'calc(100vh - 250px)',
+                  maxHeight: 'calc(100vh - 280px)',
                   border: "0.1px solid rgb(96, 92, 92)",
                 }}
               >
@@ -304,85 +342,44 @@ const StudentRecords = () => {
                       <TableCell sx={tableHeaderStyle}>ID Number</TableCell>
                       <TableCell sx={tableHeaderStyle}>Name</TableCell>
                       <TableCell sx={tableHeaderStyle}>Grade & Section</TableCell>
+                      <TableCell sx={tableHeaderStyle}>Subject</TableCell>
+                      <TableCell sx={tableHeaderStyle}>Quarter</TableCell>
                       <TableCell sx={tableHeaderStyle}>Progress</TableCell>
-                      <TableCell sx={tableHeaderStyle}>Status</TableCell>
-                      <TableCell sx={tableHeaderStyle}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {paginatedRows.map((student, index) => (
-                      <TableRow key={index} hover>
-                        <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.idNumber}</TableCell>
-                        <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.name}</TableCell>
-                        <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.gradeSection}</TableCell>
-                        <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.progress}</TableCell>
-                        <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.status}</TableCell>
-                        <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>
-                          <IconButton 
-                            color="primary"
-                            onClick={() => handleEditClick(student)}
-                          >
-                            <EditIcon />
-                          </IconButton>
+                    {paginatedRows.length > 0 ? (
+                      paginatedRows.map((student, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.idNumber}</TableCell>
+                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.name}</TableCell>
+                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.gradeSection}</TableCell>
+                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.subject}</TableCell>
+                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.quarter}</TableCell>
+                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>
+                            <Chip
+                              label={student.progress}
+                              size="small"
+                              color={
+                                student.progress === 'Completed' ? 'success' :
+                                student.progress === 'In-progress' ? 'primary' : 'default'
+                              }
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                          {quarter 
+                            ? `No students found with ${teacherSubject} in ${quarter} Quarter` 
+                            : `No students found with ${teacherSubject}`}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
-
-              {/* Edit Modal */}
-              <Dialog open={openModal} onClose={handleCloseModal}>
-                <DialogTitle>Edit Student Record</DialogTitle>
-                <DialogContent>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-                    <TextField
-                      label="ID Number"
-                      value={editingStudent?.idNumber || ''}
-                      onChange={(e) => setEditingStudent({ ...editingStudent, idNumber: e.target.value })}
-                      fullWidth
-                    />
-                    <TextField
-                      label="Name"
-                      value={editingStudent?.name || ''}
-                      onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
-                      fullWidth
-                    />
-                    <TextField
-                      label="Grade & Section"
-                      value={editingStudent?.gradeSection || ''}
-                      onChange={(e) => setEditingStudent({ ...editingStudent, gradeSection: e.target.value })}
-                      fullWidth
-                    />
-                    <FormControl fullWidth>
-                      <InputLabel>Progress</InputLabel>
-                      <Select
-                        value={editingStudent?.progress || ''}
-                        label="Progress"
-                        onChange={(e) => setEditingStudent({ ...editingStudent, progress: e.target.value })}
-                      >
-                        <MenuItem value="In-progress">In-progress</MenuItem>
-                        <MenuItem value="Completed">Completed</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControl fullWidth>
-                      <InputLabel>Status</InputLabel>
-                      <Select
-                        value={editingStudent?.status || ''}
-                        label="Status"
-                        onChange={(e) => setEditingStudent({ ...editingStudent, status: e.target.value })}
-                      >
-                        <MenuItem value="Pending">Pending</MenuItem>
-                        <MenuItem value="Approved">Approved</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Box>
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={handleCloseModal}>Cancel</Button>
-                  <Button onClick={handleSaveChanges} variant="contained">Save Changes</Button>
-                </DialogActions>
-              </Dialog>
 
               {/* Pagination */}
               <TablePagination
