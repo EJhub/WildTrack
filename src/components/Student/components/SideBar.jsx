@@ -1,11 +1,12 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { List, ListItem, ListItemText, Box, Button, useMediaQuery } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import SettingsIcon from '@mui/icons-material/Settings';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 import { AuthContext } from '../../AuthContext';
 import NotificationBadge from './NotificationBadge';
+import ReportForm from './ReportForm';
 
 const SideBar = () => {
   const location = useLocation();
@@ -13,6 +14,9 @@ const SideBar = () => {
   const { user, logout } = useContext(AuthContext);
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   const isExtraSmallScreen = useMediaQuery('(max-width:400px)');
+  
+  // State to control the Report form dialog
+  const [reportFormOpen, setReportFormOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -28,6 +32,14 @@ const SideBar = () => {
       handleLogout();
     }
   };
+  
+  const handleReportClick = () => {
+    setReportFormOpen(true);
+  };
+  
+  const handleCloseReportForm = () => {
+    setReportFormOpen(false);
+  };
 
   const getListItemStyles = (path) => ({
     paddingY: '1.5rem',
@@ -42,123 +54,138 @@ const SideBar = () => {
   });
 
   return (
-    <Box
-      sx={{
-        width: isSmallScreen ? '250px' : '250px',
-        height: 'auto',
-        background: "#781B1B",
-        padding: '0px',
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-      }}
-    >
-      <List component="nav" sx={{ flexGrow: 1, paddingTop: '50px' }}>
-        <ListItem
-          button
-          onClick={() => navigateWithId('/studentDashboard/TimeRemaining')}
-          sx={getListItemStyles('/studentDashboard/TimeRemaining')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'D' : 'Dashboard'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname.startsWith('/studentDashboard/TimeRemaining') ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
-
-        <ListItem
-          button
-          onClick={() => navigateWithId('/studentDashboard/booklog')}
-          sx={getListItemStyles('/studentDashboard/booklog')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'B' : 'Book Log'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname.startsWith('/studentDashboard/booklog') ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
-        
-        {/* New menu item for Library Requirements */}
-        <ListItem
-          button
-          onClick={() => navigateWithId('/student/requirements')}
-          sx={getListItemStyles('/student/requirements')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'R' : 'Requirements'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname.startsWith('/student/requirements') ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
-
-        <ListItem
-          button
-          onClick={() => navigateWithId('/studentDashboard/personalInfo')}
-          sx={getListItemStyles('/studentDashboard/personalInfo')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'P' : 'Personal Info'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname.startsWith('/studentDashboard/personalInfo') ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
-
-        <ListItem
-          button
-          onClick={() => navigateWithId('/studentDashboard/StudentAnalyticsAndReports')}
-          sx={getListItemStyles('/studentDashboard/StudentAnalyticsAndReports')}
-        >
-          <ListItemText
-            primary={isSmallScreen ? 'A' : 'Analytics and Reports'}
-            primaryTypographyProps={{
-              align: 'center',
-              fontWeight: location.pathname.startsWith('/studentDashboard/StudentAnalyticsAndReports') ? 'bold' : 'normal',
-            }}
-          />
-        </ListItem>
-      </List>
-
+    <>
       <Box
         sx={{
+          width: isSmallScreen ? '250px' : '250px',
+          height: 'auto',
+          background: "#781B1B",
+          padding: '0px',
+          boxSizing: 'border-box',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-around',
-          padding: '1rem',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}
       >
-        <Button
-          onClick={handleLogout}
+        <List component="nav" sx={{ flexGrow: 1, paddingTop: '50px' }}>
+          <ListItem
+            button
+            onClick={() => navigateWithId('/studentDashboard/TimeRemaining')}
+            sx={getListItemStyles('/studentDashboard/TimeRemaining')}
+          >
+            <ListItemText
+              primary={isSmallScreen ? 'D' : 'Dashboard'}
+              primaryTypographyProps={{
+                align: 'center',
+                fontWeight: location.pathname.startsWith('/studentDashboard/TimeRemaining') ? 'bold' : 'normal',
+              }}
+            />
+          </ListItem>
+
+          <ListItem
+            button
+            onClick={() => navigateWithId('/studentDashboard/booklog')}
+            sx={getListItemStyles('/studentDashboard/booklog')}
+          >
+            <ListItemText
+              primary={isSmallScreen ? 'B' : 'Book Log'}
+              primaryTypographyProps={{
+                align: 'center',
+                fontWeight: location.pathname.startsWith('/studentDashboard/booklog') ? 'bold' : 'normal',
+              }}
+            />
+          </ListItem>
+          
+          {/* New menu item for Library Requirements */}
+          <ListItem
+            button
+            onClick={() => navigateWithId('/student/requirements')}
+            sx={getListItemStyles('/student/requirements')}
+          >
+            <ListItemText
+              primary={isSmallScreen ? 'R' : 'Requirements'}
+              primaryTypographyProps={{
+                align: 'center',
+                fontWeight: location.pathname.startsWith('/student/requirements') ? 'bold' : 'normal',
+              }}
+            />
+          </ListItem>
+
+          <ListItem
+            button
+            onClick={() => navigateWithId('/studentDashboard/personalInfo')}
+            sx={getListItemStyles('/studentDashboard/personalInfo')}
+          >
+            <ListItemText
+              primary={isSmallScreen ? 'P' : 'Personal Info'}
+              primaryTypographyProps={{
+                align: 'center',
+                fontWeight: location.pathname.startsWith('/studentDashboard/personalInfo') ? 'bold' : 'normal',
+              }}
+            />
+          </ListItem>
+
+          <ListItem
+            button
+            onClick={() => navigateWithId('/studentDashboard/StudentAnalyticsAndReports')}
+            sx={getListItemStyles('/studentDashboard/StudentAnalyticsAndReports')}
+          >
+            <ListItemText
+              primary={isSmallScreen ? 'A' : 'Analytics'}
+              primaryTypographyProps={{
+                align: 'center',
+                fontWeight: location.pathname.startsWith('/studentDashboard/StudentAnalyticsAndReports') ? 'bold' : 'normal',
+              }}
+            />
+          </ListItem>
+        </List>
+
+        <Box
           sx={{
-            backgroundColor: '#FFD700',
-            color: '#000',
-            border: 'solid 2px',
-            borderRadius: '12px',
-            padding: '4px 12px',
-            minWidth: 'auto',
-            '&:hover': {
-              backgroundColor: '#FFC107',
-            },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            padding: '1rem',
           }}
         >
-          Log Out
-        </Button>
+          <Button
+            onClick={handleLogout}
+            sx={{
+              backgroundColor: '#FFD700',
+              color: '#000',
+              border: 'solid 2px',
+              borderRadius: '12px',
+              padding: '4px 12px',
+              minWidth: 'auto',
+              '&:hover': {
+                backgroundColor: '#FFC107',
+              },
+            }}
+          >
+            Log Out
+          </Button>
 
-        <Button onClick={() => navigateWithId('/settings')} sx={{ minWidth: 0 }}>
-          <SettingsIcon sx={{ color: '#FFD700' }} />
-        </Button>
+          <Button 
+            onClick={handleReportClick} 
+            sx={{ 
+              minWidth: 0,
+              '&:hover': {
+                bgcolor: 'rgba(255, 215, 0, 0.1)'
+              },
+              borderRadius: '50%',
+              p: 1
+            }}
+          >
+            <AssessmentIcon sx={{ color: '#FFD700' }} />
+          </Button>
 
-        <NotificationBadge />
+          <NotificationBadge />
+        </Box>
       </Box>
-    </Box>
+      
+      {/* Report Form Dialog */}
+      <ReportForm open={reportFormOpen} onClose={handleCloseReportForm} />
+    </>
   );
 };
 

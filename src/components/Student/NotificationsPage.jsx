@@ -18,7 +18,7 @@ import SideBar from './components/SideBar';
 import { AuthContext } from '../AuthContext';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 
-const NotificationsPage = () => {
+const StudentNotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useContext(AuthContext);
@@ -223,4 +223,4 @@ const NotificationsPage = () => {
   );
 };
 
-export default NotificationsPage;
+export default StudentNotificationsPage;

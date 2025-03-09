@@ -1,8 +1,10 @@
-import React, { useContext } from 'react';
-import { List, ListItem, ListItemText, Box, Button, useMediaQuery, Typography } from '@mui/material';
+import React, { useContext, useState } from 'react';
+import { List, ListItem, ListItemText, Box, Button, useMediaQuery, Typography, IconButton } from '@mui/material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import NotificationsIcon from '@mui/icons-material/Notifications';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import { AuthContext } from '../../AuthContext';
+import TeacherNotificationBadge from './TeacherNotificationBadge';
+import ReportForm from './TeacherReportForm';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 const TeacherSideBar = () => {
@@ -10,6 +12,9 @@ const TeacherSideBar = () => {
   const navigate = useNavigate();
   const { logout, user } = useContext(AuthContext);
   const isSmallScreen = useMediaQuery('(max-width:600px)');
+  
+  // State to control the Report form dialog
+  const [reportFormOpen, setReportFormOpen] = useState(false);
   
   // Get the teacher's last name from the user context
   const teacherLastName = user?.lastName || 'Teacher';
@@ -20,6 +25,14 @@ const TeacherSideBar = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+  
+  const handleReportClick = () => {
+    setReportFormOpen(true);
+  };
+  
+  const handleCloseReportForm = () => {
+    setReportFormOpen(false);
   };
 
   // Define navigation items with paths
@@ -42,84 +55,103 @@ const TeacherSideBar = () => {
   });
  
   return (
-    <Box
-      sx={{
-        width: isSmallScreen ? '80px' : '250px',
-        height: 'auto',
-        background: '#781B1B',
-        padding: '0px',
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-      }}
-    >
-      <List component="nav" sx={{ flexGrow: 1, paddingTop: '20px' }}>
-        {navigationItems.map((item) => (
-          <ListItem
-            key={item.path}
-            button
-            component={Link}
-            to={item.path}
-            sx={getListItemStyles(item.path)}
-          >
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{
-                align: 'center',
-                fontWeight: location.pathname === item.path ? 'bold' : 'normal',
-              }}
-            />
-          </ListItem>
-        ))}
-      </List>
-      
-      {/* Welcome message */}
-      <Typography 
-        variant="subtitle1" 
-        align="center" 
-        sx={{ 
-          color: '#FFD700', 
-          padding: '0.5rem',
-          fontWeight: 'bold',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.7)'
-        }}
-      >
-        Welcome, Teacher {teacherLastName}!
-      </Typography>
- 
+    <>
       <Box
         sx={{
+          width: isSmallScreen ? '80px' : '250px',
+          height: 'auto',
+          background: '#781B1B',
+          padding: '0px',
+          boxSizing: 'border-box',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-around',
-          padding: '0.5rem 1rem 1rem',
-          flexDirection: isSmallScreen ? 'column' : 'row',
-          gap: 1
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}
       >
-        <Button
-          onClick={handleLogout}
-          sx={{
-            backgroundColor: '#FFD700',
-            color: '#000',
-            border: 'solid 2px',
-            borderRadius: '12px',
-            padding: '4px 12px',
-            minWidth: isSmallScreen ? '50px' : 'auto',
-            '&:hover': {
-              backgroundColor: '#FFC107',
-            },
+        <List component="nav" sx={{ flexGrow: 1, paddingTop: '20px' }}>
+          {navigationItems.map((item) => (
+            <ListItem
+              key={item.path}
+              button
+              component={Link}
+              to={item.path}
+              sx={getListItemStyles(item.path)}
+            >
+              <ListItemText
+                primary={item.label}
+                primaryTypographyProps={{
+                  align: 'center',
+                  fontWeight: location.pathname === item.path ? 'bold' : 'normal',
+                }}
+              />
+            </ListItem>
+          ))}
+        </List>
+        
+        {/* Welcome message */}
+        <Typography 
+          variant="subtitle1" 
+          align="center" 
+          sx={{ 
+            color: '#FFD700', 
+            padding: '0.5rem',
+            fontWeight: 'bold',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.7)'
           }}
         >
-          {isSmallScreen ? 'LO' : 'Log Out'}
-        </Button>
- 
-        <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
-          <NotificationsIcon sx={{ color: '#FFD700' }} />
-        </Button>
+          Welcome, Teacher {teacherLastName}!
+        </Typography>
+   
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            padding: '0.5rem 1rem 1rem',
+            flexDirection: isSmallScreen ? 'column' : 'row',
+            gap: 1
+          }}
+        >
+          <Button
+            onClick={handleLogout}
+            sx={{
+              backgroundColor: '#FFD700',
+              color: '#000',
+              border: 'solid 2px',
+              borderRadius: '12px',
+              padding: '4px 12px',
+              minWidth: isSmallScreen ? '50px' : 'auto',
+              '&:hover': {
+                backgroundColor: '#FFC107',
+              },
+            }}
+          >
+            {isSmallScreen ? 'LO' : 'Log Out'}
+          </Button>
+   
+          {/* Adding Report Icon Button */}
+          <IconButton 
+            onClick={handleReportClick} 
+            sx={{ 
+              minWidth: 0,
+              '&:hover': {
+                bgcolor: 'rgba(255, 215, 0, 0.1)'
+              },
+              borderRadius: '50%',
+              p: 1
+            }}
+          >
+            <AssessmentIcon sx={{ color: '#FFD700' }} />
+          </IconButton>
+   
+          {/* Using TeacherNotificationBadge component instead of inline Badge */}
+          <TeacherNotificationBadge />
+        </Box>
       </Box>
-    </Box>
+      
+      {/* Report Form Dialog */}
+      <ReportForm open={reportFormOpen} onClose={handleCloseReportForm} />
+    </>
   );
 };
  
