@@ -32,12 +32,13 @@ import NotificationsPage from './Student/NotificationsPage';
 import { Routes, Route, Link } from "react-router-dom";
 import LibraryRequirementsProgress from './Student/LibraryRequirementsProgress';
 import LibrarianLogin from "./Login/LibrarianLogin";
+import TeacherNotificationPage from "./Teacher/TeacherNotificationPage";
 
 export default function TheRoutes() {
     return (
         <Routes>
             <Route path="/student/requirements" element={<ProtectedRoute><LibraryRequirementsProgress /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/Studentnotifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/" element={<InputIDLogin />} />
             <Route path="/Tap-Out" element={<InputIDLogout />} />
             <Route path="/LoginHomepage" element={<LogInHomepage />} />
@@ -59,7 +60,8 @@ export default function TheRoutes() {
             <Route path="/TeacherDashboard/Home/SetLibraryHours" element={<TeacherDashboard />} />
             <Route path="/TeacherDashboard/StudentRecords" element={<ProtectedRoute><StudentRecords /></ProtectedRoute>} />
             <Route path="/TeacherDashboard/CompletedLibraryHours" element={<ProtectedRoute><CompletedLibraryHours /></ProtectedRoute>} />
-            <Route path="/TeacherDashboard/Analytics" element={<Analytics />} />
+            <Route path="/TeacherDashboard/Analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/Teachernotifications" element={<ProtectedRoute><TeacherNotificationPage /></ProtectedRoute>} />
             
             {/* Librarian routes - protected with role restriction */}
             <Route path="/librarian/Login" element={<LibrarianLogin />} />
