@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -50,6 +51,11 @@ const ReportsView = ({ refreshTrigger }) => {
     severity: 'success'
   });
 
+  // Get URL parameters to check if a specific report should be opened
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const reportIdFromURL = queryParams.get('reportId');
+
   // Fetch reports data
   useEffect(() => {
     const fetchReports = async () => {
@@ -70,6 +76,14 @@ const ReportsView = ({ refreshTrigger }) => {
             new Date(b.dateSubmitted) - new Date(a.dateSubmitted)
           );
           setReports(sortedReports);
+          
+          // If a report ID was specified in the URL, find and open that report
+          if (reportIdFromURL) {
+            const reportToOpen = sortedReports.find(report => report.id.toString() === reportIdFromURL);
+            if (reportToOpen) {
+              handleViewDetails(reportToOpen);
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching reports:', error);
@@ -84,7 +98,7 @@ const ReportsView = ({ refreshTrigger }) => {
     };
 
     fetchReports();
-  }, [user, refreshTrigger]);
+  }, [user, refreshTrigger, reportIdFromURL]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -114,6 +128,12 @@ const ReportsView = ({ refreshTrigger }) => {
     setSelectedReport(report);
     setAdminComments(report.adminComments || '');
     setDetailsOpen(true);
+    
+    // Optionally clear the reportId from URL to prevent reopening on refresh
+    // This is optional and depends on your UX requirements
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.delete('reportId');
+    window.history.replaceState({}, '', newUrl);
   };
 
   const handleCloseDetails = () => {
@@ -311,7 +331,14 @@ const ReportsView = ({ refreshTrigger }) => {
                 .map((report) => {
                   const statusColor = getStatusColor(report.status);
                   return (
-                    <TableRow key={report.id} hover>
+                    <TableRow 
+                      key={report.id} 
+                      hover
+                      // Highlight the row if it matches the URL report ID
+                      sx={report.id.toString() === reportIdFromURL ? {
+                        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                      } : {}}
+                    >
                       <TableCell>#{report.id}</TableCell>
                       <TableCell>
                         <Box>

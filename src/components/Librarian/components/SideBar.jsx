@@ -8,6 +8,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Settings from './Settings'; // Import the Settings component
 import { AuthContext } from '../../AuthContext'; // Import AuthContext
+import LibrarianNotificationBadge from './LibrarianNotificationBadge';
  
 const SideBar = () => {
   const location = useLocation();
@@ -263,9 +264,7 @@ const SideBar = () => {
               <SettingsIcon sx={{ color: '#FFD700' }} />
             </Button>
     
-            <Button component={Link} to="/notifications" sx={{ minWidth: 0 }}>
-              <NotificationsIcon sx={{ color: '#FFD700' }} />
-            </Button>
+            <LibrarianNotificationBadge />
           </Box>
         </Box>
       </Box>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -21,6 +21,7 @@ import "react-toastify/dist/ReactToastify.css";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import AddBook from "./components/AddBook";
+import { AuthContext } from '../AuthContext'; // Import AuthContext
 
 const StudentLibraryHours = () => {
   const [libraryHours, setLibraryHours] = useState([]);
@@ -34,14 +35,27 @@ const StudentLibraryHours = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [academicYearOptions, setAcademicYearOptions] = useState([]);
+  
+  // Use AuthContext to access user information
+  const { user, isAuthenticated, loading: authLoading } = useContext(AuthContext);
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    // Only fetch data once authentication is complete
+    if (!authLoading) {
+      fetchInitialData();
+    }
+  }, [authLoading]);
 
   const fetchInitialData = async () => {
     try {
       setLoading(true);
+      
+      // Check if user is authenticated
+      if (!isAuthenticated || !user) {
+        toast.error("Unauthorized access. Please log in.");
+        setLoading(false);
+        return;
+      }
       
       // Fetch academic years
       const token = localStorage.getItem("token");
@@ -59,14 +73,14 @@ const StudentLibraryHours = () => {
         // Don't show error toast for this - non-critical
       }
 
-      // Fetch library hours
+      // Fetch library hours using user ID from AuthContext
       const fetchLibraryHours = async () => {
         try {
-          const params = new URLSearchParams(window.location.search);
-          const idNumber = params.get("id");
+          // Use user.idNumber from AuthContext instead of URL params
+          const idNumber = user.idNumber;
 
           if (!token || !idNumber) {
-            toast.error("Unauthorized access. Please log in.");
+            toast.error("User information not available.");
             setLoading(false);
             return;
           }
@@ -256,7 +270,7 @@ const StudentLibraryHours = () => {
     setPage(0);
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return <Typography>Loading...</Typography>;
   }
 

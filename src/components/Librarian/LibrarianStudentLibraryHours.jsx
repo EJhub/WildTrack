@@ -107,9 +107,7 @@ const LibrarianStudentLibraryHours = () => {
               flexWrap: { xs: 'wrap', md: 'nowrap' },
             }}
           >
-            <IconButton>
-              <MenuIcon />
-            </IconButton>
+           
 
             <TextField
               variant="outlined"
@@ -130,9 +128,7 @@ const LibrarianStudentLibraryHours = () => {
               }}
             />
 
-            <IconButton>
-              <FilterListIcon />
-            </IconButton>
+            
           </Box>
 
           {/* Additional Filters Section: Date, Academic Year, Grade */}

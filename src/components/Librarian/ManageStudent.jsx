@@ -199,9 +199,7 @@ const ManageStudent = () => {
                 }}
                 InputProps={{
                   startAdornment: (
-                    <InputAdornment position="start">
-                      <FilterListIcon />
-                    </InputAdornment>
+                    <InputAdornment/>
                   ),
                 }}
               />

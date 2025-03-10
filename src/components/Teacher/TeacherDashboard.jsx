@@ -60,6 +60,9 @@ const TeacherDashboard = () => {
   const [filteredSection, setFilteredSection] = useState(''); // Track the actually applied section filter
   const [filteredQuarter, setFilteredQuarter] = useState(''); // Track the actually applied quarter filter
   const [filteredSubject, setFilteredSubject] = useState(''); // Track the actually applied subject filter
+  const [filteredDateFrom, setFilteredDateFrom] = useState(''); // Track the applied date from filter
+  const [filteredDateTo, setFilteredDateTo] = useState(''); // Track the applied date to filter
+  const [filteredAcademicYear, setFilteredAcademicYear] = useState(''); // Track the applied academic year filter
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
 
@@ -217,7 +220,7 @@ const TeacherDashboard = () => {
       }
     };
 
-    // Function to fetch participants data
+    // Updated function to fetch participants data with all filters
     const fetchParticipantsData = async () => {
       try {
         setParticipantsLoading(true);
@@ -269,6 +272,53 @@ const TeacherDashboard = () => {
       clearInterval(statisticsInterval);
     };
   }, [user, gradeLevel, teacherSubject, fetchDashboardStatistics]); // Added teacherSubject dependency
+
+  // Updated fetchParticipantsData function with date range and academic year filters
+  const fetchParticipantsData = async (filterParams = {}) => {
+    try {
+      setParticipantsLoading(true);
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (gradeLevel) {
+        params.append('gradeLevel', gradeLevel);
+      }
+      
+      // Always use monthly view
+      params.append('timeframe', 'monthly');
+      
+      // Always filter by teacher's subject
+      if (teacherSubject) {
+        params.append('subject', teacherSubject);
+      }
+      
+      // Add filters from parameters
+      if (filterParams.section) params.append('section', filterParams.section);
+      if (filterParams.quarter) params.append('quarter', filterParams.quarter);
+      if (filterParams.academicYear) params.append('academicYear', filterParams.academicYear);
+      
+      // Add date filters if provided
+      if (filterParams.dateFrom) params.append('dateFrom', filterParams.dateFrom);
+      if (filterParams.dateTo) params.append('dateTo', filterParams.dateTo);
+      
+      // Fetch participants data
+      const url = `http://localhost:8080/api/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await axios.get(url);
+      
+      // Process the data for chart display
+      const formattedData = response.data.map(item => ({
+        name: getFullMonthName(item.month),
+        participants: item.participants
+      }));
+      
+      setParticipantsData(formattedData);
+    } catch (err) {
+      console.error('Error fetching participants data:', err);
+      toast.error("Failed to load participants data");
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
 
   // Helper function to convert month abbreviation to full name
   const getFullMonthName = (monthAbbr) => {
@@ -339,7 +389,7 @@ const TeacherDashboard = () => {
     setPage(0);
   };
 
-  // Filter application handler - only called when filter button is clicked
+  // Updated applyFilters function - called when filter button is clicked
   const applyFilters = async () => {
     try {
       setLoading(true);
@@ -348,6 +398,10 @@ const TeacherDashboard = () => {
       // Store the currently applied filters
       setFilteredSection(section);
       setFilteredQuarter(quarter);
+      setFilteredDateFrom(dateFrom);
+      setFilteredDateTo(dateTo);
+      setFilteredAcademicYear(academicYear);
+      
       // Always use teacher's subject for filtering
       const subjectToFilter = teacherSubject || subject;
       setFilteredSubject(subjectToFilter);
@@ -377,27 +431,21 @@ const TeacherDashboard = () => {
       if (section) filterDescriptions.push(`Section: ${section}`);
       if (quarter) filterDescriptions.push(`Quarter: ${quarter}`);
       if (subjectToFilter) filterDescriptions.push(`Subject: ${subjectToFilter}`);
+      if (dateFrom) filterDescriptions.push(`From: ${dateFrom}`);
+      if (dateTo) filterDescriptions.push(`To: ${dateTo}`);
+      if (academicYear) filterDescriptions.push(`AY: ${academicYear}`);
       
       toast.info(`Filters applied: ${filterDescriptions.length > 0 ? filterDescriptions.join(', ') : 'None'}`);
       
-      // Also refresh participants data with same filters
-      const participantsParams = new URLSearchParams();
-      if (gradeLevel) participantsParams.append('gradeLevel', gradeLevel);
-      if (section) participantsParams.append('section', section);
-      if (academicYear) participantsParams.append('academicYear', academicYear);
-      if (quarter) participantsParams.append('quarter', quarter);
-      if (subjectToFilter) participantsParams.append('subject', subjectToFilter);
-      participantsParams.append('timeframe', 'monthly');
-      
-      const participantsUrl = `http://localhost:8080/api/statistics/active-participants${participantsParams.toString() ? `?${participantsParams.toString()}` : ''}`;
-      const participantsResponse = await axios.get(participantsUrl);
-      
-      const formattedData = participantsResponse.data.map(item => ({
-        name: getFullMonthName(item.month),
-        participants: item.participants
-      }));
-      
-      setParticipantsData(formattedData);
+      // Also refresh participants data with all filters
+      await fetchParticipantsData({
+        section,
+        quarter,
+        academicYear,
+        dateFrom,
+        dateTo,
+        subject: subjectToFilter
+      });
 
       // Refresh student count statistics with section filter
       await fetchDashboardStatistics({ section });
@@ -419,6 +467,9 @@ const TeacherDashboard = () => {
     setQuarter('');
     setFilteredSection('');
     setFilteredQuarter('');
+    setFilteredDateFrom('');
+    setFilteredDateTo('');
+    setFilteredAcademicYear('');
     // Maintain teacher's subject filter
     setSubject(teacherSubject);
     setFilteredSubject(teacherSubject);
@@ -480,7 +531,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  // Get chart title based on active filters
+  // Updated getChartTitle function to show date range and academic year
   const getChartTitle = () => {
     const parts = [];
     parts.push("Active Library Hours Participants");
@@ -498,12 +549,27 @@ const TeacherDashboard = () => {
       parts.push(`${teacherSubject}`);
     }
     
+    // Add academic year to chart title if specified
+    if (filteredAcademicYear) {
+      parts.push(`AY ${filteredAcademicYear}`);
+    }
+    
+    // Add date range to chart title if specified
+    if (filteredDateFrom && filteredDateTo) {
+      parts.push(`${filteredDateFrom} to ${filteredDateTo}`);
+    } else if (filteredDateFrom) {
+      parts.push(`From ${filteredDateFrom}`);
+    } else if (filteredDateTo) {
+      parts.push(`Until ${filteredDateTo}`);
+    }
+    
     return parts.join(' - ');
   };
 
   // Check if there are any active filters
   const hasActiveFilters = () => {
-    return filteredSection || filteredQuarter || dateFrom || dateTo || academicYear;
+    return filteredSection || filteredQuarter || filteredDateFrom || 
+           filteredDateTo || filteredAcademicYear;
   };
 
   return (
@@ -752,25 +818,25 @@ const TeacherDashboard = () => {
                         variant="filled"
                       />
                     )}
-                    {dateFrom && (
+                    {filteredDateFrom && (
                       <Chip 
-                        label={`From: ${dateFrom}`} 
+                        label={`From: ${filteredDateFrom}`} 
                         size="small" 
                         color="primary" 
                         variant="outlined"
                       />
                     )}
-                    {dateTo && (
+                    {filteredDateTo && (
                       <Chip 
-                        label={`To: ${dateTo}`} 
+                        label={`To: ${filteredDateTo}`} 
                         size="small" 
                         color="primary" 
                         variant="outlined"
                       />
                     )}
-                    {academicYear && (
+                    {filteredAcademicYear && (
                       <Chip 
-                        label={`AY: ${academicYear}`} 
+                        label={`AY: ${filteredAcademicYear}`} 
                         size="small" 
                         color="primary" 
                         variant="outlined"
@@ -838,12 +904,14 @@ const TeacherDashboard = () => {
               </Box>
               
               {/* Information about participant counting */}
-              {(filteredQuarter || teacherSubject) && (
+              {(filteredQuarter || teacherSubject || filteredDateFrom || filteredDateTo || filteredAcademicYear) && (
                 <Box sx={{ mt: 2, p: 1, backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: 1 }}>
                   <Typography variant="body2">
                     <strong>Note:</strong> Each student is counted as 1 participant if they have any progress
                     {filteredQuarter && ` in ${filteredQuarter} Quarter`}
-                    {teacherSubject && ` for ${teacherSubject}`}.
+                    {teacherSubject && ` for ${teacherSubject}`}
+                    {filteredAcademicYear && ` during ${filteredAcademicYear}`}
+                    {(filteredDateFrom || filteredDateTo) && ` within the selected date range`}.
                   </Typography>
                 </Box>
               )}

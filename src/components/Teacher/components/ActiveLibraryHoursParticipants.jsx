@@ -42,7 +42,7 @@ const ActiveLibraryHoursParticipants = () => {
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
   const [section, setSection] = useState('');
-  const [dataView, setDataView] = useState('Weekly');
+  const [dataView, setDataView] = useState('Monthly'); // Default to Monthly for better academic year view
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: []
@@ -140,10 +140,15 @@ const ActiveLibraryHoursParticipants = () => {
         queryParams.append('section', params.section);
       }
       
+      // Academic year is passed as a date range parameter, not to filter students
       if (params.academicYear) {
         queryParams.append('academicYear', params.academicYear);
+        
+        // Log that we're using academicYear filter
+        console.log(`Using academic year filter: ${params.academicYear}`);
       }
       
+      // Add date range parameters - these will override academic year if provided
       if (params.dateFrom) {
         queryParams.append('dateFrom', params.dateFrom);
       }
@@ -157,16 +162,25 @@ const ActiveLibraryHoursParticipants = () => {
       
       // Make API call to fetch participants data
       const url = `http://localhost:8080/api/statistics/active-participants?${queryParams.toString()}`;
+      console.log(`Fetching data from: ${url}`);
+      
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       // Process the data for the chart
-      processChartData(response.data);
+      processChartData(response.data, params);
       
       // Display notification about applied filters
-      if (params.section) {
-        toast.info(`Viewing data for ${teacherGradeLevel || gradeLevel} - Section ${params.section}`);
+      const filterMsg = [];
+      if (params.section) filterMsg.push(`Section ${params.section}`);
+      if (params.academicYear) filterMsg.push(`AY: ${params.academicYear}`);
+      if (params.dateFrom && params.dateTo) filterMsg.push(`Date: ${params.dateFrom} to ${params.dateTo}`);
+      else if (params.dateFrom) filterMsg.push(`From: ${params.dateFrom}`);
+      else if (params.dateTo) filterMsg.push(`To: ${params.dateTo}`);
+      
+      if (filterMsg.length > 0) {
+        toast.info(`Viewing data for ${teacherGradeLevel || gradeLevel} - ${filterMsg.join(', ')}`);
       }
     } catch (err) {
       console.error('Error fetching participants data:', err);
@@ -177,8 +191,8 @@ const ActiveLibraryHoursParticipants = () => {
     }
   }, [teacherGradeLevel, teacherSubject, dataView, gradeLevel]);
 
-  // Process data for the chart
-  const processChartData = (data) => {
+  // Process data for the chart with support for multi-year data
+  const processChartData = (data, params) => {
     if (!data || data.length === 0) {
       setChartData({
         labels: [],
@@ -198,64 +212,30 @@ const ActiveLibraryHoursParticipants = () => {
     
     if (dataView === 'Weekly') {
       // Weekly view - days of the week (Monday to Sunday)
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      labels = days;
-      
-      // Map data to days
-      const dayMap = {};
-      data.forEach(item => {
-        dayMap[item.day] = item.participants;
-      });
-      
-      // Fill in values for all days
-      values = days.map(day => dayMap[day] || 0);
+      labels = data.map(item => item.day);
+      values = data.map(item => item.participants);
     } else if (dataView === 'Monthly') {
-      // Monthly view - months of the year (January to December)
-      const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      
-      // Map data to months (data comes with month abbreviations)
-      const monthMap = {};
-      data.forEach(item => {
-        // Convert month abbreviation to month name
-        const monthIndex = getMonthIndexFromAbbr(item.month);
-        if (monthIndex >= 0) {
-          monthMap[months[monthIndex]] = item.participants;
-        }
-      });
-      
-      labels = months;
-      values = months.map(month => monthMap[month] || 0);
-    } else {
-      // Yearly view - can keep as is or modify if needed
-      const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      
-      // Map data to months (data comes with month abbreviations)
-      const monthMap = {};
-      data.forEach(item => {
-        // Convert month abbreviation to month name
-        const monthIndex = getMonthIndexFromAbbr(item.month);
-        if (monthIndex >= 0) {
-          monthMap[months[monthIndex]] = item.participants;
-        }
-      });
-      
-      labels = months;
-      values = months.map(month => monthMap[month] || 0);
+      // Monthly view - Use the exact months from the data
+      // This handles multi-year data better
+      labels = data.map(item => item.month);
+      values = data.map(item => item.participants);
     }
     
-    // Create dataset label with section information if a section filter is applied
-    const sectionInfo = appliedFilters.section ? ` - Section ${appliedFilters.section}` : '';
+    // Create dataset label with relevant filter information
+    let labelParts = [`Active Participants - ${teacherSubject || 'All Subjects'}`];
+    
+    if (params?.section) {
+      labelParts.push(`Section ${params.section}`);
+    }
+    
+    if (params?.academicYear) {
+      labelParts.push(`AY: ${params.academicYear}`);
+    }
     
     setChartData({
       labels,
       datasets: [{
-        label: `Active Participants - ${teacherSubject || 'All Subjects'}${sectionInfo}`,
+        label: labelParts.join(' - '),
         data: values,
         backgroundColor: '#A85858',
         borderColor: '#000',
@@ -307,18 +287,15 @@ const ActiveLibraryHoursParticipants = () => {
     fetchSections();
   }, [gradeLevel]);
 
-  // Fetch data when teacher info is available or filters change
+  // Fetch data when teacher info is available
   useEffect(() => {
-    if (teacherGradeLevel) {
+    if (teacherGradeLevel && teacherSubject) {
+      // Initial data fetch with just teacher's grade level
       fetchParticipantsData({
-        gradeLevel,
-        section,
-        academicYear,
-        dateFrom,
-        dateTo
+        gradeLevel: teacherGradeLevel
       });
     }
-  }, [teacherGradeLevel, teacherSubject, dataView, fetchParticipantsData]);
+  }, [teacherGradeLevel, teacherSubject, fetchParticipantsData]);
 
   // Track currently applied filters
   const [appliedFilters, setAppliedFilters] = useState({
@@ -346,20 +323,6 @@ const ActiveLibraryHoursParticipants = () => {
     });
   };
 
-  // Refresh data when grade level or section changes
-  useEffect(() => {
-    if (teacherGradeLevel && appliedFilters.section) {
-      // If there's an applied section filter, refresh the data
-      fetchParticipantsData({
-        gradeLevel,
-        section: appliedFilters.section,
-        academicYear: appliedFilters.academicYear,
-        dateFrom: appliedFilters.dateRange.from,
-        dateTo: appliedFilters.dateRange.to
-      });
-    }
-  }, [appliedFilters, teacherGradeLevel, gradeLevel, fetchParticipantsData]);
-  
   // Effect to update chart x-axis label when dataView changes
   useEffect(() => {
     setChartOptions(prevOptions => ({
@@ -371,8 +334,8 @@ const ActiveLibraryHoursParticipants = () => {
           title: {
             ...prevOptions.scales.x.title,
             text: dataView === 'Weekly' 
-              ? 'Days of the Week (Monday to Sunday)' 
-              : 'Months of the Year (January to December)',
+              ? 'Days of the Week' 
+              : 'Months',
           }
         }
       }
@@ -388,16 +351,31 @@ const ActiveLibraryHoursParticipants = () => {
         ...chartOptions.plugins,
         title: {
           ...chartOptions.plugins.title,
-          text: appliedFilters.section 
-            ? `Showing data for ${gradeLevel} - Section ${appliedFilters.section}` 
-            : `Showing data for ${gradeLevel} - All Sections`
+          text: getChartTitle()
         }
       }
     };
     
     // Update the chart options
     setChartOptions(updatedOptions);
-  }, [appliedFilters.section, gradeLevel]);
+  }, [appliedFilters, gradeLevel]);
+  
+  // Dynamic chart title function
+  const getChartTitle = () => {
+    const parts = [`${gradeLevel}`];
+    
+    if (appliedFilters.section) {
+      parts.push(`Section ${appliedFilters.section}`);
+    } else {
+      parts.push(`All Sections`);
+    }
+    
+    if (appliedFilters.academicYear) {
+      parts.push(`Academic Year: ${appliedFilters.academicYear}`);
+    }
+    
+    return `Showing data for ${parts.join(' - ')}`;
+  };
   
   // State for chart options
   const [chartOptions, setChartOptions] = useState({
@@ -430,7 +408,7 @@ const ActiveLibraryHoursParticipants = () => {
       x: {
         title: {
           display: true,
-          text: 'Days of the Week (Monday to Sunday)',
+          text: 'Months',
         },
         grid: {
           color: '#E0E0E0',
@@ -609,6 +587,7 @@ const ActiveLibraryHoursParticipants = () => {
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
             Active Library Hours Participants - {teacherSubject || 'All Subjects'}
             {appliedFilters.section ? ` - Section ${appliedFilters.section}` : ''}
+            {appliedFilters.academicYear ? ` - AY ${appliedFilters.academicYear}` : ''}
           </Typography>
           <Box>
             <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -622,7 +601,9 @@ const ActiveLibraryHoursParticipants = () => {
         </Box>
         
         <Typography variant="body1" sx={{ textAlign: 'center', marginBottom: 2 }}>
-          {dataView === 'Weekly' ? 'Weekly (Monday to Sunday)' : 'Monthly (January to December)'} View for {teacherGradeLevel} {appliedFilters.section ? `- Section ${appliedFilters.section}` : ''}
+          {dataView} View for {teacherGradeLevel} 
+          {appliedFilters.section ? ` - Section ${appliedFilters.section}` : ''}
+          {appliedFilters.academicYear ? ` - Academic Year ${appliedFilters.academicYear}` : ''}
         </Typography>
         
         {/* Active Filters Display */}
