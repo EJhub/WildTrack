@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
@@ -14,11 +13,12 @@ import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CircularProgress from "@mui/material/CircularProgress";
+import { AuthContext } from "../AuthContext"; // Import AuthContext
 
 const PersonalInformation = () => {
-  const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const idNumber = queryParams.get("id");
+  // Get user information from AuthContext
+  const { user, isAuthenticated, loading: authLoading } = useContext(AuthContext);
 
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ const PersonalInformation = () => {
   const [profilePicture, setProfilePicture] = useState(null);
 
   axios.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token'); // or wherever you store your auth token
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -38,36 +38,44 @@ const PersonalInformation = () => {
   });
 
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      if (!idNumber) {
-        setError("ID number is missing from the URL.");
+    // Only fetch user info once authentication is complete
+    if (!authLoading) {
+      fetchUserInfo();
+    }
+  }, [authLoading, user]);
+
+  const fetchUserInfo = async () => {
+    try {
+      setLoading(true);
+      
+      // Check if user is authenticated
+      if (!isAuthenticated || !user || !user.idNumber) {
+        setError("Unauthorized access. Please log in.");
         setLoading(false);
         return;
       }
   
-      try {
-        const token = localStorage.getItem('token'); // or however you store your auth token
-        const response = await axios.get(`http://localhost:8080/api/users/${idNumber}`, {
-          headers: {
-            Authorization: `Bearer ${token}` // Add auth header
-          }
-        });
-        setUserInfo(response.data);
-        setLoading(false);
-      } catch (err) {
-        if (err.response && err.response.status === 401) {
-          // Handle unauthorized error
-          window.location.href = '/login'; // Redirect to login if session expired
-        } else {
-          console.error("Error fetching user info:", err);
-          setError("Failed to fetch user information. Please try again later.");
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-        setLoading(false);
+      });
+      
+      setUserInfo(response.data);
+      setLoading(false);
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        // Handle unauthorized error
+        window.location.href = '/login'; // Redirect to login if session expired
+      } else {
+        console.error("Error fetching user info:", err);
+        setError("Failed to fetch user information. Please try again later.");
       }
-    };
-  
-    fetchUserInfo();
-  }, [idNumber]);
+      setLoading(false);
+    }
+  };
+
   const handleChangePassword = () => {
     setShowChangePasswordModal(true);
   };
@@ -133,13 +141,7 @@ const PersonalInformation = () => {
         }));
   
         // Refresh the profile picture display
-        const updatedUserResponse = await axios.get(`http://localhost:8080/api/users/${userInfo.idNumber}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        setUserInfo(updatedUserResponse.data);
-  
+        fetchUserInfo();
         handleCloseProfilePictureModal();
       } catch (error) {
         console.error('Error uploading profile picture:', error);
@@ -164,12 +166,51 @@ const PersonalInformation = () => {
     }
   };
 
-  if (loading) {
-    return <Typography variant="h6">Loading...</Typography>;
+  // Show loading indicator while auth or data is loading
+  if (authLoading || loading) {
+    return (
+      <>
+        <NavBar />
+        <Box sx={{ display: "flex", height: "100vh" }}>
+          <SideBar />
+          <Box
+            sx={{
+              padding: 4,
+              flexGrow: 1,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Loading user information...</Typography>
+          </Box>
+        </Box>
+      </>
+    );
   }
 
+  // Show error if there's any
   if (error) {
-    return <Typography variant="h6" color="error">{error}</Typography>;
+    return (
+      <>
+        <NavBar />
+        <Box sx={{ display: "flex", height: "100vh" }}>
+          <SideBar />
+          <Box
+            sx={{
+              padding: 4,
+              flexGrow: 1,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6" color="error">{error}</Typography>
+          </Box>
+        </Box>
+      </>
+    );
   }
 
   return (
@@ -210,22 +251,22 @@ const PersonalInformation = () => {
               Personal Information
             </Typography>
             <Avatar
-  alt={`${userInfo.firstName} ${userInfo.lastName}`}
-  src={userInfo.profilePictureUrl ? 
-    `http://localhost:8080${userInfo.profilePictureUrl}` : 
-    "/default-avatar.png"
-  }
-  sx={{
-    width: 150,
-    height: 150,
-    borderRadius: "10px",
-    margin: "auto",
-    border: "2px solid white",
-    marginBottom: 2,
-    cursor: 'pointer'
-  }}
-  onClick={handleProfilePictureClick}
-/>
+              alt={`${userInfo.firstName} ${userInfo.lastName}`}
+              src={userInfo.profilePictureUrl ? 
+                `http://localhost:8080${userInfo.profilePictureUrl}` : 
+                "/default-avatar.png"
+              }
+              sx={{
+                width: 150,
+                height: 150,
+                borderRadius: "10px",
+                margin: "auto",
+                border: "2px solid white",
+                marginBottom: 2,
+                cursor: 'pointer'
+              }}
+              onClick={handleProfilePictureClick}
+            />
             <Box sx={{ marginBottom: 2 }}>
               <Typography variant="body1" sx={{color: "white", marginBottom: 1, textAlign: "left" }}>
                 Name:

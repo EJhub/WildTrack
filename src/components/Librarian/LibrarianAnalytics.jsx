@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
   Button, 
-  Paper, 
-  Select, 
-  MenuItem, 
-  InputAdornment,
-  TextField
+  Paper
 } from '@mui/material';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useLocation } from 'react-router-dom';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import NavBar from './components/NavBar';
@@ -24,15 +19,15 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 const Analytics = () => {
-  const [chartType, setChartType] = useState('bar');
-  const [timeframe, setTimeframe] = useState('weekly');
-  const [gradeLevel, setGradeLevel] = useState('All Grades');
-  const [section, setSection] = useState('');
-  const [academicYear, setAcademicYear] = useState('');
   const [selectedGraph, setSelectedGraph] = useState('participants');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [viewMode, setViewMode] = useState('analytics'); // 'analytics' or 'reports'
+  
+  // Get URL parameters
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const viewParam = queryParams.get('view');
+  
+  // Set the view mode based on URL parameter or default to analytics
+  const [viewMode, setViewMode] = useState(viewParam === 'reports' ? 'reports' : 'analytics');
 
   // Export PDF function
   const exportToPDF = () => {
@@ -56,16 +51,22 @@ const Analytics = () => {
     });
   };
 
-  // Section options
-  const sections = ['Section A', 'Section B', 'Section C'];
-  
-  // Academic year options
-  const academicYears = ['2023-2024', '2024-2025', '2025-2026'];
-
   // Toggle between analytics and reports view
   const toggleView = (view) => {
     setViewMode(view);
+    
+    // Update URL to reflect the current view without full page reload
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.set('view', view);
+    window.history.pushState({}, '', newUrl);
   };
+
+  // Effect to update view based on URL parameters
+  useEffect(() => {
+    if (viewParam === 'reports') {
+      setViewMode('reports');
+    }
+  }, [viewParam]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
@@ -182,194 +183,6 @@ const Analytics = () => {
                 </Button>
               </Box>
 
-              {/* Filter Row */}
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 2, 
-                marginBottom: 2, 
-                flexWrap: 'wrap',
-                alignItems: 'center',
-              }}>
-                {/* Date From */}
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    Date From:
-                  </Typography>
-                  <TextField
-                    size="small"
-                    placeholder="MM/DD/YEAR"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    sx={{ 
-                      width: '150px',
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '4px',
-                        height: '36px',
-                      }
-                    }}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <CalendarTodayIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
-
-                {/* Date To */}
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    Date To:
-                  </Typography>
-                  <TextField
-                    size="small"
-                    placeholder="MM/DD/YEAR"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    sx={{ 
-                      width: '150px',
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '4px',
-                        height: '36px',
-                      }
-                    }}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <CalendarTodayIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
-
-                {/* Grade Level */}
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    Grade Level:
-                  </Typography>
-                  <Select
-                    size="small"
-                    value={gradeLevel}
-                    onChange={(e) => setGradeLevel(e.target.value)}
-                    displayEmpty
-                    renderValue={(selected) => selected || "Choose here..."}
-                    IconComponent={ExpandMoreIcon}
-                    sx={{ 
-                      width: '150px',
-                      height: '36px',
-                      borderRadius: '4px',
-                      backgroundColor: '#fff'
-                    }}
-                  >
-                    <MenuItem value="All Grades">All Grades</MenuItem>
-                    {[...Array(6)].map((_, i) => (
-                      <MenuItem key={i} value={`Grade ${i + 1}`}>
-                        Grade {i + 1}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </Box>
-
-                {/* Section */}
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    Section:
-                  </Typography>
-                  <Select
-                    size="small"
-                    value={section}
-                    onChange={(e) => setSection(e.target.value)}
-                    displayEmpty
-                    renderValue={(selected) => selected || "Choose here..."}
-                    IconComponent={ExpandMoreIcon}
-                    sx={{ 
-                      width: '150px',
-                      height: '36px',
-                      borderRadius: '4px',
-                      backgroundColor: '#fff'
-                    }}
-                  >
-                    <MenuItem value="">All Sections</MenuItem>
-                    {sections.map((sectionOption) => (
-                      <MenuItem key={sectionOption} value={sectionOption}>
-                        {sectionOption}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </Box>
-
-                {/* Academic Year */}
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    Academic Year:
-                  </Typography>
-                  <Select
-                    size="small"
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                    IconComponent={ExpandMoreIcon}
-                    displayEmpty
-                    renderValue={(selected) => selected || "Select Academic Year"}
-                    sx={{ 
-                      width: '200px',
-                      height: '36px',
-                      borderRadius: '4px',
-                      backgroundColor: '#fff'
-                    }}
-                  >
-                    <MenuItem value="">Current Academic Year</MenuItem>
-                    {academicYears.map((yearOption) => (
-                      <MenuItem key={yearOption} value={yearOption}>
-                        {yearOption}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </Box>
-
-                {/* Data View */}
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    Data View:
-                  </Typography>
-                  <Select
-                    size="small"
-                    value={timeframe}
-                    onChange={(e) => setTimeframe(e.target.value)}
-                    IconComponent={ExpandMoreIcon}
-                    sx={{ 
-                      width: '150px',
-                      height: '36px',
-                      borderRadius: '4px',
-                      backgroundColor: '#fff'
-                    }}
-                  >
-                    <MenuItem value="weekly">Weekly</MenuItem>
-                    <MenuItem value="monthly">Monthly</MenuItem>
-                    <MenuItem value="yearly">Yearly</MenuItem>
-                  </Select>
-                </Box>
-
-                {/* Filter Button */}
-                <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', pb: 0 }}>
-                  <Button
-                    variant="contained"
-                    sx={{
-                      backgroundColor: '#d3d3d3',
-                      color: '#000',
-                      height: '36px',
-                      borderRadius: '4px',
-                      '&:hover': { backgroundColor: '#c0c0c0' },
-                      textTransform: 'none',
-                      mt: 3
-                    }}
-                  >
-                    Filter
-                  </Button>
-                </Box>
-              </Box>
-
               {/* Chart Display */}
               <Paper sx={{ 
                 padding: 2, 
@@ -384,93 +197,14 @@ const Analytics = () => {
                 <Box id="chart-container" sx={{ 
                   width: '100%', 
                   position: 'relative',
-                  height: '500px'
+                  minHeight: '500px'
                 }}>
                   {selectedGraph === 'participants' ? (
-                    <Box>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          textAlign: 'center', 
-                          fontWeight: 'bold',
-                          mb: 2
-                        }}
-                      >
-                        Active Library Hours Participants
-                        <Typography 
-                          component="span" 
-                          display="block" 
-                          variant="subtitle1"
-                          sx={{ fontWeight: 'normal' }}
-                        >
-                          {timeframe === 'weekly' ? 'Weekly' : 
-                          timeframe === 'monthly' ? 'Monthly' : 'Yearly'}
-                        </Typography>
-                      </Typography>
-                      <LibraryHoursParticipants
-                        timeframe={timeframe}
-                        gradeLevel={gradeLevel}
-                        chartType={chartType}
-                        section={section}
-                        academicYear={academicYear}
-                      />
-                    </Box>
+                    <LibraryHoursParticipants />
                   ) : selectedGraph === 'frequency' ? (
-                    <Box>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          textAlign: 'center', 
-                          fontWeight: 'bold',
-                          mb: 2
-                        }}
-                      >
-                        Accession Usage Frequency
-                        <Typography 
-                          component="span" 
-                          display="block" 
-                          variant="subtitle1"
-                          sx={{ fontWeight: 'normal' }}
-                        >
-                          {timeframe === 'weekly' ? 'Weekly' : 
-                          timeframe === 'monthly' ? 'Monthly' : 'Yearly'}
-                        </Typography>
-                      </Typography>
-                      <AccessionUsageFrequency 
-                        timeframe={timeframe} 
-                        gradeLevel={gradeLevel}
-                        section={section}
-                        academicYear={academicYear}
-                      />
-                    </Box>
+                    <AccessionUsageFrequency />
                   ) : (
-                    <Box>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          textAlign: 'center', 
-                          fontWeight: 'bold',
-                          mb: 2
-                        }}
-                      >
-                        Library Hours Completion Rate
-                        <Typography 
-                          component="span" 
-                          display="block" 
-                          variant="subtitle1"
-                          sx={{ fontWeight: 'normal' }}
-                        >
-                          {timeframe === 'weekly' ? 'Weekly' : 
-                          timeframe === 'monthly' ? 'Monthly' : 'Yearly'}
-                        </Typography>
-                      </Typography>
-                      <LibraryHoursCompletionRate
-                        timeframe={timeframe}
-                        gradeLevel={gradeLevel}
-                        section={section}
-                        academicYear={academicYear}
-                      />
-                    </Box>
+                    <LibraryHoursCompletionRate />
                   )}
                 </Box>
                 

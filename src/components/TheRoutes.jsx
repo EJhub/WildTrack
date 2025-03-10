@@ -33,6 +33,8 @@ import { Routes, Route, Link } from "react-router-dom";
 import LibraryRequirementsProgress from './Student/LibraryRequirementsProgress';
 import LibrarianLogin from "./Login/LibrarianLogin";
 import TeacherNotificationPage from "./Teacher/TeacherNotificationPage";
+import LibrarianNotificationPage from "./Librarian/LibrarianNotificationPage";
+import LoginProtection from './LoginProtection';
 
 export default function TheRoutes() {
     return (
@@ -42,8 +44,8 @@ export default function TheRoutes() {
             <Route path="/" element={<InputIDLogin />} />
             <Route path="/Tap-Out" element={<InputIDLogout />} />
             <Route path="/LoginHomepage" element={<LogInHomepage />} />
-            <Route path="/Login" element={<LogIn />} />
-            <Route path="/Register" element={<Register />} />
+            <Route path="/Login" element={<LoginProtection><LogIn /></LoginProtection>} />
+            <Route path="/Register" element={<LoginProtection><Register /></LoginProtection>} />
             <Route path="/ResetPassword" element={<ForgotPassword />} />
             <Route path="/studentDashboard/TimeRemaining" element={<ProtectedRoute><StudentLibraryHours /></ProtectedRoute> } />
             <Route path="/studentDashboard/TimeRemaining/Addbook" element={<ProtectedRoute><StudentLibraryHours /> </ProtectedRoute>} />
@@ -64,7 +66,7 @@ export default function TheRoutes() {
             <Route path="/Teachernotifications" element={<ProtectedRoute><TeacherNotificationPage /></ProtectedRoute>} />
             
             {/* Librarian routes - protected with role restriction */}
-            <Route path="/librarian/Login" element={<LibrarianLogin />} />
+            <Route path="/librarian/Login" element={<LoginProtection><LibrarianLogin /></LoginProtection>} />
             <Route path="/librarian/Home" element={
                 <ProtectedRoute allowedRoles={['Librarian']}>
                     <LibrarianDashboard />
@@ -115,6 +117,12 @@ export default function TheRoutes() {
                     <LibrarianManageNASStudent/>
                 </ProtectedRoute>
             } />
+
+            <Route path="/librarian/notifications" element={
+                            <ProtectedRoute allowedRoles={['Librarian']}>
+                                <LibrarianNotificationPage/>
+                            </ProtectedRoute>
+                        } />
             
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
@@ -20,6 +20,8 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import TablePagination from "@mui/material/TablePagination";
+import CircularProgress from "@mui/material/CircularProgress";
+import { AuthContext } from "../AuthContext"; // Import AuthContext
 
 const BookLog = () => {
   const [bookLogs, setBookLogs] = useState([]); // Stores book logs for the user
@@ -37,20 +39,24 @@ const BookLog = () => {
   const [registeredBooks, setRegisteredBooks] = useState([]); // List of books
   const [loading, setLoading] = useState(true);
 
-  // Get idNumber directly
-  const idNumber = new URLSearchParams(window.location.search).get("id");
+  // Use AuthContext to access user information
+  const { user, isAuthenticated, loading: authLoading } = useContext(AuthContext);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetchInitialData();
-  }, [idNumber, token]);
+    // Only fetch data once authentication is complete
+    if (!authLoading) {
+      fetchInitialData();
+    }
+  }, [authLoading, user]);
 
   // Fetch initial data - academic years, book logs, and registered books
   const fetchInitialData = async () => {
     try {
       setLoading(true);
       
-      if (!token || !idNumber) {
+      // Check if user is authenticated
+      if (!isAuthenticated || !user || !user.idNumber) {
         alert("Unauthorized access. Please log in.");
         setLoading(false);
         return;
@@ -83,10 +89,13 @@ const BookLog = () => {
   // Fetch Book Logs Function
   const fetchBookLogs = async () => {
     try {
-      
+      if (!user || !user.idNumber) {
+        console.error("User ID not available");
+        return;
+      }
 
       const response = await axios.get(
-        `http://localhost:8080/api/booklog/user/${idNumber}`,
+        `http://localhost:8080/api/booklog/user/${user.idNumber}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -252,7 +261,12 @@ const BookLog = () => {
 
   const handleAddBookLogSubmit = async (bookLog) => {
     try {
-      const encodedIdNumber = encodeURIComponent(idNumber); // Encode special characters
+      if (!user || !user.idNumber) {
+        alert("User information not available.");
+        return;
+      }
+
+      const encodedIdNumber = encodeURIComponent(user.idNumber); // Encode special characters
   
       const response = await axios.put(
         `http://localhost:8080/api/booklog/${bookLog.id}/add-to-booklog/${encodedIdNumber}`,
@@ -263,7 +277,7 @@ const BookLog = () => {
         },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -281,6 +295,30 @@ const BookLog = () => {
       alert(error.response?.data?.error || "Failed to add book to book log.");
     }
   };
+
+  // Show loading indicator while auth or data is loading
+  if (authLoading || loading) {
+    return (
+      <>
+        <NavBar />
+        <Box sx={{ display: "flex", height: "100vh" }}>
+          <SideBar />
+          <Box
+            sx={{
+              padding: 4,
+              flexGrow: 1,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Loading book logs...</Typography>
+          </Box>
+        </Box>
+      </>
+    );
+  }
 
   return (
     <>

@@ -23,12 +23,12 @@ const SideBar = () => {
     navigate('/login');
   };
 
-  const navigateWithId = (path) => {
-    const idNumber = user?.idNumber || localStorage.getItem('idNumber');
-    if (idNumber) {
-      navigate(`${path}?id=${idNumber}`);
+  // Updated navigation function without query parameters
+  const navigateTo = (path) => {
+    if (user) {
+      navigate(path);
     } else {
-      console.error('No ID Number found for navigation');
+      console.error('User not authenticated for navigation');
       handleLogout();
     }
   };
@@ -70,7 +70,7 @@ const SideBar = () => {
         <List component="nav" sx={{ flexGrow: 1, paddingTop: '50px' }}>
           <ListItem
             button
-            onClick={() => navigateWithId('/studentDashboard/TimeRemaining')}
+            onClick={() => navigateTo('/studentDashboard/TimeRemaining')}
             sx={getListItemStyles('/studentDashboard/TimeRemaining')}
           >
             <ListItemText
@@ -84,7 +84,7 @@ const SideBar = () => {
 
           <ListItem
             button
-            onClick={() => navigateWithId('/studentDashboard/booklog')}
+            onClick={() => navigateTo('/studentDashboard/booklog')}
             sx={getListItemStyles('/studentDashboard/booklog')}
           >
             <ListItemText
@@ -99,7 +99,7 @@ const SideBar = () => {
           {/* New menu item for Library Requirements */}
           <ListItem
             button
-            onClick={() => navigateWithId('/student/requirements')}
+            onClick={() => navigateTo('/student/requirements')}
             sx={getListItemStyles('/student/requirements')}
           >
             <ListItemText
@@ -113,7 +113,7 @@ const SideBar = () => {
 
           <ListItem
             button
-            onClick={() => navigateWithId('/studentDashboard/personalInfo')}
+            onClick={() => navigateTo('/studentDashboard/personalInfo')}
             sx={getListItemStyles('/studentDashboard/personalInfo')}
           >
             <ListItemText
@@ -127,7 +127,7 @@ const SideBar = () => {
 
           <ListItem
             button
-            onClick={() => navigateWithId('/studentDashboard/StudentAnalyticsAndReports')}
+            onClick={() => navigateTo('/studentDashboard/StudentAnalyticsAndReports')}
             sx={getListItemStyles('/studentDashboard/StudentAnalyticsAndReports')}
           >
             <ListItemText

@@ -58,7 +58,7 @@ const Login = () => {
 
       // 5. Navigate to the appropriate dashboard based on role
       if (role === "Student") {
-        navigate(`/studentDashboard/TimeRemaining?id=${idNumber}`);
+        navigate(`/studentDashboard/TimeRemaining`);
       } else if (role === "Teacher") {
         navigate("/TeacherDashboard/Home");
       } else if (role === "NAS") {

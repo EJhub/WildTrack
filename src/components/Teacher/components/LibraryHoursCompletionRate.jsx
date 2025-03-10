@@ -234,6 +234,15 @@ const LibraryHoursCompletionRate = () => {
         queryParams.append('academicYear', params.academicYear);
       }
       
+      // Add date range parameters - FIXED: Now correctly adding these to the query
+      if (params.dateFrom) {
+        queryParams.append('dateFrom', params.dateFrom);
+      }
+      
+      if (params.dateTo) {
+        queryParams.append('dateTo', params.dateTo);
+      }
+      
       // Add the data view parameter
       queryParams.append('timeframe', dataView.toLowerCase());
       
@@ -248,11 +257,19 @@ const LibraryHoursCompletionRate = () => {
       // Process the data for the chart
       processChartData(response.data);
       
-      // Display notification about applied filters
-      if (params.section) {
-        const grade = params.gradeLevel || teacherGradeLevel || gradeLevel;
-        const subject = teacherSubject ? ` (${teacherSubject})` : '';
-        toast.info(`Viewing completion rate for ${grade} - Section ${params.section}${subject}`);
+      // Build notification message based on applied filters
+      let filterMsg = [];
+      if (params.section) filterMsg.push(`Section ${params.section}`);
+      if (params.academicYear) filterMsg.push(`AY: ${params.academicYear}`);
+      if (params.dateFrom && params.dateTo) filterMsg.push(`Date: ${params.dateFrom} to ${params.dateTo}`);
+      else if (params.dateFrom) filterMsg.push(`From: ${params.dateFrom}`);
+      else if (params.dateTo) filterMsg.push(`To: ${params.dateTo}`);
+      
+      const grade = params.gradeLevel || teacherGradeLevel || gradeLevel;
+      const subject = teacherSubject ? ` (${teacherSubject})` : '';
+      
+      if (filterMsg.length > 0) {
+        toast.info(`Viewing completion rate for ${grade}${subject} - ${filterMsg.join(', ')}`);
       }
     } catch (err) {
       console.error('Error fetching completion rate data:', err);
@@ -290,52 +307,102 @@ const LibraryHoursCompletionRate = () => {
       return;
     }
     
+    // Map to store month data from API response
+    const dataMap = new Map();
+    data.forEach(item => {
+      // Handle both weekly and monthly data
+      if (dataView === 'Weekly') {
+        dataMap.set(item.day, item.rate);
+      } else {
+        // Extract month and potentially year if present
+        let key = item.month;
+        dataMap.set(key, item.rate);
+      }
+    });
+    
     let labels = [];
     let values = [];
     
     if (dataView === 'Weekly') {
       // Process daily data
       // Weekly view - days of the week (Monday to Sunday)
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      labels = days;
-      
-      // Map data to days
-      const dayMap = {};
-      data.forEach(item => {
-        dayMap[item.day] = item.rate;
-      });
-      
-      // Fill in values for all days
-      values = days.map(day => dayMap[day] || 0);
+      labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      values = labels.map(day => dataMap.has(day) ? dataMap.get(day) : 0);
     } else {
-      // Process monthly data - months of the year (January to December)
-      const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
+      // For monthly view, check if academic year filter is applied
+      const isAcademicYearFilter = appliedFilters.academicYear && appliedFilters.academicYear.length > 0;
       
-      // Map data to months (data comes with month abbreviations)
-      const monthMap = {};
-      data.forEach(item => {
-        // Convert month abbreviation to month name
-        const monthIndex = getMonthIndexFromAbbr(item.month);
-        if (monthIndex >= 0) {
-          monthMap[months[monthIndex]] = item.rate;
-        }
-      });
+      // Define month abbreviations and order
+      const monthAbbreviations = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
       
-      labels = months;
-      values = months.map(month => monthMap[month] || 0);
+      if (isAcademicYearFilter) {
+        // Academic year order (July to June)
+        // Extract years from academic year (e.g., "2024-2025")
+        const years = appliedFilters.academicYear.split('-');
+        const firstYear = years[0];
+        const secondYear = years[1];
+        
+        // Create ordered month labels for academic year (July of first year to June of second year)
+        const academicYearLabels = [
+          `JUL ${firstYear}`, `AUG ${firstYear}`, `SEP ${firstYear}`, 
+          `OCT ${firstYear}`, `NOV ${firstYear}`, `DEC ${firstYear}`,
+          `JAN ${secondYear}`, `FEB ${secondYear}`, `MAR ${secondYear}`, 
+          `APR ${secondYear}`, `MAY ${secondYear}`, `JUN ${secondYear}`
+        ];
+        
+        // Use academic year ordered labels
+        labels = academicYearLabels;
+        // Map values from data to ordered labels (use 0 for missing months)
+        values = academicYearLabels.map(month => {
+          // Try to find the exact match first
+          if (dataMap.has(month)) {
+            return dataMap.get(month);
+          }
+          
+          // If not found, look for a match without the year or with a different year format
+          const monthAbbr = month.split(' ')[0];
+          const matchingKey = Array.from(dataMap.keys()).find(key => 
+            key.startsWith(monthAbbr) || key.includes(monthAbbr)
+          );
+          
+          return matchingKey ? dataMap.get(matchingKey) : 0;
+        });
+      } else {
+        // Regular calendar order (January to December)
+        const monthOrder = {
+          'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+          'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+        };
+        
+        // Extract and sort the keys from the data
+        labels = Array.from(dataMap.keys()).sort((a, b) => {
+          // Extract month abbreviation from the label (might include year)
+          const monthA = a.split(' ')[0].substring(0, 3).toUpperCase();
+          const monthB = b.split(' ')[0].substring(0, 3).toUpperCase();
+          
+          return monthOrder[monthA] - monthOrder[monthB];
+        });
+        
+        // Get values in the correct order
+        values = labels.map(label => dataMap.get(label));
+      }
     }
     
     // Create dataset label with section and subject information
     const sectionInfo = appliedFilters.section ? ` - Section ${appliedFilters.section}` : '';
     const subjectInfo = teacherSubject ? ` (${teacherSubject})` : '';
+    let dateRangeInfo = '';
+    
+    if (appliedFilters.dateRange.from && appliedFilters.dateRange.to) {
+      dateRangeInfo = ` (${appliedFilters.dateRange.from} to ${appliedFilters.dateRange.to})`;
+    } else if (appliedFilters.academicYear) {
+      dateRangeInfo = ` (AY: ${appliedFilters.academicYear})`;
+    }
     
     setChartData({
       labels,
       datasets: [{
-        label: `Completion Rate${sectionInfo}${subjectInfo}`,
+        label: `Completion Rate${sectionInfo}${subjectInfo}${dateRangeInfo}`,
         data: values,
         backgroundColor: '#FFD700',
         borderColor: '#000',
@@ -346,11 +413,16 @@ const LibraryHoursCompletionRate = () => {
   
   // Helper to get month index from abbreviation
   const getMonthIndexFromAbbr = (abbr) => {
+    if (!abbr) return -1;
+    
+    // Handle month abbreviations that might include year (e.g., "JAN 2023")
+    const monthPart = abbr.split(' ')[0].toUpperCase();
+    
     const months = {
       'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
       'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
     };
-    return months[abbr?.toUpperCase()] || -1;
+    return months[monthPart] || -1;
   };
 
   // Fetch initial data when teacher info is available
@@ -376,6 +448,23 @@ const LibraryHoursCompletionRate = () => {
     // Update chart options to reflect section filter and teacher subject
     const grade = gradeLevel || teacherGradeLevel || 'all grades';
     const subjectInfo = teacherSubject ? ` - ${teacherSubject}` : '';
+    let dateInfo = '';
+    
+    if (appliedFilters.dateRange.from && appliedFilters.dateRange.to) {
+      dateInfo = ` (${appliedFilters.dateRange.from} to ${appliedFilters.dateRange.to})`;
+    } else if (appliedFilters.academicYear) {
+      dateInfo = ` (AY: ${appliedFilters.academicYear})`;
+    }
+    
+    // Determine X-axis label based on data view and filters
+    let xAxisTitle = '';
+    if (dataView === 'Weekly') {
+      xAxisTitle = 'Days of the Week (Monday to Sunday)';
+    } else if (appliedFilters.academicYear) {
+      xAxisTitle = `Months of the Academic Year (${appliedFilters.academicYear})`;
+    } else {
+      xAxisTitle = 'Months of the Year';
+    }
     
     setChartOptions(prevOptions => ({
       ...prevOptions,
@@ -384,8 +473,8 @@ const LibraryHoursCompletionRate = () => {
         title: {
           ...prevOptions.plugins.title,
           text: appliedFilters.section 
-            ? `Showing completion rate for ${grade} - Section ${appliedFilters.section}${subjectInfo}` 
-            : `Showing completion rate for ${grade} - All Sections${subjectInfo}`
+            ? `Showing completion rate for ${grade} - Section ${appliedFilters.section}${subjectInfo}${dateInfo}` 
+            : `Showing completion rate for ${grade} - All Sections${subjectInfo}${dateInfo}`
         }
       },
       scales: {
@@ -394,17 +483,21 @@ const LibraryHoursCompletionRate = () => {
           ...prevOptions.scales.x,
           title: {
             ...prevOptions.scales.x.title,
-            text: dataView === 'Weekly' 
-              ? 'Days of the Week (Monday to Sunday)' 
-              : 'Months of the Year (January to December)',
+            text: xAxisTitle,
           }
         }
       }
     }));
-  }, [appliedFilters.section, gradeLevel, teacherGradeLevel, teacherSubject, dataView]);
+  }, [appliedFilters, gradeLevel, teacherGradeLevel, teacherSubject, dataView]);
 
   // Handle filter button click
   const handleFilterClick = () => {
+    // Validate date range if both dates are provided
+    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+      toast.error('Date From must be before or equal to Date To');
+      return;
+    }
+    
     // Update applied filters state
     setAppliedFilters({
       section: section,
@@ -424,19 +517,20 @@ const LibraryHoursCompletionRate = () => {
   
   // Clear filters
   const handleClearFilters = () => {
-    setSection('');
+    setSection(teacherSection || '');  // Reset to teacher's section if assigned
     setDateFrom('');
     setDateTo('');
     setAcademicYear('');
     setAppliedFilters({
-      section: '',
+      section: teacherSection || '',
       academicYear: '',
       dateRange: { from: '', to: '' }
     });
     
     // Refresh data with cleared filters
     fetchCompletionRateData({
-      gradeLevel
+      gradeLevel,
+      section: teacherSection || ''  // Keep teacher's section if assigned
     });
     
     toast.info('Filters cleared');
@@ -480,7 +574,14 @@ const LibraryHoursCompletionRate = () => {
               <Select
                 size="small"
                 value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
+                onChange={(e) => {
+                  setAcademicYear(e.target.value);
+                  // Clear date range if academic year is selected
+                  if (e.target.value) {
+                    setDateFrom('');
+                    setDateTo('');
+                  }
+                }}
                 sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
                 displayEmpty
               >
@@ -650,9 +751,12 @@ const LibraryHoursCompletionRate = () => {
       <Paper sx={{ padding: 3, borderRadius: '15px', border: '1px solid #ddd' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            Library Hours Completion Rate
+            Library Hours Completion Rate {teacherSubject ? `(${teacherSubject})` : ''} - {appliedFilters.academicYear ? `AY ${appliedFilters.academicYear}` : 'All Time'}
             {appliedFilters.section ? ` - Section ${appliedFilters.section}` : ''}
-            {teacherSubject ? ` (${teacherSubject})` : ''}
+            {!appliedFilters.academicYear && appliedFilters.dateRange.from && appliedFilters.dateRange.to ? 
+              ` (${appliedFilters.dateRange.from} to ${appliedFilters.dateRange.to})` : 
+              !appliedFilters.academicYear && appliedFilters.dateRange.from ? ` (From: ${appliedFilters.dateRange.from})` : 
+              !appliedFilters.academicYear && appliedFilters.dateRange.to ? ` (To: ${appliedFilters.dateRange.to})` : ''}
           </Typography>
           <Box>
             <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -666,7 +770,7 @@ const LibraryHoursCompletionRate = () => {
         </Box>
         
         <Typography variant="body1" sx={{ textAlign: 'center', marginBottom: 2 }}>
-          {dataView === 'Weekly' ? 'Weekly (Monday to Sunday)' : 'Monthly (January to December)'} View for {teacherGradeLevel} {appliedFilters.section ? `- Section ${appliedFilters.section}` : ''}
+          {dataView === 'Weekly' ? 'Weekly (Monday to Sunday)' : 'Monthly (January to December)'} View for {teacherGradeLevel || gradeLevel || 'All Grades'} {appliedFilters.section ? `- Section ${appliedFilters.section}` : ''}
         </Typography>
         
         <Box sx={{ height: '350px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
