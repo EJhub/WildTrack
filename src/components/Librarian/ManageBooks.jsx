@@ -35,6 +35,11 @@ const LibrarianManageBooks = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredBooks, setFilteredBooks] = useState([]);
 
   const [formFields, setFormFields] = useState({
     title: '',
@@ -42,6 +47,7 @@ const LibrarianManageBooks = () => {
     accessionNumber: '',
     isbn: '',
     genre: '',
+    dateRegistered: new Date().toISOString()
   });
 
   const [page, setPage] = useState(0);
@@ -66,6 +72,11 @@ const LibrarianManageBooks = () => {
     fetchBooks();
   }, []);
 
+  useEffect(() => {
+    // Initialize filtered books with all books
+    setFilteredBooks(data);
+  }, [data]);
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -81,12 +92,64 @@ const LibrarianManageBooks = () => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setFormFields({ title: '', author: '', accessionNumber: '', isbn: '', genre: '' });
+    setFormFields({
+      title: '',
+      author: '',
+      accessionNumber: '',
+      isbn: '',
+      genre: '',
+      dateRegistered: new Date().toISOString()
+    });
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormFields({ ...formFields, [name]: value });
+  };
+
+  // View book details
+  const handleViewBook = (book) => {
+    setSelectedBook(book);
+    setOpenViewDialog(true);
+    setOpenSearchDialog(false);
+  };
+  
+  // Function to handle row click and select a book
+  const handleRowClick = (book) => {
+    setSelectedBook(book);
+  };
+  
+  // Function to open search dialog for viewing books
+  const handleOpenSearchDialog = () => {
+    setSearchTerm('');
+    setFilteredBooks(data);
+    setOpenSearchDialog(true);
+  };
+  
+  // Function to close search dialog
+  const handleCloseSearchDialog = () => {
+    setOpenSearchDialog(false);
+    setSearchTerm('');
+  };
+  
+  // Function to handle search input change
+  const handleSearchChange = (e) => {
+    const term = e.target.value.toLowerCase();
+    setSearchTerm(term);
+    
+    // Filter books based on search term
+    const filtered = data.filter(book => 
+      book.title?.toLowerCase().includes(term) ||
+      book.author?.toLowerCase().includes(term) ||
+      book.accessionNumber?.toLowerCase().includes(term)
+    );
+    
+    setFilteredBooks(filtered);
+  };
+
+  const handleCloseViewDialog = () => {
+    setOpenViewDialog(false);
+    setSelectedBook(null);
   };
 
   // Delete related functions
@@ -126,12 +189,17 @@ const LibrarianManageBooks = () => {
 
   const handleSubmit = async () => {
     try {
+      const submissionData = {
+        ...formFields,
+        dateRegistered: formFields.dateRegistered || new Date().toISOString()
+      };
+      
       const response = await fetch('http://localhost:8080/api/books/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formFields),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
@@ -143,10 +211,33 @@ const LibrarianManageBooks = () => {
       const newBook = await response.json();
       setData((prevData) => [...prevData, newBook]);
       setOpenDialog(false);
-      setFormFields({ title: '', author: '', accessionNumber: '', isbn: '', genre: '' });
+      setFormFields({
+        title: '',
+        author: '',
+        accessionNumber: '',
+        isbn: '',
+        genre: '',
+        dateRegistered: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error adding book:', error);
       alert('An unexpected error occurred.');
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return "Invalid Date";
     }
   };
 
@@ -220,6 +311,18 @@ const LibrarianManageBooks = () => {
               sx={{
                 fontWeight: 'bold',
                 padding: '10px 20px',
+                backgroundColor: '#4caf50',
+                '&:hover': { backgroundColor: '#388e3c' },
+              }}
+              onClick={() => handleOpenSearchDialog()}
+            >
+              View Book
+            </Button>
+            <Button
+              variant="contained"
+              sx={{
+                fontWeight: 'bold',
+                padding: '10px 20px',
                 backgroundColor: '#CD6161',
                 '&:hover': { backgroundColor: '#ff0000' },
               }}
@@ -253,22 +356,24 @@ const LibrarianManageBooks = () => {
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
                     BOOK TITLE
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
                     AUTHOR
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
                     ACCESSION NUMBER
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
                     ISBN
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
                     GENRE
                   </TableCell>
-
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                    DATE REGISTERED
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -278,9 +383,11 @@ const LibrarianManageBooks = () => {
                     <TableRow
                       key={index}
                       hover
+                      onClick={() => handleViewBook(book)}
                       sx={{
                         backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF',
                         '&:hover': { backgroundColor: '#FCEAEA' },
+                        cursor: 'pointer',
                       }}
                     >
                       <TableCell align="center">{book.title}</TableCell>
@@ -288,7 +395,7 @@ const LibrarianManageBooks = () => {
                       <TableCell align="center">{book.accessionNumber}</TableCell>
                       <TableCell align="center">{book.isbn}</TableCell>
                       <TableCell align="center">{book.genre}</TableCell>
-
+                      <TableCell align="center">{formatDate(book.dateRegistered)}</TableCell>
                     </TableRow>
                   ))}
               </TableBody>
@@ -375,6 +482,198 @@ const LibrarianManageBooks = () => {
         </DialogActions>
       </Dialog>
 
+      {/* View Book Dialog */}
+      <Dialog 
+        open={openViewDialog} 
+        onClose={handleCloseViewDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle 
+          sx={{ 
+            textAlign: 'center', 
+            fontWeight: 'bold',
+            bgcolor: '#f5f5f5',
+            borderBottom: '1px solid #ddd'
+          }}
+        >
+          View Book Details
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {selectedBook && (
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Book Title</Typography>
+              <TextField
+                fullWidth
+                value={selectedBook.title || ''}
+                sx={{ mb: 2 }}
+                InputProps={{ readOnly: true }}
+              />
+              
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Accession Number</Typography>
+                  <TextField
+                    fullWidth
+                    value={selectedBook.accessionNumber || ''}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>ISBN</Typography>
+                  <TextField
+                    fullWidth
+                    value={selectedBook.isbn || ''}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Box>
+              </Box>
+              
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Author</Typography>
+                  <TextField
+                    fullWidth
+                    value={selectedBook.author || ''}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Genre</Typography>
+                  <TextField
+                    fullWidth
+                    value={selectedBook.genre || ''}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Box>
+              </Box>
+              
+              <Box>
+                <Typography variant="subtitle1" sx={{ mb: 1 }}>Date Registered</Typography>
+                <TextField
+                  fullWidth
+                  value={formatDate(selectedBook.dateRegistered)}
+                  InputProps={{ readOnly: true }}
+                />
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', p: 2 }}>
+          <Button
+            onClick={handleCloseViewDialog}
+            variant="contained"
+            sx={{
+              backgroundColor: '#CD6161',
+              '&:hover': { backgroundColor: '#B33A3A' },
+              width: '100px'
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Search Book Dialog */}
+      <Dialog 
+        open={openSearchDialog} 
+        onClose={handleCloseSearchDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle 
+          sx={{ 
+            textAlign: 'center', 
+            fontWeight: 'bold',
+            fontSize: '24px',
+            pb: 1
+          }}
+        >
+          View Book
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 3 }}>
+            <Typography sx={{ mb: 1 }}>Search:</Typography>
+            <TextField
+              fullWidth
+              placeholder="Type book title, author, or accession number..."
+              size="small"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              autoFocus
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+          
+          <Typography 
+            sx={{ 
+              fontWeight: 'bold', 
+              fontSize: '20px',
+              mb: 2,
+              textAlign: 'center'
+            }}
+          >
+            Books
+          </Typography>
+          
+          <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#FFB300' }}>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>BOOK TITLE</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>AUTHOR</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>ACCESSION NUMBER</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>ISBN</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>GENRE</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredBooks.length > 0 ? (
+                  filteredBooks.map((book, index) => (
+                    <TableRow 
+                      key={book.id || index}
+                      onClick={() => handleViewBook(book)}
+                      selected={selectedBook?.id === book.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell>{book.title}</TableCell>
+                      <TableCell>{book.author}</TableCell>
+                      <TableCell>{book.accessionNumber}</TableCell>
+                      <TableCell>{book.isbn}</TableCell>
+                      <TableCell>{book.genre}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">No books found</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions sx={{ padding: 2, justifyContent: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleCloseSearchDialog}
+            sx={{
+              backgroundColor: '#666666',
+              '&:hover': { backgroundColor: '#444444' },
+              width: '120px'
+            }}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Book Dialog */}
       <Dialog 
         open={openDeleteDialog} 
@@ -436,7 +735,7 @@ const LibrarianManageBooks = () => {
                   .filter(book => !book.hidden)
                   .map((book, index) => (
                     <TableRow 
-                      key={book.id}
+                      key={book.id || index}
                       onClick={() => setBookToDelete(book)}
                       selected={bookToDelete?.id === book.id}
                       hover
@@ -462,6 +761,7 @@ const LibrarianManageBooks = () => {
               '&:hover': { backgroundColor: '#660000' },
               width: '120px'
             }}
+            disabled={!bookToDelete}
           >
             Delete
           </Button>
