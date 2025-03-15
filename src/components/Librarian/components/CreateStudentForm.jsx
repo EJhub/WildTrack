@@ -37,6 +37,22 @@ const CreateStudentForm = ({ open, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
 
+  const sortGradeLevels = (grades) => {
+    const gradeOrder = {
+      'Nursery': 0,
+      'Kinder': 1,
+      'Preparatory': 2,
+      'Grade 1': 3,
+      'Grade 2': 4,
+      'Grade 3': 5,
+      'Grade 4': 6,
+      'Grade 5': 7,
+      'Grade 6': 8
+    };
+
+    return grades.sort((a, b) => gradeOrder[a] - gradeOrder[b]);
+  };
+
   // Reset form state when dialog closes
   useEffect(() => {
     if (!open) {
@@ -50,12 +66,13 @@ const CreateStudentForm = ({ open, onClose }) => {
     const fetchDropdownOptions = async () => {
       try {
         // Fetch Grade Levels
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/active');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
-        setGradeOptions(uniqueGrades);
+        const sortedGrades = sortGradeLevels(uniqueGrades);
+        setGradeOptions(sortedGrades);
 
         // Fetch Academic Years
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/active');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
 
@@ -74,7 +91,7 @@ const CreateStudentForm = ({ open, onClose }) => {
     const fetchSectionOptions = async () => {
       if (formData.grade) {
         try {
-          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}`);
+          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}/active`);
           const sections = sectionsResponse.data.map(section => section.sectionName);
           setSectionOptions(sections);
         } catch (error) {

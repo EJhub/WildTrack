@@ -37,7 +37,12 @@ const AcademicYearTable = () => {
     const fetchAcademicYearData = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/academic-years/all');
-        setAcademicYearData(response.data);
+        // Ensure every academic year has a status property
+        const processedData = response.data.map(year => ({
+          ...year,
+          status: year.status || 'Active' // Default to 'Active' if status is not set
+        }));
+        setAcademicYearData(processedData);
       } catch (error) {
         console.error('Error fetching academic year data:', error);
       }
@@ -74,10 +79,11 @@ const AcademicYearTable = () => {
 
     const handleArchiveAcademicYear = async (id) => {
       try {
+        // Use the archive endpoint which now implements toggle functionality
         await axios.put(`http://localhost:8080/api/academic-years/${id}/archive`);
         fetchAcademicYearData();
       } catch (error) {
-        console.error('Error archiving academic year:', error);
+        console.error('Error toggling academic year archive status:', error);
       }
     };
 
@@ -92,8 +98,6 @@ const AcademicYearTable = () => {
 
     return (
       <Box sx={{ flexGrow: 1, backgroundColor: '#ffffff' }}>
-       
-
         {/* Table Section */}
         <TableContainer
           component={Paper}
@@ -140,7 +144,19 @@ const AcademicYearTable = () => {
                     <TableCell>{`${year.startYear}-${year.endYear}`}</TableCell>
                     <TableCell>4</TableCell>
                     <TableCell>{formatQuarterDates(year)}</TableCell>
-                    <TableCell>{year.status || 'Active'}</TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          backgroundColor: year.status === 'Active' ? '#90EE90' : '#FFB6C1',
+                          borderRadius: '16px',
+                          px: 2,
+                          py: 0.5,
+                          display: 'inline-block',
+                        }}
+                      >
+                        {year.status || 'Active'}
+                      </Box>
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant="outlined"
@@ -164,16 +180,16 @@ const AcademicYearTable = () => {
                         onClick={() => handleArchiveAcademicYear(year.id)}
                         sx={{
                           color: '#800000',
-                          backgroundColor: '#F5B400',
+                          backgroundColor: year.status === 'Active' ? '#F5B400' : '#90EE90',
                           border: '1px solid #FFEB3B',
                           fontWeight: 'bold',
                           '&:hover': {
-                            backgroundColor: '#FFEB3B',
+                            backgroundColor: year.status === 'Active' ? '#FFEB3B' : '#32CD32',
                             color: '#800000',
                           },
                         }}
                       >
-                        Archive
+                        {year.status === 'Active' ? 'Archive' : 'Unarchive'}
                       </Button>
                     </TableCell>
                   </TableRow>

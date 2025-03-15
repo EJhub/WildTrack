@@ -48,21 +48,22 @@ function Register() {
   useEffect(() => {
     const fetchDropdownOptions = async () => {
       try {
-        // Fetch Grade Sections
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        // Fetch active grade levels
+        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/active');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         const sortedGrades = sortGradeLevels(uniqueGrades);
         setGradeOptions(sortedGrades);
 
-        // Fetch Sections for the current grade
+        // Fetch active sections for the selected grade
         if (formData.grade) {
-          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}`);
+          // Use the new endpoint for active sections by grade
+          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}/active`);
           const sections = sectionsResponse.data.map(section => section.sectionName);
           setSectionOptions(sections);
         }
 
-        // Fetch Academic Years
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        // Fetch active academic years using the new endpoint
+        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/active');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
 
@@ -74,6 +75,8 @@ function Register() {
 
     fetchDropdownOptions();
   }, [formData.grade]);
+
+  // Rest of the component remains the same...
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

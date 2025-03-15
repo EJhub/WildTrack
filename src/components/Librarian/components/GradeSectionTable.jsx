@@ -201,13 +201,14 @@ const GradeSectionTable = () => {
             status: item.status
           });
           gradeGroup.totalStudents += item.numberOfStudents;
+          
+          // Recalculate active sections count
           gradeGroup.activeSections = gradeGroup.sections.filter(s => s.status === 'active').length;
         } else {
           acc.push({
             grade: item.gradeLevel,
             activeSections: item.status === 'active' ? 1 : 0,
             totalStudents: item.numberOfStudents,
-            status: 'active',
             sections: [{
               id: item.id,
               sectionName: item.sectionName,
@@ -219,6 +220,12 @@ const GradeSectionTable = () => {
         }
         return acc;
       }, []);
+
+      // Determine grade status - a grade is archived only if ALL sections are archived
+      groupedData.forEach(gradeGroup => {
+        const allSectionsArchived = gradeGroup.sections.every(section => section.status === 'archived');
+        gradeGroup.status = allSectionsArchived ? 'archived' : 'active';
+      });
 
       setGradeSections(groupedData);
     } catch (error) {
@@ -235,10 +242,14 @@ const GradeSectionTable = () => {
 
   const handleArchiveGrade = async (gradeLevel) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/grade-sections/${gradeLevel}/toggle-archive`, {
+      // Use the new endpoint for archiving/unarchiving an entire grade level
+      const response = await fetch(`http://localhost:8080/api/grade-sections/grade/${gradeLevel}/toggle-archive`, {
         method: 'PUT'
       });
+      
       if (!response.ok) throw new Error('Failed to toggle grade archive status');
+      
+      // Refresh the data after successful update
       fetchGradeSections();
     } catch (error) {
       console.error('Error toggling grade archive status:', error);
@@ -292,8 +303,6 @@ const GradeSectionTable = () => {
 
   return (
     <Box sx={{ width: '100%' }}>
-      
-
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
