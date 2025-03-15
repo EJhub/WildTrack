@@ -60,7 +60,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
  useEffect(() => {
    const fetchGradeOptions = async () => {
      try {
-       const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+       const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/active');
        const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
        setGradeOptions(uniqueGrades);
      } catch (error) {
@@ -82,7 +82,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
    const fetchSectionOptions = async () => {
      if (formData.grade) {
        try {
-         const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}`);
+         const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}/active`);
          const sections = sectionsResponse.data.map(section => section.sectionName);
          setSectionOptions(sections);
        } catch (error) {
