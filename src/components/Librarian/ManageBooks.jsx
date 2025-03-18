@@ -25,10 +25,12 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Tooltip,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
-
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const LibrarianManageBooks = () => {
   const [data, setData] = useState([]); // Book data with additional UI states
@@ -40,6 +42,7 @@ const LibrarianManageBooks = () => {
   const [selectedBook, setSelectedBook] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredBooks, setFilteredBooks] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
 
   const [formFields, setFormFields] = useState({
     title: '',
@@ -86,7 +89,30 @@ const LibrarianManageBooks = () => {
     setPage(0);
   };
 
-  const handleOpenDialog = () => {
+  const handleOpenDialog = (book = null) => {
+    if (book) {
+      setFormFields({
+        title: book.title || '',
+        author: book.author || '',
+        accessionNumber: book.accessionNumber || '',
+        isbn: book.isbn || '',
+        genre: book.genre || '',
+        dateRegistered: book.dateRegistered || new Date().toISOString()
+      });
+      setSelectedBook(book);
+      setIsEditing(true);
+    } else {
+      setFormFields({
+        title: '',
+        author: '',
+        accessionNumber: '',
+        isbn: '',
+        genre: '',
+        dateRegistered: new Date().toISOString()
+      });
+      setSelectedBook(null);
+      setIsEditing(false);
+    }
     setOpenDialog(true);
   };
 
@@ -100,6 +126,8 @@ const LibrarianManageBooks = () => {
       genre: '',
       dateRegistered: new Date().toISOString()
     });
+    setIsEditing(false);
+    setSelectedBook(null);
   };
 
   const handleInputChange = (e) => {
@@ -153,7 +181,8 @@ const LibrarianManageBooks = () => {
   };
 
   // Delete related functions
-  const handleDeleteClick = (book) => {
+  const handleDeleteClick = (event, book) => {
+    event.stopPropagation(); // Prevent row click
     setBookToDelete(book);
     setOpenDeleteDialog(true);
   };
@@ -187,6 +216,11 @@ const LibrarianManageBooks = () => {
     }
   };
 
+  const handleEditClick = (event, book) => {
+    event.stopPropagation(); // Prevent row click
+    handleOpenDialog(book);
+  };
+
   const handleSubmit = async () => {
     try {
       const submissionData = {
@@ -194,33 +228,51 @@ const LibrarianManageBooks = () => {
         dateRegistered: formFields.dateRegistered || new Date().toISOString()
       };
       
-      const response = await fetch('http://localhost:8080/api/books/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submissionData),
-      });
+      if (isEditing && selectedBook) {
+        // Update existing book
+        const response = await fetch(`http://localhost:8080/api/books/${selectedBook.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submissionData),
+        });
 
-      if (!response.ok) {
-        const errorMessage = await response.text();
-        alert(`Error: ${errorMessage}`);
-        return;
+        if (!response.ok) {
+          const errorMessage = await response.text();
+          alert(`Error: ${errorMessage}`);
+          return;
+        }
+
+        const updatedBook = await response.json();
+        setData((prevData) => prevData.map(book => 
+          book.id === selectedBook.id ? updatedBook : book
+        ));
+        alert('Book updated successfully');
+      } else {
+        // Add new book
+        const response = await fetch('http://localhost:8080/api/books/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submissionData),
+        });
+
+        if (!response.ok) {
+          const errorMessage = await response.text();
+          alert(`Error: ${errorMessage}`);
+          return;
+        }
+
+        const newBook = await response.json();
+        setData((prevData) => [...prevData, newBook]);
+        alert('Book added successfully');
       }
-
-      const newBook = await response.json();
-      setData((prevData) => [...prevData, newBook]);
-      setOpenDialog(false);
-      setFormFields({
-        title: '',
-        author: '',
-        accessionNumber: '',
-        isbn: '',
-        genre: '',
-        dateRegistered: new Date().toISOString()
-      });
+      
+      handleCloseDialog();
     } catch (error) {
-      console.error('Error adding book:', error);
+      console.error('Error with book operation:', error);
       alert('An unexpected error occurred.');
     }
   };
@@ -323,22 +375,10 @@ const LibrarianManageBooks = () => {
               sx={{
                 fontWeight: 'bold',
                 padding: '10px 20px',
-                backgroundColor: '#CD6161',
-                '&:hover': { backgroundColor: '#ff0000' },
-              }}
-              onClick={() => setOpenDeleteDialog(true)}
-            >
-              Delete Book
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 20px',
                 backgroundColor: '#FFB300',
                 '&:hover': { backgroundColor: '#F57C00' },
               }}
-              onClick={handleOpenDialog}
+              onClick={() => handleOpenDialog(null)}
             >
               Add Book
             </Button>
@@ -374,6 +414,9 @@ const LibrarianManageBooks = () => {
                   <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
                     DATE REGISTERED
                   </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                    ACTIONS
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -396,6 +439,34 @@ const LibrarianManageBooks = () => {
                       <TableCell align="center">{book.isbn}</TableCell>
                       <TableCell align="center">{book.genre}</TableCell>
                       <TableCell align="center">{formatDate(book.dateRegistered)}</TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                          <Tooltip title="Edit">
+                            <IconButton 
+                              size="small" 
+                              onClick={(e) => handleEditClick(e, book)}
+                              sx={{ 
+                                color: '#2196F3',
+                                '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.1)' }
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton 
+                              size="small" 
+                              onClick={(e) => handleDeleteClick(e, book)}
+                              sx={{ 
+                                color: '#F44336',
+                                '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' }
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
                     </TableRow>
                   ))}
               </TableBody>
@@ -420,9 +491,9 @@ const LibrarianManageBooks = () => {
         </Box>
       </Box>
 
-      {/* Add Book Dialog */}
+      {/* Add/Edit Book Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>Add New Book</DialogTitle>
+        <DialogTitle>{isEditing ? 'Edit Book' : 'Add New Book'}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -477,7 +548,7 @@ const LibrarianManageBooks = () => {
             Cancel
           </Button>
           <Button onClick={handleSubmit} color="primary">
-            Add
+            {isEditing ? 'Update' : 'Add'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -678,99 +749,38 @@ const LibrarianManageBooks = () => {
       <Dialog 
         open={openDeleteDialog} 
         onClose={handleCloseDeleteDialog}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
       >
-        <DialogTitle 
-          sx={{ 
-            textAlign: 'center', 
-            fontWeight: 'bold',
-            fontSize: '24px',
-            pb: 1
-          }}
-        >
-          Delete Book
+        <DialogTitle sx={{ textAlign: 'center', color: '#f44336' }}>
+          Confirm Delete
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mb: 3 }}>
-            <Typography sx={{ mb: 1 }}>Title:</Typography>
-            <TextField
-              fullWidth
-              placeholder="Type title here..."
-              size="small"
-              onChange={(e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                setData(prevData => prevData.map(book => ({
-                  ...book,
-                  hidden: !book.title.toLowerCase().includes(searchTerm)
-                })));
-              }}
-            />
-          </Box>
-          
-          <Typography 
-            sx={{ 
-              fontWeight: 'bold', 
-              fontSize: '20px',
-              mb: 2,
-              textAlign: 'center'
-            }}
-          >
-            Book Details
-          </Typography>
-          
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#8B0000' }}>
-                  <TableCell sx={{ color: '#FFD700', fontWeight: 'bold' }}>BOOK TITLE</TableCell>
-                  <TableCell sx={{ color: '#FFD700', fontWeight: 'bold' }}>AUTHOR</TableCell>
-                  <TableCell sx={{ color: '#FFD700', fontWeight: 'bold' }}>ACCESSION NUMBER</TableCell>
-                  <TableCell sx={{ color: '#FFD700', fontWeight: 'bold' }}>ISBN</TableCell>
-                  <TableCell sx={{ color: '#FFD700', fontWeight: 'bold' }}>GENRE</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data
-                  .filter(book => !book.hidden)
-                  .map((book, index) => (
-                    <TableRow 
-                      key={book.id || index}
-                      onClick={() => setBookToDelete(book)}
-                      selected={bookToDelete?.id === book.id}
-                      hover
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell>{book.title}</TableCell>
-                      <TableCell>{book.author}</TableCell>
-                      <TableCell>{book.accessionNumber}</TableCell>
-                      <TableCell>{book.isbn}</TableCell>
-                      <TableCell>{book.genre}</TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DialogContentText>
+            Are you sure you want to delete this book?
+            {bookToDelete && (
+              <Box component="span" sx={{ display: 'block', fontWeight: 'bold', mt: 2 }}>
+                "{bookToDelete.title}" by {bookToDelete.author}
+              </Box>
+            )}
+          </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ padding: 2, justifyContent: 'center', gap: 2 }}>
           <Button
             variant="contained"
             onClick={handleConfirmDelete}
             sx={{
-              backgroundColor: '#8B0000',
-              '&:hover': { backgroundColor: '#660000' },
+              backgroundColor: '#f44336',
+              '&:hover': { backgroundColor: '#d32f2f' },
               width: '120px'
             }}
-            disabled={!bookToDelete}
           >
             Delete
           </Button>
           <Button
-            variant="contained"
+            variant="outlined"
             onClick={handleCloseDeleteDialog}
             sx={{
-              backgroundColor: '#666666',
-              '&:hover': { backgroundColor: '#444444' },
               width: '120px'
             }}
           >
