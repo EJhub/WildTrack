@@ -14,9 +14,6 @@ import LibraryHoursParticipants from './components/ActiveLibraryHoursParticipant
 import AccessionUsageFrequency from './components/AccessionUsageFrequency';
 import LibraryHoursCompletionRate from './components/LibraryHoursCompletionRate';
 import ReportsView from './components/ReportsView';
-import * as XLSX from 'xlsx';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 const Analytics = () => {
   const [selectedGraph, setSelectedGraph] = useState('participants');
@@ -28,28 +25,6 @@ const Analytics = () => {
   
   // Set the view mode based on URL parameter or default to analytics
   const [viewMode, setViewMode] = useState(viewParam === 'reports' ? 'reports' : 'analytics');
-
-  // Export PDF function
-  const exportToPDF = () => {
-    const input = document.getElementById('chart-container');
-    html2canvas(input).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      pdf.addImage(imgData, 'PNG', 10, 10, 190, 120);
-      pdf.save('chart.pdf');
-    });
-  };
-
-  // Export Excel function
-  const exportToExcel = () => {
-    const input = document.getElementById('chart-container');
-    html2canvas(input).then(() => {
-      const worksheet = XLSX.utils.json_to_sheet([{ Label: 'Example Export', Value: 100 }]);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-      XLSX.writeFile(workbook, 'chart.xlsx');
-    });
-  };
 
   // Toggle between analytics and reports view
   const toggleView = (view) => {
@@ -194,7 +169,7 @@ const Analytics = () => {
                 overflow: 'hidden',
                 position: 'relative'
               }}>
-                <Box id="chart-container" sx={{ 
+                <Box sx={{ 
                   width: '100%', 
                   position: 'relative',
                   minHeight: '500px'
@@ -208,40 +183,7 @@ const Analytics = () => {
                   )}
                 </Box>
                 
-                {/* Export Buttons at the bottom-center */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  gap: 2, 
-                  marginTop: 3 
-                }}>
-                  <Button 
-                    variant="contained"
-                    onClick={exportToPDF}
-                    sx={{
-                      backgroundColor: '#CD6161',
-                      color: '#fff',
-                      borderRadius: '20px',
-                      textTransform: 'none',
-                      '&:hover': { backgroundColor: '#B04747' },
-                    }}
-                  >
-                    Export PDF
-                  </Button>
-                  <Button 
-                    variant="contained"
-                    onClick={exportToExcel}
-                    sx={{
-                      backgroundColor: '#CD6161',
-                      color: '#fff',
-                      borderRadius: '20px',
-                      textTransform: 'none',
-                      '&:hover': { backgroundColor: '#B04747' },
-                    }}
-                  >
-                    Export Excel
-                  </Button>
-                </Box>
+                {/* Note: Export buttons are now inside each chart component */}
               </Paper>
             </>
           ) : (

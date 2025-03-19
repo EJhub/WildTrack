@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -27,6 +27,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
 
 const LibraryHoursCompletionRate = () => {
   // Filter states
@@ -51,6 +52,9 @@ const LibraryHoursCompletionRate = () => {
   // Section options
   const [availableSections, setAvailableSections] = useState([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
+  
+  // Chart container ref for export functions
+  const chartRef = useRef(null);
   
   // Applied filters tracking
   const [appliedFilters, setAppliedFilters] = useState({
@@ -425,6 +429,54 @@ const LibraryHoursCompletionRate = () => {
 
   const chartData = formatChartData();
 
+  // PDF export function using the centralized utility
+  const handleExportToPDF = async () => {
+    try {
+      const chartId = 'completion-rate-chart';
+      const fileName = `completion-rate-${appliedFilters.gradeLevel}-${new Date().toISOString().split('T')[0]}`;
+      const title = getChartTitle();
+      
+      const success = await exportToPDF(chartId, fileName, title);
+      
+      if (success) {
+        toast.success(`Chart exported to PDF successfully`);
+      } else {
+        toast.error(`Failed to export chart to PDF`);
+      }
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast.error(`Error exporting to PDF: ${error.message}`);
+    }
+  };
+
+  // Excel export function using the centralized utility
+  const handleExportToExcel = () => {
+    try {
+      // Format data for Excel export in the expected format
+      const formattedData = {
+        labels: chartData.map(item => item.name),
+        datasets: [{
+          label: 'Completion Rate (%)',
+          data: chartData.map(item => item.rate)
+        }]
+      };
+      
+      const fileName = `completion-rate-${appliedFilters.gradeLevel}-${new Date().toISOString().split('T')[0]}`;
+      const title = 'Library Hours Completion Rate';
+      
+      const success = exportToExcel(formattedData, fileName, title);
+      
+      if (success) {
+        toast.success(`Chart exported to Excel successfully`);
+      } else {
+        toast.error(`Failed to export chart to Excel`);
+      }
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error(`Error exporting to Excel: ${error.message}`);
+    }
+  };
+
   // Generate dynamic colors for the bars based on completion rate
   const getBarColor = (entry) => {
     const rate = entry.rate;
@@ -544,7 +596,7 @@ const LibraryHoursCompletionRate = () => {
             InputLabelProps={{ shrink: true }}
             InputProps={{
               endAdornment: (
-                 <InputAdornment/>
+                 <InputAdornment position="end" />
               ),
             }}
           />
@@ -574,7 +626,7 @@ const LibraryHoursCompletionRate = () => {
             InputLabelProps={{ shrink: true }}
             InputProps={{
               endAdornment: (
-                 <InputAdornment/>
+                 <InputAdornment position="end" />
               ),
             }}
           />
@@ -831,7 +883,7 @@ const LibraryHoursCompletionRate = () => {
             <Typography>No completion rate data available</Typography>
           </Box>
         ) : (
-          <Box sx={{ position: 'relative', height: 400 }}>
+          <Box sx={{ position: 'relative', height: 400 }} id="completion-rate-chart" ref={chartRef}>
             {/* Legend at the top right */}
             <Box sx={{ 
               position: 'absolute', 
@@ -926,6 +978,41 @@ const LibraryHoursCompletionRate = () => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            
+            {/* Export Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: 2, 
+              marginTop: 3 
+            }}>
+              <Button 
+                variant="contained"
+                onClick={handleExportToPDF}
+                sx={{
+                  backgroundColor: '#CD6161',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  textTransform: 'none',
+                  '&:hover': { backgroundColor: '#B04747' },
+                }}
+              >
+                Export PDF
+              </Button>
+              <Button 
+                variant="contained"
+                onClick={handleExportToExcel}
+                sx={{
+                  backgroundColor: '#CD6161',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  textTransform: 'none',
+                  '&:hover': { backgroundColor: '#B04747' },
+                }}
+              >
+                Export Excel
+              </Button>
+            </Box>
           </Box>
         )}
       </Box>

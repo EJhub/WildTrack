@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -26,6 +26,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
 
 const AccessionUsageFrequency = () => {
   // Filter states
@@ -61,6 +62,9 @@ const AccessionUsageFrequency = () => {
     dateRange: { from: '', to: '' },
     dataView: 'weekly'
   });
+
+  // Chart container ref for export functions
+  const chartRef = useRef(null);
 
   // Define labels for days and months
   const weeklyLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -480,6 +484,54 @@ const AccessionUsageFrequency = () => {
     }
   }, [accessionFrequencyData, appliedFilters]);
 
+  // PDF export function using the centralized utility
+  const handleExportToPDF = async () => {
+    try {
+      const chartId = 'accession-usage-chart';
+      const fileName = `accession-usage-${appliedFilters.gradeLevel}-${new Date().toISOString().split('T')[0]}`;
+      const title = getChartTitle();
+      
+      const success = await exportToPDF(chartId, fileName, title);
+      
+      if (success) {
+        toast.success(`Chart exported to PDF successfully`);
+      } else {
+        toast.error(`Failed to export chart to PDF`);
+      }
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast.error(`Error exporting to PDF: ${error.message}`);
+    }
+  };
+
+  // Excel export function using the centralized utility
+  const handleExportToExcel = () => {
+    try {
+      // Format data for Excel export
+      const chartData = {
+        labels: processedData.map(item => item.name),
+        datasets: bookTitles.map((book, index) => ({
+          label: book,
+          data: processedData.map(item => item[book] || 0)
+        }))
+      };
+      
+      const fileName = `accession-usage-${appliedFilters.gradeLevel}-${new Date().toISOString().split('T')[0]}`;
+      const title = 'Accession Usage Frequency';
+      
+      const success = exportToExcel(chartData, fileName, title);
+      
+      if (success) {
+        toast.success(`Chart exported to Excel successfully`);
+      } else {
+        toast.error(`Failed to export chart to Excel`);
+      }
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error(`Error exporting to Excel: ${error.message}`);
+    }
+  };
+
   // Calculate the maximum value for y-axis based on real data
   const getYAxisDomain = () => {
     if (processedData.length === 0 || bookTitles.length === 0) return [0, 10];
@@ -591,7 +643,7 @@ const AccessionUsageFrequency = () => {
             InputLabelProps={{ shrink: true }}
             InputProps={{
               endAdornment: (
-                 <InputAdornment/>
+                 <InputAdornment position="end" />
               ),
             }}
           />
@@ -621,7 +673,7 @@ const AccessionUsageFrequency = () => {
             InputLabelProps={{ shrink: true }}
             InputProps={{
               endAdornment: (
-                <InputAdornment/>
+                <InputAdornment position="end" />
               ),
             }}
           />
@@ -878,7 +930,7 @@ const AccessionUsageFrequency = () => {
             <Typography>No accession usage data available</Typography>
           </Box>
         ) : (
-          <Box sx={{ position: 'relative', height: 400 }}>
+          <Box sx={{ position: 'relative', height: 400 }} id="accession-usage-chart" ref={chartRef}>
             <ResponsiveContainer width="100%" height={350}>
               <BarChart 
                 data={processedData}
@@ -951,6 +1003,41 @@ const AccessionUsageFrequency = () => {
                 ))}
               </BarChart>
             </ResponsiveContainer>
+            
+            {/* Export Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: 2, 
+              marginTop: 3 
+            }}>
+              <Button 
+                variant="contained"
+                onClick={handleExportToPDF}
+                sx={{
+                  backgroundColor: '#CD6161',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  textTransform: 'none',
+                  '&:hover': { backgroundColor: '#B04747' },
+                }}
+              >
+                Export PDF
+              </Button>
+              <Button 
+                variant="contained"
+                onClick={handleExportToExcel}
+                sx={{
+                  backgroundColor: '#CD6161',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  textTransform: 'none',
+                  '&:hover': { backgroundColor: '#B04747' },
+                }}
+              >
+                Export Excel
+              </Button>
+            </Box>
           </Box>
         )}
       </Box>

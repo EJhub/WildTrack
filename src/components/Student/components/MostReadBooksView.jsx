@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
 import { Bar } from 'react-chartjs-2';
 import Box from '@mui/material/Box';
@@ -11,6 +11,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { AuthContext } from '../../AuthContext';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -41,6 +42,10 @@ const MostReadBooksView = () => {
     dateTo: '',
     academicYear: ''
   });
+  
+  // Create refs for chart containers to use with export functions
+  const mostReadChartRef = useRef(null);
+  const highestRatedChartRef = useRef(null);
   
   // Get the authenticated user information
   const { user } = useContext(AuthContext);
@@ -206,14 +211,44 @@ const MostReadBooksView = () => {
     }
   };
 
-  const exportToPDF = () => {
-    // Implement PDF export functionality
-    toast.info('PDF export functionality will be implemented soon');
+  // PDF export function
+  const handleExportToPDF = async (chartId, title) => {
+    try {
+      const success = await exportToPDF(
+        chartId, 
+        `${title.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`,
+        title
+      );
+      
+      if (success) {
+        toast.success(`${title} exported to PDF successfully`);
+      } else {
+        toast.error(`Failed to export ${title} to PDF`);
+      }
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast.error(`Error exporting to PDF: ${error.message}`);
+    }
   };
 
-  const exportToExcel = () => {
-    // Implement Excel export functionality
-    toast.info('Excel export functionality will be implemented soon');
+  // Excel export function
+  const handleExportToExcel = (chartData, title) => {
+    try {
+      const success = exportToExcel(
+        chartData,
+        `${title.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`,
+        title
+      );
+      
+      if (success) {
+        toast.success(`${title} exported to Excel successfully`);
+      } else {
+        toast.error(`Failed to export ${title} to Excel`);
+      }
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error(`Error exporting to Excel: ${error.message}`);
+    }
   };
 
   const chartOptions = {
@@ -382,7 +417,7 @@ const MostReadBooksView = () => {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={exportToPDF}
+                onClick={() => handleExportToPDF('most-read-chart-container', 'Most Read Books')}
                 sx={{
                   padding: '6px 12px',
                 }}
@@ -392,7 +427,7 @@ const MostReadBooksView = () => {
               <Button
                 variant="contained"
                 color="secondary"
-                onClick={exportToExcel}
+                onClick={() => handleExportToExcel(mostReadData, 'Most Read Books')}
                 sx={{
                   padding: '6px 12px',
                 }}
@@ -412,7 +447,7 @@ const MostReadBooksView = () => {
                 </Typography>
               </Box>
             ) : (
-              <Box sx={{ height: '400px' }}>
+              <Box id="most-read-chart-container" ref={mostReadChartRef} sx={{ height: '400px' }}>
                 <Bar data={mostReadData} options={chartOptions} />
               </Box>
             )}
@@ -435,7 +470,7 @@ const MostReadBooksView = () => {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={exportToPDF}
+                onClick={() => handleExportToPDF('highest-rated-chart-container', 'Highest Rated Books')}
                 sx={{
                   padding: '6px 12px',
                 }}
@@ -445,7 +480,7 @@ const MostReadBooksView = () => {
               <Button
                 variant="contained"
                 color="secondary"
-                onClick={exportToExcel}
+                onClick={() => handleExportToExcel(highestRatedData, 'Highest Rated Books')}
                 sx={{
                   padding: '6px 12px',
                 }}
@@ -465,13 +500,14 @@ const MostReadBooksView = () => {
                 </Typography>
               </Box>
             ) : (
-              <Box sx={{ height: '400px' }}>
+              <Box id="highest-rated-chart-container" ref={highestRatedChartRef} sx={{ height: '400px' }}>
                 <Bar data={highestRatedData} options={chartOptions} />
               </Box>
             )}
           </Paper>
         </>
       )}
+      <ToastContainer position="bottom-right" />
     </Box>
   );
 };
