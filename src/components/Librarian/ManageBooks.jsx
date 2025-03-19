@@ -26,6 +26,7 @@ import {
   Select,
   MenuItem,
   Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
@@ -34,6 +35,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 const LibrarianManageBooks = () => {
   const [data, setData] = useState([]); // Book data with additional UI states
+  const [genres, setGenres] = useState([]); // Store genres for dropdown
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
@@ -43,6 +45,7 @@ const LibrarianManageBooks = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredBooks, setFilteredBooks] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [formFields, setFormFields] = useState({
     title: '',
@@ -55,30 +58,59 @@ const LibrarianManageBooks = () => {
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [mainSearchTerm, setMainSearchTerm] = useState('');
 
-  const fetchBooks = async () => {
+  // Fetch books and genres data
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/books/all');
-      if (!response.ok) {
-        const errorMessage = await response.text();
+      // Fetch books
+      const booksResponse = await fetch('http://localhost:8080/api/books/all');
+      if (!booksResponse.ok) {
+        const errorMessage = await booksResponse.text();
         console.error(`Error fetching books: ${errorMessage}`);
         return;
       }
-      const books = await response.json();
+      const books = await booksResponse.json();
       setData(books);
+      setFilteredBooks(books);
+      
+      // Fetch genres for dropdown
+      const genresResponse = await fetch('http://localhost:8080/api/genres');
+      if (!genresResponse.ok) {
+        const errorMessage = await genresResponse.text();
+        console.error(`Error fetching genres: ${errorMessage}`);
+        return;
+      }
+      const genresData = await genresResponse.json();
+      setGenres(genresData);
     } catch (error) {
-      console.error('Error fetching books:', error);
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBooks();
+    fetchData();
   }, []);
 
+  // Filter main table based on search term
   useEffect(() => {
-    // Initialize filtered books with all books
-    setFilteredBooks(data);
-  }, [data]);
+    if (mainSearchTerm) {
+      const lowercasedTerm = mainSearchTerm.toLowerCase();
+      const filtered = data.filter(book => 
+        book.title?.toLowerCase().includes(lowercasedTerm) ||
+        book.author?.toLowerCase().includes(lowercasedTerm) ||
+        book.accessionNumber?.toLowerCase().includes(lowercasedTerm) ||
+        book.isbn?.toLowerCase().includes(lowercasedTerm) ||
+        book.genre?.toLowerCase().includes(lowercasedTerm)
+      );
+      setFilteredBooks(filtered);
+    } else {
+      setFilteredBooks(data);
+    }
+  }, [mainSearchTerm, data]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -144,7 +176,7 @@ const LibrarianManageBooks = () => {
   
   // Function to handle row click and select a book
   const handleRowClick = (book) => {
-    setSelectedBook(book);
+    handleViewBook(book);
   };
   
   // Function to open search dialog for viewing books
@@ -223,6 +255,22 @@ const LibrarianManageBooks = () => {
 
   const handleSubmit = async () => {
     try {
+      // Validate required fields
+      if (!formFields.title.trim()) {
+        alert('Please enter the book title');
+        return;
+      }
+      
+      if (!formFields.accessionNumber.trim()) {
+        alert('Please enter the accession number');
+        return;
+      }
+      
+      if (!formFields.genre) {
+        alert('Please select a genre');
+        return;
+      }
+      
       const submissionData = {
         ...formFields,
         dateRegistered: formFields.dateRegistered || new Date().toISOString()
@@ -293,6 +341,14 @@ const LibrarianManageBooks = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <>
       <NavBar />
@@ -331,8 +387,10 @@ const LibrarianManageBooks = () => {
 
             <TextField
               variant="outlined"
-              placeholder="Type here..."
+              placeholder="Search books..."
               size="small"
+              value={mainSearchTerm}
+              onChange={(e) => setMainSearchTerm(e.target.value)}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
@@ -420,11 +478,11 @@ const LibrarianManageBooks = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data
+                {filteredBooks
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((book, index) => (
                     <TableRow
-                      key={index}
+                      key={book.id || index}
                       hover
                       onClick={() => handleViewBook(book)}
                       sx={{
@@ -469,6 +527,11 @@ const LibrarianManageBooks = () => {
                       </TableCell>
                     </TableRow>
                   ))}
+                {filteredBooks.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">No books found</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -476,7 +539,7 @@ const LibrarianManageBooks = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={filteredBooks.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -492,7 +555,7 @@ const LibrarianManageBooks = () => {
       </Box>
 
       {/* Add/Edit Book Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{isEditing ? 'Edit Book' : 'Add New Book'}</DialogTitle>
         <DialogContent>
           <TextField
@@ -503,6 +566,7 @@ const LibrarianManageBooks = () => {
             value={formFields.title}
             onChange={handleInputChange}
             fullWidth
+            required
           />
           <TextField
             margin="dense"
@@ -519,6 +583,7 @@ const LibrarianManageBooks = () => {
             value={formFields.accessionNumber}
             onChange={handleInputChange}
             fullWidth
+            required
           />
           <TextField
             margin="dense"
@@ -528,18 +593,18 @@ const LibrarianManageBooks = () => {
             onChange={handleInputChange}
             fullWidth
           />
-          <FormControl fullWidth margin="dense">
+          <FormControl fullWidth margin="dense" required>
             <InputLabel>Genre</InputLabel>
             <Select
               name="genre"
               value={formFields.genre}
               onChange={handleInputChange}
             >
-              <MenuItem value="History">History</MenuItem>
-              <MenuItem value="Literature">Literature</MenuItem>
-              <MenuItem value="Action">Action</MenuItem>
-              <MenuItem value="Fiction">Fiction</MenuItem>
-              <MenuItem value="Poetry">Poetry</MenuItem>
+              {genres.map(genre => (
+                <MenuItem key={genre.id} value={genre.genre}>
+                  {genre.genre}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </DialogContent>
@@ -547,7 +612,11 @@ const LibrarianManageBooks = () => {
           <Button onClick={handleCloseDialog} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} color="primary">
+          <Button 
+            onClick={handleSubmit} 
+            color="primary"
+            disabled={!formFields.title.trim() || !formFields.accessionNumber.trim() || !formFields.genre}
+          >
             {isEditing ? 'Update' : 'Add'}
           </Button>
         </DialogActions>
