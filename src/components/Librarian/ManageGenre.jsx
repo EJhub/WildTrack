@@ -116,11 +116,19 @@ const LibrarianManageGenre = () => {
       }
 
       const newGenre = await response.json();
-      setData((prevData) => [newGenre, ...prevData]);
-      setFilteredData((prevData) => [newGenre, ...prevData]);
+      
+      // Add empty books array to the new genre object
+      const newGenreWithBooks = { ...newGenre, books: [] };
+      
+      setData((prevData) => [newGenreWithBooks, ...prevData]);
+      setFilteredData((prevData) => [newGenreWithBooks, ...prevData]);
       handleCloseDialog();
+      
+      // Show success message
+      alert('Genre added successfully');
     } catch (error) {
       console.error('Error adding genre:', error);
+      alert('Failed to add genre: ' + error.message);
     }
   };
 
@@ -239,7 +247,7 @@ const LibrarianManageGenre = () => {
               </TableHead>
               <TableBody>
                 {(() => {
-                  const maxRows = Math.max(...filteredData.map((genre) => genre.books.length || 0));
+                  const maxRows = Math.max(...filteredData.map((genre) => (genre.books && genre.books.length) || 0), 0);
                   return Array.from({ length: maxRows }).map((_, rowIndex) => (
                     <TableRow key={rowIndex}>
                       {filteredData.map((genre) => (
@@ -276,10 +284,11 @@ const LibrarianManageGenre = () => {
             onChange={(e) => setGenreName(e.target.value)}
             fullWidth
             variant="outlined"
+            required
           />
           <TextField
             margin="dense"
-            label="Title"
+            label="Description (Optional)"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             fullWidth
@@ -292,7 +301,11 @@ const LibrarianManageGenre = () => {
           <Button onClick={handleCloseDialog} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} color="primary">
+          <Button 
+            onClick={handleSubmit} 
+            color="primary"
+            disabled={!genreName.trim()} // Disable button if genre name is empty
+          >
             Add Genre
           </Button>
         </DialogActions>
@@ -377,6 +390,7 @@ const LibrarianManageGenre = () => {
               '&:hover': { backgroundColor: '#660000' },
               width: '120px'
             }}
+            disabled={!genreToDelete} // Disable button if no genre is selected
           >
             Delete
           </Button>
