@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -27,6 +27,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
 
 const LibraryHoursParticipants = () => {
   // Filter states
@@ -61,6 +62,9 @@ const LibraryHoursParticipants = () => {
     dateRange: { from: '', to: '' },
     dataView: 'weekly'
   });
+
+  // Chart container ref for export functions
+  const chartRef = useRef(null);
 
   // Define labels for days and months
   const weeklyLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -315,11 +319,58 @@ const LibraryHoursParticipants = () => {
     toast.info('Filters cleared');
   };
 
-  // Initial data fetch on component mount
+  // Initial data fetch on component mount and when filters change
   useEffect(() => {
     fetchParticipantsData();
-    // No interval needed as we'll rely on manual refresh via filter application
   }, [appliedFilters]);
+
+  // PDF export function using the centralized utility
+  const handleExportToPDF = async () => {
+    try {
+      const chartId = 'participants-chart';
+      const fileName = `participants-${appliedFilters.gradeLevel}-${new Date().toISOString().split('T')[0]}`;
+      const title = getChartTitle();
+      
+      const success = await exportToPDF(chartId, fileName, title);
+      
+      if (success) {
+        toast.success(`Chart exported to PDF successfully`);
+      } else {
+        toast.error(`Failed to export chart to PDF`);
+      }
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast.error(`Error exporting to PDF: ${error.message}`);
+    }
+  };
+
+  // Excel export function using the centralized utility
+  const handleExportToExcel = () => {
+    try {
+      // Format data in the structure expected by the utility
+      const chartData = {
+        labels: processedData.map(item => item.name),
+        datasets: [{
+          label: 'Number of Participants',
+          data: processedData.map(item => item.value)
+        }]
+      };
+      
+      const fileName = `participants-${appliedFilters.gradeLevel}-${new Date().toISOString().split('T')[0]}`;
+      const title = 'Active Library Hours Participants';
+      
+      const success = exportToExcel(chartData, fileName, title);
+      
+      if (success) {
+        toast.success(`Chart exported to Excel successfully`);
+      } else {
+        toast.error(`Failed to export chart to Excel`);
+      }
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error(`Error exporting to Excel: ${error.message}`);
+    }
+  };
 
   // Process the data for the chart
   useEffect(() => {
@@ -555,9 +606,7 @@ const LibraryHoursParticipants = () => {
             InputLabelProps={{ shrink: true }}
             InputProps={{
               endAdornment: (
-                <InputAdornment/>
-                  
-                
+                <InputAdornment position="end" />
               ),
             }}
           />
@@ -587,7 +636,7 @@ const LibraryHoursParticipants = () => {
             InputLabelProps={{ shrink: true }}
             InputProps={{
               endAdornment: (
-                <InputAdornment/>
+                <InputAdornment position="end" />
               ),
             }}
           />
@@ -844,7 +893,7 @@ const LibraryHoursParticipants = () => {
             <Typography>No participants data available</Typography>
           </Box>
         ) : (
-          <Box sx={{ position: 'relative', height: 400 }}>
+          <Box sx={{ position: 'relative', height: 400 }} id="participants-chart" ref={chartRef}>
             {/* Legend at the top right */}
             <Box sx={{ 
               position: 'absolute', 
@@ -925,6 +974,41 @@ const LibraryHoursParticipants = () => {
                 />
               </BarChart>
             </ResponsiveContainer>
+            
+            {/* Export Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: 2, 
+              marginTop: 3 
+            }}>
+              <Button 
+                variant="contained"
+                onClick={handleExportToPDF}
+                sx={{
+                  backgroundColor: '#CD6161',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  textTransform: 'none',
+                  '&:hover': { backgroundColor: '#B04747' },
+                }}
+              >
+                Export PDF
+              </Button>
+              <Button 
+                variant="contained"
+                onClick={handleExportToExcel}
+                sx={{
+                  backgroundColor: '#CD6161',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  textTransform: 'none',
+                  '&:hover': { backgroundColor: '#B04747' },
+                }}
+              >
+                Export Excel
+              </Button>
+            </Box>
           </Box>
         )}
       </Box>
