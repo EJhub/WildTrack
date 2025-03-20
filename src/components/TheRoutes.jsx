@@ -35,6 +35,7 @@ import LibrarianLogin from "./Login/LibrarianLogin";
 import TeacherNotificationPage from "./Teacher/TeacherNotificationPage";
 import LibrarianNotificationPage from "./Librarian/LibrarianNotificationPage";
 import LoginProtection from './LoginProtection';
+import ChangePassword from "./Login/ChangePassword";
 
 export default function TheRoutes() {
     return (
@@ -45,6 +46,7 @@ export default function TheRoutes() {
             <Route path="/Tap-Out" element={<InputIDLogout />} />
             <Route path="/LoginHomepage" element={<LogInHomepage />} />
             <Route path="/Login" element={<LoginProtection><LogIn /></LoginProtection>} />
+            <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/Register" element={<LoginProtection><Register /></LoginProtection>} />
             <Route path="/ResetPassword" element={<ForgotPassword />} />
             <Route path="/studentDashboard/TimeRemaining" element={<ProtectedRoute><StudentLibraryHours /></ProtectedRoute> } />

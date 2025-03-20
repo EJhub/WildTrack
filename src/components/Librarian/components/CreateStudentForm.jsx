@@ -8,18 +8,27 @@ import {
   Box,
   IconButton,
   Typography,
-  Grid
+  Grid,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
+  Paper
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import InfoIcon from '@mui/icons-material/Info';
+import WarningIcon from '@mui/icons-material/Warning';
 import axios from 'axios';
-import SuccessDialog from './SuccessDialog'; // Import the separate component
+import SuccessDialog from './SuccessDialog';
 
 const CreateStudentForm = ({ open, onClose }) => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     middleName: "",
-    email: "",
     idNumber: "",
     password: "",
     confirmPassword: "",
@@ -27,6 +36,18 @@ const CreateStudentForm = ({ open, onClose }) => {
     section: "",
     academicYear: "",
     role: "Student"
+  });
+
+  // Form validation states
+  const [formValid, setFormValid] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecial: false
   });
 
   // Store student name for success message
@@ -58,8 +79,15 @@ const CreateStudentForm = ({ open, onClose }) => {
     if (!open) {
       resetForm();
       setLoading(false);
+      setErrors({});
+      setShowPasswordRequirements(false);
     }
   }, [open]);
+
+  // Validate form whenever any input changes
+  useEffect(() => {
+    validateForm();
+  }, [formData, errors]);
 
   // Fetch dropdown options
   useEffect(() => {
@@ -103,6 +131,76 @@ const CreateStudentForm = ({ open, onClose }) => {
     fetchSectionOptions();
   }, [formData.grade]);
 
+  // Validate password whenever it changes
+  useEffect(() => {
+    validatePassword(formData.password);
+  }, [formData.password]);
+
+  // Validate password confirmation
+  useEffect(() => {
+    if (formData.confirmPassword && formData.password !== formData.confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
+    } else {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.confirmPassword;
+        return newErrors;
+      });
+    }
+  }, [formData.password, formData.confirmPassword]);
+
+  // Validate if all required fields are filled and valid
+  const validateForm = () => {
+    const requiredFields = [
+      'firstName',
+      'lastName',
+      'idNumber',
+      'password',
+      'confirmPassword',
+      'grade',
+      'section',
+      'academicYear'
+    ];
+    
+    const allFieldsFilled = requiredFields.every(field => formData[field] && formData[field].trim() !== '');
+    const noErrors = Object.keys(errors).length === 0;
+    const isValid = allFieldsFilled && noErrors;
+    
+    setFormValid(isValid);
+    return isValid;
+  };
+
+  const validatePassword = (password) => {
+    const validations = {
+      minLength: password.length >= 8,
+      hasUpperCase: /[A-Z]/.test(password),
+      hasLowerCase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
+    };
+    
+    setPasswordValidation(validations);
+    
+    // Check if all validations pass
+    const isPasswordValid = Object.values(validations).every(Boolean);
+    
+    if (password && !isPasswordValid) {
+      setErrors(prev => ({ ...prev, password: "Password doesn't meet all requirements" }));
+    } else {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.password;
+        return newErrors;
+      });
+    }
+    
+    return isPasswordValid;
+  };
+
+  const isPasswordValid = () => {
+    return Object.values(passwordValidation).every(Boolean);
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
@@ -113,6 +211,19 @@ const CreateStudentForm = ({ open, onClose }) => {
         [name]: value,
         section: '' // Reset section when grade changes
       }));
+    } else if (name === 'idNumber') {
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value
+      }));
+      // Clear ID number error if it exists
+      if (errors.idNumber) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.idNumber;
+          return newErrors;
+        });
+      }
     } else {
       setFormData(prevData => ({
         ...prevData,
@@ -121,12 +232,22 @@ const CreateStudentForm = ({ open, onClose }) => {
     }
   };
 
+  const handlePasswordFocus = () => {
+    setShowPasswordRequirements(true);
+  };
+
+  const handlePasswordBlur = () => {
+    // Don't hide requirements if password field has input but requirements aren't met
+    if (!formData.password || isPasswordValid()) {
+      setShowPasswordRequirements(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       firstName: "",
       lastName: "",
       middleName: "",
-      email: "",
       idNumber: "",
       password: "",
       confirmPassword: "",
@@ -135,24 +256,60 @@ const CreateStudentForm = ({ open, onClose }) => {
       academicYear: "",
       role: "Student"
     });
+    setErrors({});
+    setFormValid(false);
+  };
+
+  const getPasswordFeedback = () => {
+    if (!formData.password) return null;
+    
+    if (!isPasswordValid()) {
+      return (
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            mt: 1, 
+            color: 'error.main',
+            fontSize: '0.75rem'
+          }}
+        >
+          <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
+          Password doesn't meet all requirements
+        </Box>
+      );
+    }
+    
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          mt: 1, 
+          color: 'success.main',
+          fontSize: '0.75rem'
+        }}
+      >
+        <CheckCircleIcon fontSize="small" sx={{ mr: 0.5 }} />
+        Password meets all requirements
+      </Box>
+    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+    // Final validation check before submission
+    if (!validateForm()) {
       return;
     }
 
     try {
       setLoading(true);
-      const response = await axios.post("http://localhost:8080/api/students/register", {
+      const response = await axios.post("http://localhost:8080/api/users/register", {
         firstName: formData.firstName,
         lastName: formData.lastName,
         middleName: formData.middleName,
-        email: formData.email,
         idNumber: formData.idNumber,
         password: formData.password,
         grade: formData.grade,
@@ -177,7 +334,23 @@ const CreateStudentForm = ({ open, onClose }) => {
       
     } catch (error) {
       console.error("Error adding student:", error);
-      alert("Failed to add student");
+      // Handle specific error messages from the backend
+      if (error.response && error.response.data && error.response.data.error) {
+        // If it's a password validation error
+        if (error.response.data.error.includes("Password")) {
+          setErrors(prev => ({ ...prev, password: error.response.data.error }));
+          setShowPasswordRequirements(true);
+          document.getElementById('password').focus();
+        } else if (error.response.data.error.includes("ID Number")) {
+          setErrors(prev => ({ ...prev, idNumber: "ID Number already exists" }));
+          document.getElementById('idNumber').focus();
+        } else {
+          // Generic error handling
+          alert(error.response.data.error || "Failed to add student");
+        }
+      } else {
+        alert("Failed to add student");
+      }
       setLoading(false);
     }
   };
@@ -186,7 +359,6 @@ const CreateStudentForm = ({ open, onClose }) => {
   const handleSuccessDialogClose = () => {
     setSuccessDialogOpen(false);
     setLoading(false);
-    // No need to call onClose() here since the form is already closed
   };
 
   return (
@@ -194,7 +366,7 @@ const CreateStudentForm = ({ open, onClose }) => {
       <Dialog 
         open={open} 
         onClose={onClose}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle sx={{ 
@@ -214,6 +386,7 @@ const CreateStudentForm = ({ open, onClose }) => {
             <Grid container spacing={2}>
               <Grid item xs={4}>
                 <TextField
+                  id="firstName"
                   name="firstName"
                   label="First Name"
                   value={formData.firstName}
@@ -235,6 +408,7 @@ const CreateStudentForm = ({ open, onClose }) => {
               </Grid>
               <Grid item xs={4}>
                 <TextField
+                  id="lastName"
                   name="lastName"
                   label="Last Name"
                   value={formData.lastName}
@@ -247,6 +421,7 @@ const CreateStudentForm = ({ open, onClose }) => {
             </Grid>
 
             <TextField
+              id="idNumber"
               name="idNumber"
               label="ID Number"
               value={formData.idNumber}
@@ -255,32 +430,59 @@ const CreateStudentForm = ({ open, onClose }) => {
               required
               variant="outlined"
               sx={{ mt: 2 }}
-            />
-
-            <TextField
-              name="email"
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              variant="outlined"
-              sx={{ mt: 2 }}
+              helperText={errors.idNumber}
             />
 
             <Grid container spacing={2} sx={{ mt: 0 }}>
               <Grid item xs={6}>
                 <TextField
+                  id="password"
                   name="password"
                   label="Password"
                   type="password"
                   value={formData.password}
                   onChange={handleInputChange}
+                  onFocus={handlePasswordFocus}
+                  onBlur={handlePasswordBlur}
                   fullWidth
                   required
                   variant="outlined"
+                  helperText={errors.password}
                 />
+                {getPasswordFeedback()}
+                <Collapse in={showPasswordRequirements}>
+                  <Paper elevation={0} sx={{ mt: 1, p: 1, bgcolor: 'background.paper', border: '1px solid #e0e0e0' }}>
+                    <Typography variant="caption" component="div" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <InfoIcon fontSize="small" sx={{ mr: 0.5, color: 'info.main' }} />
+                      Password requirements:
+                    </Typography>
+                    <List dense disablePadding>
+                      {[
+                        { id: 'minLength', label: 'At least 8 characters' },
+                        { id: 'hasUpperCase', label: 'At least one uppercase letter' },
+                        { id: 'hasLowerCase', label: 'At least one lowercase letter' },
+                        { id: 'hasNumber', label: 'At least one number' },
+                        { id: 'hasSpecial', label: 'At least one special character' }
+                      ].map((req) => (
+                        <ListItem key={req.id} disablePadding sx={{ py: 0 }}>
+                          <ListItemIcon sx={{ minWidth: 24 }}>
+                            {passwordValidation[req.id] ? 
+                              <CheckCircleIcon fontSize="small" sx={{ color: 'success.main' }} /> : 
+                              <CancelIcon fontSize="small" sx={{ color: 'error.main' }} />
+                            }
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={req.label} 
+                            primaryTypographyProps={{ 
+                              variant: 'caption',
+                              color: passwordValidation[req.id] ? 'success.main' : 'error.main'
+                            }} 
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                </Collapse>
               </Grid>
               <Grid item xs={6}>
                 <TextField
@@ -292,6 +494,7 @@ const CreateStudentForm = ({ open, onClose }) => {
                   fullWidth
                   required
                   variant="outlined"
+                  helperText={errors.confirmPassword}
                 />
               </Grid>
             </Grid>
@@ -394,7 +597,6 @@ const CreateStudentForm = ({ open, onClose }) => {
               </Grid>
             </Grid>
 
-
             <TextField
               name="academicYear"
               label="Academic Year"
@@ -428,17 +630,17 @@ const CreateStudentForm = ({ open, onClose }) => {
               ))}
             </TextField>
 
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 1 }}>
               <Button 
                 type="submit"
                 variant="contained"
-                disabled={loading}
+                disabled={loading || !formValid}
                 sx={{
                   backgroundColor: '#FFD700',
                   color: '#000',
                   '&:hover': { backgroundColor: '#FFC107' },
                   width: '200px'
+                  
                 }}
               >
                 {loading ? 'Submitting...' : 'Submit'}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PersonIcon from "@mui/icons-material/Person";
 import {
   Box,
@@ -19,12 +19,12 @@ import axios from "axios";
 function InputIDLogout() {
   const [idInput, setIdInput] = useState("");
   const [studentDetails, setStudentDetails] = useState({
-    name: "John Doe",
-    idNumber: "24-1234-213",
-    grade: "6",
-    section: "Hope",
-    date: "October 22, 2024",
-    timeOut: "8:23:08 AM",
+    name: "",
+    idNumber: "",
+    grade: "",
+    section: "",
+    date: "",
+    timeOut: "",
     profilePictureUrl: null,
   });
   const [error, setError] = useState(null);
@@ -79,7 +79,10 @@ function InputIDLogout() {
         setIdInput(""); // Clear the input field
       } catch (err) {
         console.error("Error:", err);
-        setError(err.response?.data?.error || "Student not found. Please check the ID number.");
+        const errorMsg = err.response?.data?.error || "Student not found. Please check the ID number.";
+        
+        // Set the error to display below the input field
+        setError(errorMsg);
       }
     }
   };

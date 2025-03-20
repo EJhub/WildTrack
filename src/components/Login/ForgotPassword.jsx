@@ -1,40 +1,65 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { AuthContext } from "../AuthContext"; // Ensure you have an AuthContext setup
+import { CircularProgress } from "@mui/material";
 
 const ForgotPassword = () => {
-  const [credentials, setCredentials] = useState({ username: "", password: "" });
+  const [idNumber, setIdNumber] = useState("");
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null); // New state for success message
+  const [success, setSuccess] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext); // Access AuthContext for user login
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setCredentials({ ...credentials, [name]: value });
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post("http://localhost:8080/api/reset-password", {
-        email: credentials.username, // Send the email for reset
-      });
-
-      if (response.status === 200) {
-        setSuccess("Password reset request is successful. Please check your email to verify and change your password.");
-        setTimeout(() => navigate("/login"), 5000); // Redirect after 5 seconds
-      }
-    } catch (err) {
-      console.error("Reset Password error:", err.response?.data || err);
-
-      setError(err.response?.data?.error || "Failed to reset password. Please try again.");
-    }
+    setIdNumber(e.target.value);
+    // Clear any error/success messages when the user types
+    if (error) setError(null);
+    if (success) setSuccess(null);
   };
 
   const handleCancel = () => {
-    navigate("/Login"); // Redirect to home page or any other page
+    navigate("/login");
+  };
+
+  const handleRequestReset = async (e) => {
+    e.preventDefault();
+    
+    if (!idNumber) {
+      setError("Please enter your ID number");
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // First check if the user exists
+      const userResponse = await axios.get(`http://localhost:8080/api/users/${idNumber}`);
+      
+      if (userResponse.data) {
+        // User exists, now create notification for librarians
+        const notificationResponse = await axios.post("http://localhost:8080/api/notifications/password-reset-request", {
+          userId: userResponse.data.id,
+          idNumber: idNumber,
+          userName: `${userResponse.data.firstName} ${userResponse.data.lastName}`
+        });
+        
+        setSuccess("Password reset request sent to librarian. You will be notified when your password is reset.");
+        
+        // Clear the form
+        setIdNumber("");
+      }
+    } catch (err) {
+      console.error("Error requesting password reset:", err);
+      
+      if (err.response?.status === 404) {
+        setError("User not found. Please check your ID number and try again.");
+      } else {
+        setError("An error occurred while requesting password reset. Please try again later.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -43,29 +68,49 @@ const ForgotPassword = () => {
         <div style={styles.blurBorder}>
           <div style={styles.loginBox}>
             <h2 style={styles.title}>Forgot Password</h2>
-            {error && <p style={{ color: "red" }}>{error}</p>}
-            {success && <p style={{ color: "green" }}>{success}</p>} {/* Display success message */}
-            <form onSubmit={handleLogin}>
-              <h5 style={styles.label}>Email</h5>
+            {error && <p style={{ color: "red", fontSize: "14px" }}>{error}</p>}
+            {success && <p style={{ color: "green", fontSize: "14px" }}>{success}</p>}
+            <form onSubmit={handleRequestReset}>
+              <h5 style={styles.label}>ID Number</h5>
               <input
                 type="text"
-                name="username"
-                placeholder="@cit.edu"
-                autoComplete="username"
+                name="idNumber"
+                placeholder="Enter your ID number"
                 style={styles.input}
-                value={credentials.username}
+                value={idNumber}
                 onChange={handleInputChange}
+                disabled={isLoading || success}
               />
+              <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '15px' }}>
+                {!success ? (
+                  <p style={{ color: '#666', fontSize: '13px' }}>
+                    Enter your ID number and a notification will be sent to the librarian to reset your password.
+                  </p>
+                ) : (
+                  <p style={{ color: '#666', fontSize: '13px' }}>
+                    Please check with the librarian for your temporary password.
+                  </p>
+                )}
+              </div>
               <div style={styles.buttonContainer}>
                 <button
                   type="button"
                   onClick={handleCancel}
                   style={styles.cancelButton}
+                  disabled={isLoading}
                 >
-                  Cancel
+                  {success ? "Login" : "Cancel"}
                 </button>
-                <button type="submit" style={styles.submitButton}>
-                  Reset Password
+                <button 
+                  type="submit" 
+                  style={styles.submitButton}
+                  disabled={isLoading || success}
+                >
+                  {isLoading ? (
+                    <CircularProgress size={20} style={{ color: "white" }} />
+                  ) : (
+                    "Request Reset"
+                  )}
                 </button>
               </div>
             </form>
@@ -127,7 +172,7 @@ const styles = {
   input: {
     width: "90%",
     padding: "10px",
-    marginBottom: "15px",
+    marginBottom: "10px",
     borderRadius: "4px",
     border: "1px solid black",
     fontSize: "16px",
@@ -152,12 +197,15 @@ const styles = {
   submitButton: {
     width: "48%",                   // Set button width to allow them to fit side by side
     padding: "10px",
-    backgroundColor: "#781B1B",     // Blue color for Reset Password button  
+    backgroundColor: "#781B1B",     // Maroon color for Request Reset button
     color: "white",
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
     fontSize: "16px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
   },
 };
 

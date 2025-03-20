@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
@@ -26,6 +27,11 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteConfirmation from './components/DeleteConfirmation';
 
 const LibrarianManageTeacher = () => {
+  // Get query parameters
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const resetPasswordUserId = queryParams.get('resetPasswordUserId');
+  
   const [teachers, setTeachers] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false); // Modal for adding teacher
   const [isUpdateFormOpen, setIsUpdateFormOpen] = useState(false); // Modal for updating teacher
@@ -47,6 +53,16 @@ const LibrarianManageTeacher = () => {
         },
       });
       setTeachers(response.data);
+      
+      // If there's a resetPasswordUserId param, find and open that teacher's form
+      if (resetPasswordUserId) {
+        const teacherId = parseInt(resetPasswordUserId, 10);
+        const teacher = response.data.find(t => t.id === teacherId);
+        if (teacher) {
+          setCurrentTeacher(teacher);
+          setIsUpdateFormOpen(true);
+        }
+      }
     } catch (error) {
       console.error('There was an error fetching teachers:', error);
     }
@@ -56,7 +72,7 @@ const LibrarianManageTeacher = () => {
     if (currentView === 'Teachers') {
       getTeachers();
     }
-  }, [currentView]);
+  }, [currentView, resetPasswordUserId]);
 
   const handleOpenForm = () => setIsFormOpen(true);
   const handleCloseForm = () => {

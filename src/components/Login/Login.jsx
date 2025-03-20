@@ -26,13 +26,16 @@ const Login = () => {
     setError(null);
 
     try {
+      // Create a new axios instance specifically for this request to avoid setting global headers
+      const loginAxios = axios.create();
+      
       // 1. Make login request to get authentication token
-      const response = await axios.post("http://localhost:8080/api/login", {
+      const response = await loginAxios.post("http://localhost:8080/api/login", {
         idNumber: credentials.idNumber,
         password: credentials.password,
       });
 
-      const { token, role, idNumber } = response.data;
+      const { token, role, idNumber, requirePasswordChange, userId } = response.data;
       
       // If it's a librarian, redirect to librarian login
       if (role === "Librarian") {
@@ -48,34 +51,57 @@ const Login = () => {
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("idNumber", idNumber);
+      
+      // Store the password reset requirement flag if present
+      if (requirePasswordChange) {
+        localStorage.setItem("requirePasswordChange", "true");
+        localStorage.setItem("userId", userId || "");
+      }
 
       // 3. Configure axios to use the token for future requests
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // 4. Wait for the login context to be fully updated
       // This is critical - we need to await this
-      await login({ token, role, idNumber });
+      await login({ token, role, idNumber, requirePasswordChange, userId });
 
-      // 5. Navigate to the appropriate dashboard based on role
-      if (role === "Student") {
-        navigate(`/studentDashboard/TimeRemaining`);
-      } else if (role === "Teacher") {
-        navigate("/TeacherDashboard/Home");
-      } else if (role === "NAS") {
-        navigate("/nasDashboard/Home");
+      // 5. Check if password change is required
+      if (requirePasswordChange) {
+        navigate("/change-password", { 
+          state: { 
+            fromReset: true,
+            userId: userId || ""
+          } 
+        });
       } else {
-        throw new Error("Invalid role returned from the server.");
+        // Navigate to the appropriate dashboard based on role
+        if (role === "Student") {
+          navigate(`/studentDashboard/TimeRemaining`);
+        } else if (role === "Teacher") {
+          navigate("/TeacherDashboard/Home");
+        } else if (role === "NAS") {
+          navigate("/nasDashboard/Home");
+        } else {
+          throw new Error("Invalid role returned from the server.");
+        }
       }
     } catch (err) {
-      console.error("Login error:", err.response?.data || err);
-
-      if (err.response?.data?.error === "Invalid credentials") {
+      console.error("Login error:", err);
+      setIsLoading(false); // Ensure loading is turned off
+      
+      // Handle specific error cases
+      if (err.response?.data?.error === "temporary_password_incorrect") {
+        setError(err.response.data.message || "Please request the temporary password from the Librarian.");
+      } else if (err.response?.data?.error === "invalid_credentials") {
         setError("Incorrect ID Number or Password");
       } else if (err.response?.status === 404) {
         setError("User not found. Please check your ID Number.");
       } else {
         setError(err.response?.data?.error || "Login failed. Please try again.");
       }
+      
+      // Ensure nothing else happens after error
+      return;
     } finally {
       setIsLoading(false);
     }

@@ -17,6 +17,7 @@ import MenuItem from '@mui/material/MenuItem';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import KeyIcon from '@mui/icons-material/Key';
 
 const LibrarianNotificationPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -131,6 +132,55 @@ const LibrarianNotificationPage = () => {
     navigate(`/librarian/LibrarianAnalytics?view=reports&reportId=${referenceId}`);
   };
 
+  // Extract user ID from password reset notification message
+  const extractUserIdFromMessage = (message) => {
+    // Sample message format: "User John Doe (ID: 12345) has requested a password reset..."
+    const idMatch = message.match(/\(ID: ([^)]+)\)/);
+    if (idMatch && idMatch[1]) {
+      return idMatch[1]; // The user's ID number
+    }
+    return null;
+  };
+
+  // Handle reset password request
+ // This function should be updated in your LibrarianNotificationPage component
+const handleResetPassword = async (notification) => {
+  const idNumber = extractUserIdFromMessage(notification.message);
+  
+  if (!idNumber) {
+    showSnackbar("Could not identify the user from the notification", "error");
+    return;
+  }
+  
+  try {
+    // First, get the user details to determine if they're a student or teacher
+    const userResponse = await axios.get(`http://localhost:8080/api/users/${idNumber}`);
+    
+    if (userResponse.data) {
+      const userId = userResponse.data.id;
+      const userRole = userResponse.data.role;
+      
+      // Mark notification as read
+      await handleMarkAsRead(notification.id);
+      
+      // Navigate to the appropriate page with a query parameter
+      if (userRole === 'Student') {
+        navigate(`/librarian/LibrarianManageStudent?resetPasswordUserId=${userId}`);
+      } else if (userRole === 'Teacher') {
+        navigate(`/librarian/LibrarianManageTeacher?resetPasswordUserId=${userId}`);
+      } else {
+        // For other roles
+        navigate(`/librarian/UserManagement?resetPasswordUserId=${userId}`);
+      }
+    } else {
+      showSnackbar("User not found", "error");
+    }
+  } catch (err) {
+    console.error('Error processing password reset:', err);
+    showSnackbar("Failed to process password reset request", "error");
+  }
+};
+
   // Menu handlers
   const handleMenuOpen = (event, notification) => {
     event.stopPropagation();
@@ -180,10 +230,23 @@ const LibrarianNotificationPage = () => {
     return date.toLocaleString();
   };
 
+  // Check if notification is a password reset request
+  const isPasswordResetRequest = (notification) => {
+    return notification.title === "Password Reset Request";
+  };
+
   // Helper to determine the notification type styling
   const getNotificationStyling = (notification) => {
     // Define styling based on notification type and read status
     const baseColor = '#FFD700'; // Gold color
+    
+    // Password reset requests should have a distinctive appearance
+    if (isPasswordResetRequest(notification)) {
+      return {
+        backgroundColor: notification.read ? 'rgba(173, 216, 230, 0.1)' : 'rgba(173, 216, 230, 0.2)',
+        borderLeft: notification.read ? '4px solid #E0E0E0' : '4px solid #1976d2'
+      };
+    }
     
     // Check if this is a report notification
     if (notification.notificationType === 'REPORT_SUBMISSION') {
@@ -345,6 +408,21 @@ const LibrarianNotificationPage = () => {
                                     }} 
                                   />
                                 )}
+                                {isPasswordResetRequest(notification) && (
+                                  <Chip 
+                                    label="Password Reset" 
+                                    size="small" 
+                                    icon={<KeyIcon sx={{ fontSize: '0.8rem !important' }} />}
+                                    sx={{ 
+                                      backgroundColor: '#1976d2', 
+                                      color: 'white',
+                                      height: 20,
+                                      '& .MuiChip-icon': {
+                                        color: 'white'
+                                      }
+                                    }} 
+                                  />
+                                )}
                               </Box>
                               <Typography variant="caption" color="text.secondary">
                                 {formatDate(notification.createdAt)}
@@ -367,6 +445,29 @@ const LibrarianNotificationPage = () => {
                                   sx={{ mt: 1, color: '#781B1B', mr: 2 }}
                                 >
                                   View Report
+                                </Button>
+                              )}
+                              
+                              {/* Password Reset Request Button */}
+                              {isPasswordResetRequest(notification) && (
+                                <Button
+                                  size="small"
+                                  startIcon={<KeyIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleResetPassword(notification);
+                                  }}
+                                  sx={{
+                                    mt: 1,
+                                    mr: 2,
+                                    backgroundColor: '#1976d2',
+                                    color: 'white',
+                                    '&:hover': {
+                                      backgroundColor: '#0d47a1',
+                                    }
+                                  }}
+                                >
+                                  Reset Password
                                 </Button>
                               )}
                               
@@ -421,6 +522,18 @@ const LibrarianNotificationPage = () => {
           >
             <MarkEmailReadIcon fontSize="small" sx={{ mr: 1.5, color: '#781B1B' }} />
             <Typography variant="body2">Mark as Read</Typography>
+          </MenuItem>
+        )}
+        
+        {selectedNotification && isPasswordResetRequest(selectedNotification) && (
+          <MenuItem onClick={() => {
+            handleResetPassword(selectedNotification);
+            handleMenuClose();
+          }}
+          sx={{ py: 1.5 }}
+          >
+            <KeyIcon fontSize="small" sx={{ mr: 1.5, color: '#1976d2' }} />
+            <Typography variant="body2">Reset Password</Typography>
           </MenuItem>
         )}
         
@@ -485,8 +598,6 @@ const LibrarianNotificationPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Removed the report dialog since we now redirect to ReportsView */}
 
       {/* Snackbar for notifications */}
       <Snackbar 

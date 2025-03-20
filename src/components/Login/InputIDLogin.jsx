@@ -19,12 +19,12 @@ import axios from "axios";
 function InputIdLogin() {
  const [idInput, setIdInput] = useState("");
  const [studentDetails, setStudentDetails] = useState({
-   name: "John Doe",
-   idNumber: "24-1234-213",
-   grade: "6",
-   section: "Hope",
-   date: "October 22, 2024",
-   timeIn: "8:23:08 AM",
+   name: "",
+   idNumber: "",
+   grade: "",
+   section: "",
+   date: "",
+   timeIn: "",
    profilePictureUrl: null,
  });
  const [error, setError] = useState(null);
