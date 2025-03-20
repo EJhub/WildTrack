@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, Snackbar, Grid, Typography, IconButton, Alert, Divider } from '@mui/material';
+import { 
+  Box, 
+  TextField, 
+  Button, 
+  Snackbar, 
+  Grid, 
+  Typography, 
+  IconButton, 
+  Alert, 
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Paper
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import KeyIcon from '@mui/icons-material/Key';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import axios from 'axios';
 import ConfirmUpdateDialog from './ConfirmUpdateDialog';
 
@@ -16,13 +34,11 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
    role: 'Teacher',
  });
 
- const [passwordData, setPasswordData] = useState({
-   currentPassword: '',
-   newPassword: '',
-   confirmPassword: '',
- });
+ // State for reset password
+ const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+ const [temporaryPassword, setTemporaryPassword] = useState('');
+ const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
 
- const [changePassword, setChangePassword] = useState(false);
  const [loading, setLoading] = useState(false);
  const [gradeOptions, setGradeOptions] = useState([]);
  const [sectionOptions, setSectionOptions] = useState([]);
@@ -37,12 +53,10 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
 
  useEffect(() => {
    if (teacherData) {
-
      setFormVisible(true);
      setFormData({
        firstName: teacherData.firstName || '',
        middleName: teacherData.middleName || '',
-
        lastName: teacherData.lastName || '',
        idNumber: teacherData.idNumber || '',
        subject: teacherData.subject || '',
@@ -110,18 +124,67 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
    }
  };
 
+ // Handle open reset password dialog
+ const handleResetPasswordClick = () => {
+   setResetPasswordDialogOpen(true);
+ };
 
- const handlePasswordChange = (e) => {
-   const { name, value } = e.target;
-   setPasswordData(prevData => ({
-     ...prevData,
-     [name]: value
-   }));
+ // Handle close reset password dialog
+ const handleCloseResetPasswordDialog = () => {
+   setResetPasswordDialogOpen(false);
+   if (passwordResetSuccess) {
+     setPasswordResetSuccess(false);
+     setTemporaryPassword('');
+   }
+ };
+
+ // Handle confirm reset password
+ const handleConfirmResetPassword = async () => {
+   setLoading(true);
+   
+   try {
+     // Generate temporary password (in a real app, this would come from the server)
+     const tempPass = "Change123!";
+     
+     // Call API to reset password
+     const response = await axios.post('http://localhost:8080/api/users/reset-password', {
+       userId: teacherData.id,
+       tempPassword: tempPass
+     });
+     
+     // Set the temporary password to display
+     setTemporaryPassword(tempPass);
+     setPasswordResetSuccess(true);
+     
+     setSnackbar({
+       open: true,
+       message: 'Password has been reset successfully',
+       severity: 'success'
+     });
+   } catch (error) {
+     console.error('Error resetting password:', error);
+     setSnackbar({
+       open: true,
+       message: error.response?.data?.error || 'Failed to reset password',
+       severity: 'error'
+     });
+   } finally {
+     setLoading(false);
+   }
+ };
+
+ // Copy temporary password to clipboard
+ const handleCopyPassword = () => {
+   navigator.clipboard.writeText(temporaryPassword);
+   setSnackbar({
+     open: true,
+     message: 'Password copied to clipboard',
+     severity: 'success'
+   });
  };
 
  // Initial submit handler that validates and opens the dialog
  const handleSubmit = () => {
-
    if (
      !formData.firstName ||
      !formData.lastName ||
@@ -131,22 +194,8 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
      !formData.section ||
      !formData.role
    ) {
-
      setSnackbar({ open: true, message: 'All required fields must be filled!', severity: 'warning' });
      return;
-   }
-
-   // Validate password fields if password change is enabled
-   if (changePassword) {
-     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-       setSnackbar({ open: true, message: 'All password fields are required!', severity: 'warning' });
-       return;
-     }
-     
-     if (passwordData.newPassword !== passwordData.confirmPassword) {
-       setSnackbar({ open: true, message: 'New password and confirm password do not match!', severity: 'error' });
-       return;
-     }
    }
 
    // Hide form and show confirmation dialog
@@ -179,37 +228,13 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
 
      await axios.put(`http://localhost:8080/api/teachers/${teacherData.id}`, payload);
      
-     // Handle password change if requested
-     if (changePassword) {
-       try {
-         const passwordPayload = {
-           id: teacherData.id,
-           currentPassword: passwordData.currentPassword,
-           newPassword: passwordData.newPassword
-         };
-         
-         await axios.put('http://localhost:8080/api/users/change-password', passwordPayload);
-         setSnackbar({ open: true, message: 'Teacher information and password updated successfully!', severity: 'success' });
-       } catch (passwordError) {
-         console.error('Error updating password:', passwordError);
-         setSnackbar({ 
-           open: true, 
-           message: passwordError.response?.data?.error || 'Password update failed. Please check your current password.',
-           severity: 'error'
-         });
-         setLoading(false);
-         return;
-       }
-     } else {
-       setSnackbar({ open: true, message: 'Teacher information updated successfully!', severity: 'success' });
-     }
+     setSnackbar({ open: true, message: 'Teacher information updated successfully!', severity: 'success' });
      
      onUpdate();
      setLoading(false);
      // Keep dialog and form closed after successful update
      setConfirmDialogOpen(false);
      // Close the entire form component
-
      onClose();
    } catch (error) {
      console.error('Error updating teacher:', error);
@@ -222,7 +247,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
      setLoading(false);
      // Reopen form on error
      setFormVisible(true);
-
+     setConfirmDialogOpen(false);
    }
  };
 
@@ -240,7 +265,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
            boxShadow: 24,
            p: 4,
            borderRadius: '8px',
-           zIndex: 1500,
+           zIndex: 1000,
            border: '1px solid #CCC',
            maxHeight: '90vh',
            overflowY: 'auto'
@@ -413,57 +438,24 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
            
            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-               Change Password
+               Password Management
              </Typography>
              <Button 
-               variant="text" 
-               onClick={() => setChangePassword(!changePassword)}
-               sx={{ ml: 2 }}
+               variant="contained"
+               startIcon={<KeyIcon />}
+               onClick={handleResetPasswordClick}
+               sx={{ 
+                 ml: 2, 
+                 backgroundColor: '#f44336',
+                 color: 'white',
+                 '&:hover': {
+                   backgroundColor: '#d32f2f',
+                 }
+               }}
              >
-               {changePassword ? 'Cancel' : 'Change'}
+               Reset Password
              </Button>
            </Box>
-
-           {changePassword && (
-             <>
-               <TextField
-                 label="Current Password"
-                 name="currentPassword"
-                 type="password"
-                 value={passwordData.currentPassword}
-                 onChange={handlePasswordChange}
-                 variant="outlined"
-                 fullWidth
-                 required
-               />
-               <Grid container spacing={2}>
-                 <Grid item xs={6}>
-                   <TextField
-                     label="New Password"
-                     name="newPassword"
-                     type="password"
-                     value={passwordData.newPassword}
-                     onChange={handlePasswordChange}
-                     variant="outlined"
-                     fullWidth
-                     required
-                   />
-                 </Grid>
-                 <Grid item xs={6}>
-                   <TextField
-                     label="Confirm Password"
-                     name="confirmPassword"
-                     type="password"
-                     value={passwordData.confirmPassword}
-                     onChange={handlePasswordChange}
-                     variant="outlined"
-                     fullWidth
-                     required
-                   />
-                 </Grid>
-               </Grid>
-             </>
-           )}
 
            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
              <Button
@@ -484,7 +476,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
        </Box>
      )}
 
-     {/* Confirmation Dialog */}
+     {/* Confirmation Dialog for update */}
      <ConfirmUpdateDialog
        open={confirmDialogOpen}
        onClose={handleCancelUpdate}
@@ -492,6 +484,90 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
        title="Confirm Update"
        message="Are you sure you want to save the changes? The new details will replace the current records."
      />
+
+     {/* Reset Password Dialog - with higher z-index */}
+     <Dialog 
+       open={resetPasswordDialogOpen} 
+       onClose={handleCloseResetPasswordDialog}
+       maxWidth="sm"
+       sx={{
+         zIndex: 9999, // Ensure this is higher than any other elements
+         '& .MuiDialog-paper': {
+           position: 'relative',
+           margin: '32px'
+         }
+       }}
+     >
+       <DialogTitle>
+         {passwordResetSuccess ? "Password Reset Successful" : "Reset Teacher Password"}
+       </DialogTitle>
+       <DialogContent>
+         {!passwordResetSuccess ? (
+           <DialogContentText>
+             Are you sure you want to reset the password for {formData.firstName} {formData.lastName}? 
+             This will generate a temporary password that the teacher will need to change on their next login.
+           </DialogContentText>
+         ) : (
+           <Box sx={{ mt: 2 }}>
+             <DialogContentText sx={{ mb: 2 }}>
+               The password for {formData.firstName} {formData.lastName} has been reset successfully.
+             </DialogContentText>
+             
+             <Paper 
+               elevation={3}
+               sx={{ 
+                 p: 2, 
+                 display: 'flex', 
+                 alignItems: 'center', 
+                 justifyContent: 'space-between',
+                 backgroundColor: '#e8f4f8',
+                 border: '1px solid #b3e0ff'
+               }}
+             >
+               <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
+                 {temporaryPassword}
+               </Typography>
+               <IconButton 
+                 onClick={handleCopyPassword}
+                 color="primary"
+                 size="small"
+               >
+                 <ContentCopyIcon />
+               </IconButton>
+             </Paper>
+             
+             <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
+               Please share this temporary password with the teacher. They will be required to change it when they next log in.
+             </Typography>
+           </Box>
+         )}
+       </DialogContent>
+       <DialogActions>
+         {!passwordResetSuccess ? (
+           <>
+             <Button onClick={handleCloseResetPasswordDialog} color="primary">
+               Cancel
+             </Button>
+             <Button 
+               onClick={handleConfirmResetPassword} 
+               color="primary" 
+               variant="contained"
+               disabled={loading}
+             >
+               {loading ? "Resetting..." : "Reset Password"}
+             </Button>
+           </>
+         ) : (
+           <Button 
+             onClick={handleCloseResetPasswordDialog} 
+             color="primary" 
+             variant="contained"
+           >
+             Done
+           </Button>
+         )}
+       </DialogActions>
+     </Dialog>
 
      <Snackbar
        open={snackbar.open}
@@ -506,9 +582,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
          {snackbar.message}
        </Alert>
      </Snackbar>
-
    </>
-
  );
 };
 

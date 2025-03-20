@@ -4,7 +4,7 @@ import { AuthContext } from './AuthContext';
 import { CircularProgress, Box, Typography } from '@mui/material';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, passwordResetRequired } = useContext(AuthContext);
   const location = useLocation();
 
   // Show loading indicator while checking authentication
@@ -26,6 +26,11 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
         </Typography>
       </Box>
     );
+  }
+
+  // Check if password reset is required and enforce it
+  if (user && passwordResetRequired && !location.pathname.includes('/change-password')) {
+    return <Navigate to="/change-password" state={{ fromReset: true, userId: user.id }} replace />;
   }
 
   // If user is not authenticated, handle redirection

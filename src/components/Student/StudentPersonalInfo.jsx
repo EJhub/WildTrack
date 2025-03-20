@@ -9,10 +9,12 @@ import Paper from "@mui/material/Paper";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import Modal from "@mui/material/Modal";
-import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CircularProgress from "@mui/material/CircularProgress";
 import { AuthContext } from "../AuthContext"; // Import AuthContext
 
@@ -25,9 +27,16 @@ const PersonalInformation = () => {
   const [error, setError] = useState(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
+  
+  // Password visibility states
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   axios.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
@@ -84,10 +93,24 @@ const PersonalInformation = () => {
     setShowChangePasswordModal(false);
     setCurrentPassword("");
     setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError("");
+    // Reset password visibility
+    setShowOldPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleSubmitChangePassword = async (e) => {
     e.preventDefault();
+    
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+    
+    setPasswordError("");
 
     try {
       await axios.put("http://localhost:8080/api/users/change-password", {
@@ -100,7 +123,7 @@ const PersonalInformation = () => {
       handleCloseChangePasswordModal();
     } catch (error) {
       console.error("Error changing password:", error);
-      alert("Failed to change password. Please try again.");
+      setPasswordError(error.response?.data?.error || "Failed to change password. Please try again.");
     }
   };
 
@@ -165,6 +188,11 @@ const PersonalInformation = () => {
       alert('Failed to remove profile picture');
     }
   };
+
+  // Toggle password visibility functions
+  const toggleOldPasswordVisibility = () => setShowOldPassword(!showOldPassword);
+  const toggleNewPasswordVisibility = () => setShowNewPassword(!showNewPassword);
+  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
   // Show loading indicator while auth or data is loading
   if (authLoading || loading) {
@@ -345,25 +373,6 @@ const PersonalInformation = () => {
               </Box>
             </Box>
 
-            <Box sx={{ display: "flex", flexDirection: "column", marginBottom: 2 }}>
-              <Typography variant="body1" sx={{ color: "white", marginBottom: 1, textAlign: "left" }}>
-                Email:
-              </Typography>
-              <Box
-                component="div"
-                sx={{
-                  backgroundColor: "#fff",
-                  borderRadius: "5px",
-                  padding: 1,
-                  textAlign: "center",
-                  width: "96%",
-                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",
-                }}
-              >
-                {userInfo.email}
-              </Box>
-            </Box>
-
             <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between", marginBottom: 2, alignItems: "center" }}>
               <Box sx={{ display: "flex", flexDirection: "column", width: "70%" }}>
                 <Typography variant="body1" sx={{ color: "white", marginBottom: 1, textAlign: "left" }}>
@@ -386,18 +395,22 @@ const PersonalInformation = () => {
               <Box sx={{ display: "flex", alignItems: "center", marginLeft: 0 }}>
                 <Button
                   variant="contained"
-                  color="primary"
                   onClick={handleChangePassword}
                   sx={{
-                    width: "140px",
+                    width: "auto",
                     height: "35px",
                     fontSize: "12px",
                     marginTop: "30px",
                     padding: "6px 16px",
                     marginLeft: "10px",
+                    backgroundColor: '#FFD700',
+                    color: 'black',
+                    '&:hover': {
+                      backgroundColor: '#FFC107',
+                    }
                   }}
                 >
-                  Change Pas...
+                  Change Password
                 </Button>
               </Box>
             </Box>
@@ -405,6 +418,7 @@ const PersonalInformation = () => {
         </Box>
       </Box>
 
+      {/* Updated Change Password Modal */}
       <Modal open={showChangePasswordModal} onClose={handleCloseChangePasswordModal}>
         <Box
           sx={{
@@ -412,38 +426,163 @@ const PersonalInformation = () => {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            bgcolor: "background.paper",
-            boxShadow: 24,
-            p: 4,
-            width: 400,
+            bgcolor: "white",
+            boxShadow: 5,
+            borderRadius: 1,
+            width: 320,
+            p: 0,
+            overflow: "hidden"
           }}
         >
-          <Typography variant="h6" gutterBottom>
-            Change Password
-          </Typography>
-          <form onSubmit={handleSubmitChangePassword}>
-            <TextField
-              type="password"
-              label="Current Password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              fullWidth
-              required
-              margin="normal"
-            />
-            <TextField
-              type="password"
-              label="New Password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              fullWidth
-              required
-              margin="normal"
-            />
-            <Button type="submit" variant="contained" color="primary">
-              Save New Password
-            </Button>
-          </form>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: '1px solid #ddd',
+            p: 2
+          }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Change Password
+            </Typography>
+            <IconButton 
+              onClick={handleCloseChangePasswordModal}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          
+          <Box component="form" onSubmit={handleSubmitChangePassword} sx={{ p: 2, pt: 1 }}>
+            {passwordError && (
+              <Typography color="error" variant="body2" sx={{ mb: 1 }}>
+                {passwordError}
+              </Typography>
+            )}
+            
+            <Box sx={{ mb: 2, mt: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                Old Password:
+              </Typography>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showOldPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                    paddingRight: '40px' // Space for the icon
+                  }}
+                  required
+                />
+                <IconButton
+                  onClick={toggleOldPasswordVisibility}
+                  size="small"
+                  style={{
+                    position: 'absolute',
+                    right: '2px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#666'
+                  }}
+                >
+                  {showOldPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                </IconButton>
+              </div>
+            </Box>
+            
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                New Password:
+              </Typography>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                    paddingRight: '40px' // Space for the icon
+                  }}
+                  required
+                />
+                <IconButton
+                  onClick={toggleNewPasswordVisibility}
+                  size="small"
+                  style={{
+                    position: 'absolute',
+                    right: '2px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#666'
+                  }}
+                >
+                  {showNewPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                </IconButton>
+              </div>
+            </Box>
+            
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                Confirm New Password:
+              </Typography>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                    paddingRight: '40px' // Space for the icon
+                  }}
+                  required
+                />
+                <IconButton
+                  onClick={toggleConfirmPasswordVisibility}
+                  size="small"
+                  style={{
+                    position: 'absolute',
+                    right: '2px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#666'
+                  }}
+                >
+                  {showConfirmPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                </IconButton>
+              </div>
+            </Box>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button 
+                type="submit" 
+                sx={{
+                  backgroundColor: '#FFD700',
+                  color: 'black',
+                  textTransform: 'none',
+                  borderRadius: '4px',
+                  width: '80px',
+                  height: '32px',
+                  '&:hover': {
+                    backgroundColor: '#FFC000',
+                  }
+                }}
+              >
+                Save
+              </Button>
+            </Box>
+          </Box>
         </Box>
       </Modal>
 

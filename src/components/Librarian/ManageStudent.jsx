@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import AcademicYearTable from './components/AcademicYearTable';
@@ -27,6 +28,11 @@ import UpdateStudentForm from './components/UpdateStudentForm';
 import DeleteConfirmation from './components/DeleteConfirmation';
 
 const ManageStudent = () => {
+  // Get query parameters
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const resetPasswordUserId = queryParams.get('resetPasswordUserId');
+  
   // States
   const [currentView, setCurrentView] = useState('students');
   const [data, setData] = useState([]);
@@ -57,6 +63,16 @@ const ManageStudent = () => {
         }
         const result = await response.json();
         setData(result);
+        
+        // If there's a resetPasswordUserId param, find and open that student's form
+        if (resetPasswordUserId) {
+          const studentId = parseInt(resetPasswordUserId, 10);
+          const student = result.find(s => s.id === studentId);
+          if (student) {
+            setStudentToUpdate(student);
+            setIsUpdateFormOpen(true);
+          }
+        }
       } catch (error) {
         setError('An error occurred while fetching students.');
         console.error(error);
@@ -65,7 +81,7 @@ const ManageStudent = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [resetPasswordUserId]);
 
   // Event Handlers
   const handleChangePage = (event, newPage) => {
@@ -462,15 +478,15 @@ const ManageStudent = () => {
         onConfirm={handleDeleteConfirmation}
       />
       {/* New Modals */}
-<AddAcademicYear 
-  open={isAddAcademicYearModalOpen}
-  onClose={() => setIsAddAcademicYearModalOpen(false)}
-/>
+      <AddAcademicYear 
+        open={isAddAcademicYearModalOpen}
+        onClose={() => setIsAddAcademicYearModalOpen(false)}
+      />
 
-<AddGradeSection 
-  open={isAddGradeSectionModalOpen}
-  onClose={() => setIsAddGradeSectionModalOpen(false)}
-/>
+      <AddGradeSection 
+        open={isAddGradeSectionModalOpen}
+        onClose={() => setIsAddGradeSectionModalOpen(false)}
+      />
     </>
   );
 };
