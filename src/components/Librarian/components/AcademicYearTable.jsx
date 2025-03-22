@@ -212,6 +212,7 @@ const AcademicYearTable = () => {
             justifyContent: 'center',
             width: '100%',
             paddingTop: 2,
+            marginBottom: 5
           }}
         />
 

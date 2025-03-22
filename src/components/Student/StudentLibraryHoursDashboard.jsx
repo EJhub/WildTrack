@@ -283,18 +283,25 @@ const StudentLibraryHours = () => {
     <>
       <ToastContainer />
       <NavBar />
-      <Box sx={{ display: "flex", height: "100vh" }}>
+      <Box 
+        sx={{ 
+          display: "flex", 
+          height: "100vh",
+          overflow: "hidden" // Prevents outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
             padding: 4,
             flexGrow: 1,
-            display: "flex",
-            flexDirection: "column",
             backgroundImage: "url('/studentbackground.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            overflow: "hidden",
+            overflow: "auto", // Enable scrolling for the main content area
+            height: "100%", // Ensure content area fills available height
+            display: "flex", // Use flexbox for child elements
+            flexDirection: "column" // Stack children vertically
           }}
         >
           <Typography
@@ -436,13 +443,16 @@ const StudentLibraryHours = () => {
             sx={{
               borderRadius: '15px',
               boxShadow: 3,
-              overflow: 'auto',
-              maxHeight: 'calc(100vh - 340px)',
+              overflow: 'visible', // Allow content to flow outside container
               marginTop: 3,
+              marginBottom: 7, // Increased bottom margin
               backgroundColor: "rgba(255, 255, 255, 0.8)",
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            <Table stickyHeader sx={{ flexGrow: 1 }}>
+            <Table sx={{ flexGrow: 1 }}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Date</TableCell>
@@ -475,11 +485,13 @@ const StudentLibraryHours = () => {
               onRowsPerPageChange={handleChangeRowsPerPage}
               sx={{
                 paddingTop: 2,
-                backgroundColor: "transparent",  // Make background transparent
+                paddingBottom: 2, // Add bottom padding
+                backgroundColor: "transparent",
                 fontWeight: "bold",
-                display: "flex",  // Use flexbox to align items
-                justifyContent: "center",  // Center the pagination
+                display: "flex",
+                justifyContent: "center",
                 width: "100%",
+                position: "relative", // Ensure visibility
               }}
             />
           </TableContainer>

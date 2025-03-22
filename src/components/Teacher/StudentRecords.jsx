@@ -138,6 +138,7 @@ const StudentRecords = () => {
           student.idNumber.toLowerCase().includes(value)
       )
     );
+    setPage(0); // Reset to first page when searching
   };
 
   // Pagination handlers
@@ -161,6 +162,7 @@ const StudentRecords = () => {
       return matchesQuarter && matchesDateFrom && matchesDateTo && matchesAcademicYear;
     });
     setFilteredStudents(filtered);
+    setPage(0); // Reset to first page when filtering
   };
 
   // Reset filters
@@ -171,44 +173,67 @@ const StudentRecords = () => {
     setAcademicYear('');
     setSearch('');
     setFilteredStudents(students);
+    setPage(0); // Reset to first page when resetting filters
   };
 
-  const paginatedRows = filteredStudents.slice(
+  // Get displayed rows based on pagination
+  const displayedRows = filteredStudents.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
 
-  const tableHeaderStyle = {
-    fontWeight: 'bold',
-    color: '#fff',
-    backgroundColor: '#781B1B',
-  };
-
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
+            padding: '32px 32px 64px 32px', // Increased bottom padding
             flexGrow: 1,
+
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
             display: 'flex',
             flexDirection: 'column',
-            padding: 4,
-            backgroundColor: '#fff',
-            maxHeight: 'calc(100vh - 140px)',
-            overflow: 'auto',
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Typography
             variant="h4"
-            sx={{ fontWeight: 'bold', color: '#000', textAlign: 'left', marginBottom: 3 }}
+            sx={{
+              color: '#000',
+              fontWeight: 'bold',
+              textAlign: 'left',
+              fontSize: '40px',
+              marginTop: '15px',
+              marginBottom: 3
+            }}
           >
             Student Records - {teacherGradeLevel} - {teacherSubject || "Loading..."}
           </Typography>
 
           {/* Search Bar */}
-          <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 3, gap: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              marginBottom: 3,
+            }}
+          >
             <TextField
               placeholder="Search by name or ID..."
               variant="outlined"
@@ -216,19 +241,13 @@ const StudentRecords = () => {
               value={search}
               onChange={handleSearch}
               sx={{
-                backgroundColor: '#f1f1f1',
-                borderRadius: '28px',
+                backgroundColor: '#fff',
+                borderRadius: '15px',
                 width: { xs: '100%', sm: '360px' },
-                '& .MuiOutlinedInput-root': { padding: '5px 10px' },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MenuIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
                     <SearchIcon />
                   </InputAdornment>
                 ),
@@ -236,81 +255,111 @@ const StudentRecords = () => {
             />
           </Box>
 
-          {/* Filter Section */}
-          <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 3, gap: 2, flexWrap: 'wrap' }}>
-            
-            
-            <TextField
-              label="Date From"
-              type="date"
-              variant="outlined"
-              size="small"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
-              InputLabelProps={{ shrink: true }}
-            />
-            
-            <TextField
-              label="Date To"
-              type="date"
-              variant="outlined"
-              size="small"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
-              InputLabelProps={{ shrink: true }}
-            />
+          {/* Filters and Buttons */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 2,
+              marginBottom: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                name="dateFrom"
+                type="date"
+                size="small"
+                label="Date From"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  backgroundColor: '#fff',
+                  borderRadius: '15px',
+                }}
+              />
+              
+              <TextField
+                name="dateTo"
+                type="date"
+                size="small"
+                label="Date To"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  backgroundColor: '#fff',
+                  borderRadius: '15px',
+                }}
+              />
 
-            {/* Quarter Filter */}
-            <TextField
-              label="Quarter"
-              select
-              variant="outlined"
-              size="small"
-              value={quarter}
-              onChange={(e) => setQuarter(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', minWidth: '200px' }}
-            >
-              <MenuItem value="">All Quarters</MenuItem>
-              <MenuItem value="First">First</MenuItem>
-              <MenuItem value="Second">Second</MenuItem>
-              <MenuItem value="Third">Third</MenuItem>
-              <MenuItem value="Fourth">Fourth</MenuItem>
-            </TextField>
-            
-            <TextField
-              label="Academic Year"
-              select
-              variant="outlined"
-              size="small"
-              value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', minWidth: '200px' }}
-            >
-              <MenuItem value="">Select Academic Year</MenuItem>
-              <MenuItem value="2023-2024">2023-2024</MenuItem>
-              <MenuItem value="2022-2023">2022-2023</MenuItem>
-              <MenuItem value="2021-2022">2021-2022</MenuItem>
-            </TextField>
-            
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button 
-                onClick={handleFilter}
-                size="small" 
-                sx={{ 
-                  backgroundColor: "#FFD700", 
-                  color: "#000", 
-                  "&:hover": { backgroundColor: "#FFC107" } 
+              {/* Quarter Filter */}
+              <TextField
+                name="quarter"
+                label="Quarter"
+                select
+                variant="outlined"
+                size="small"
+                value={quarter}
+                onChange={(e) => setQuarter(e.target.value)}
+                sx={{
+                  backgroundColor: '#fff',
+                  borderRadius: '15px',
+                  minWidth: '150px',
                 }}
               >
-                Apply Filters
+                <MenuItem value="">All Quarters</MenuItem>
+                <MenuItem value="First">First</MenuItem>
+                <MenuItem value="Second">Second</MenuItem>
+                <MenuItem value="Third">Third</MenuItem>
+                <MenuItem value="Fourth">Fourth</MenuItem>
+              </TextField>
+              
+              <TextField
+                name="academicYear"
+                label="Academic Year"
+                select
+                variant="outlined"
+                size="small"
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+                sx={{
+                  backgroundColor: '#fff',
+                  borderRadius: '15px',
+                  minWidth: '150px',
+                }}
+              >
+                <MenuItem value="">Select Academic Year</MenuItem>
+                <MenuItem value="2023-2024">2023-2024</MenuItem>
+                <MenuItem value="2022-2023">2022-2023</MenuItem>
+                <MenuItem value="2021-2022">2021-2022</MenuItem>
+              </TextField>
+              
+              <Button
+                variant="contained"
+                onClick={handleFilter}
+                sx={{
+                  backgroundColor: "#FFD700",
+                  color: "#000",
+                  "&:hover": { backgroundColor: "#FFC107" },
+                }}
+              >
+                Filter
               </Button>
               
-              <Button 
-                onClick={handleResetFilters}
-                size="small" 
+              <Button
                 variant="outlined"
+                onClick={handleResetFilters}
+                sx={{
+                  borderColor: "#FFD700",
+                  color: "#000",
+                  "&:hover": { 
+                    backgroundColor: "rgba(255, 215, 0, 0.1)",
+                    borderColor: "#FFD700"
+                  },
+                }}
               >
                 Reset
               </Button>
@@ -325,74 +374,86 @@ const StudentRecords = () => {
           ) : error ? (
             <Typography color="error">{error}</Typography>
           ) : (
-            <>
-              <TableContainer
-                component={Paper}
-                sx={{
-                  flexGrow: 1,
-                  borderRadius: '10px',
-                  overflow: 'auto',
-                  maxHeight: 'calc(100vh - 280px)',
-                  border: "0.1px solid rgb(96, 92, 92)",
-                }}
-              >
-                <Table stickyHeader>
-                  <TableHead>
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: '15px',
+                boxShadow: 3,
+                overflow: 'visible', // Changed from 'auto' to 'visible'
+                marginTop: 3,
+                marginBottom: 5, // Added bottom margin
+                backgroundColor: "rgba(255, 255, 255, 0.8)",
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <Table sx={{ flexGrow: 1 }}> {/* Removed stickyHeader */}
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>ID Number</TableCell>
+                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Grade & Section</TableCell>
+                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Subject</TableCell>
+                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Quarter</TableCell>
+                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Progress</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {displayedRows.length === 0 ? (
                     <TableRow>
-                      <TableCell sx={tableHeaderStyle}>ID Number</TableCell>
-                      <TableCell sx={tableHeaderStyle}>Name</TableCell>
-                      <TableCell sx={tableHeaderStyle}>Grade & Section</TableCell>
-                      <TableCell sx={tableHeaderStyle}>Subject</TableCell>
-                      <TableCell sx={tableHeaderStyle}>Quarter</TableCell>
-                      <TableCell sx={tableHeaderStyle}>Progress</TableCell>
+                      <TableCell colSpan={6} align="center">
+                        No student records found matching your criteria
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedRows.length > 0 ? (
-                      paginatedRows.map((student, index) => (
-                        <TableRow key={index} hover>
-                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.idNumber}</TableCell>
-                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.name}</TableCell>
-                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.gradeSection}</TableCell>
-                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.subject}</TableCell>
-                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>{student.quarter}</TableCell>
-                          <TableCell sx={{ borderBottom: '2px solid #f1f1f1' }}>
-                            <Chip
-                              label={student.progress}
-                              size="small"
-                              color={
-                                student.progress === 'Completed' ? 'success' :
-                                student.progress === 'In-progress' ? 'primary' : 'default'
-                              }
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                          {quarter 
-                            ? `No students found with ${teacherSubject} in ${quarter} Quarter` 
-                            : `No students found with ${teacherSubject}`}
+                  ) : (
+                    displayedRows.map((student, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>{student.idNumber}</TableCell>
+                        <TableCell>{student.name}</TableCell>
+                        <TableCell>{student.gradeSection}</TableCell>
+                        <TableCell>{student.subject}</TableCell>
+                        <TableCell>{student.quarter}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={student.progress}
+                            size="small"
+                            sx={{
+                              backgroundColor: student.progress === 'Completed' ? '#1b8c3f' : 
+                                              student.progress === 'In-progress' ? '#3f51b5' : '#e0e0e0',
+                              color: student.progress === 'Not started' ? 'black' : 'white',
+                              fontWeight: 'bold',
+                              borderRadius: '16px',
+                              padding: '0 10px',
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
 
-              {/* Pagination */}
               <TablePagination
-                rowsPerPageOptions={[5, 10, 15]}
+                rowsPerPageOptions={[5, 10, 25]}
                 component="div"
                 count={filteredStudents.length}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                sx={{ alignSelf: 'center', marginTop: 2 }}
+                sx={{
+                  paddingTop: 2,
+                  paddingBottom: 2, // Added bottom padding
+                  backgroundColor: "transparent",
+                  fontWeight: "bold",
+                  display: "flex",
+                  justifyContent: "center",
+                  width: "100%",
+                  position: "relative", // Ensure visibility
+                }}
               />
-            </>
+            </TableContainer>
           )}
         </Box>
       </Box>

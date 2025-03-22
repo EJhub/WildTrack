@@ -156,9 +156,33 @@ const LibrarianManageTeacher = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
-        <Box sx={{ padding: 4, flexGrow: 1, backgroundColor: '#f5f5f5' }}>
+        <Box 
+          sx={{ 
+            padding: '32px 32px 120px 32px', // Increased bottom padding
+            flexGrow: 1, 
+            backgroundColor: '#f5f5f5',
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            display: 'flex',
+            flexDirection: 'column',
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
+          }}
+        >
           <Typography
             variant="h4"
             sx={{
@@ -223,13 +247,13 @@ const LibrarianManageTeacher = () => {
                     onClick={() => setCurrentView("Activity Log")}
                     sx={{
                       color: currentView === 'Activity Log' ? '#800000' : '#800000',
-              backgroundColor: currentView === 'Activity Log' ? '#FFEB3B' : 'white',
-              border: '1px solid #800000',
-              fontWeight: 'bold',
-              height: '40px',
-              '&:hover': {
-                backgroundColor: '#FFEB3B',
-                color: '#800000',
+                      backgroundColor: currentView === 'Activity Log' ? '#FFEB3B' : 'white',
+                      border: '1px solid #800000',
+                      fontWeight: 'bold',
+                      height: '40px',
+                      '&:hover': {
+                        backgroundColor: '#FFEB3B',
+                        color: '#800000',
                       },
                     }}
                   >
@@ -241,13 +265,13 @@ const LibrarianManageTeacher = () => {
                     onClick={() => setCurrentView("Teachers")}
                     sx={{
                       color: currentView === 'Teachers' ? '#800000' : '#800000',
-              backgroundColor: currentView === 'Teachers' ? '#FFEB3B' : 'white',
-              border: '1px solid #800000',
-              fontWeight: 'bold',
-              height: '40px',
-              '&:hover': {
-                backgroundColor: '#FFEB3B',
-                color: '#800000',
+                      backgroundColor: currentView === 'Teachers' ? '#FFEB3B' : 'white',
+                      border: '1px solid #800000',
+                      fontWeight: 'bold',
+                      height: '40px',
+                      '&:hover': {
+                        backgroundColor: '#FFEB3B',
+                        color: '#800000',
                       },
                     }}
                   >
@@ -288,7 +312,18 @@ const LibrarianManageTeacher = () => {
               )}
 
               {/* Teachers Table */}
-              <TableContainer component={Paper} sx={{ borderRadius: '15px', overflow: 'auto', maxHeight: 'calc(100vh - 340px)' }}>
+              <TableContainer 
+                component={Paper} 
+                sx={{ 
+                  borderRadius: '15px', 
+                  overflow: 'visible', // Changed from 'auto' to 'visible'
+                  marginBottom: 5, // Added bottom margin
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  flexGrow: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
                 <Table stickyHeader>
                   <TableHead>
                     <TableRow>
@@ -375,10 +410,8 @@ const LibrarianManageTeacher = () => {
                     )}
                   </TableBody>
                 </Table>
-              </TableContainer>
-
-              {/* Teacher Table Pagination */}
-              <Box sx={{ position: 'relative', width: '100%' }}>
+                
+                {/* Integrated pagination inside the TableContainer */}
                 <TablePagination
                   rowsPerPageOptions={[5, 10, 25]}
                   component="div"
@@ -388,13 +421,20 @@ const LibrarianManageTeacher = () => {
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
                   sx={{
+                    paddingTop: 2,
+                    paddingBottom: 2,
+                    backgroundColor: 'transparent',
+                    fontWeight: 'bold',
                     display: 'flex',
                     justifyContent: 'center',
-                    paddingTop: 2,
                     width: '100%',
+                    position: 'relative', // Ensure visibility
                   }}
                 />
-              </Box>
+              </TableContainer>
+              
+              {/* Extra spacer to ensure scrollability */}
+              <Box sx={{ height: 60, width: '100%' }} />
             </>
           )}
         </Box>

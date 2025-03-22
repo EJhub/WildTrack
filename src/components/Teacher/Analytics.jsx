@@ -24,46 +24,72 @@ const Analytics = () => {
     }
   };
 
-
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 64px 32px', // Increased bottom padding
             flexGrow: 1,
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
             display: 'flex',
             flexDirection: 'column',
-            maxHeight: 'calc(100vh - 64px)',
-            overflow: 'auto',
-            backgroundColor: '#f5f5f5',
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
-
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+          {/* Header with buttons for switching views */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: 3,
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
+            gap: 2
+          }}>
             <Typography
               variant="h4"
               sx={{
                 fontWeight: 'bold',
-                color: '#000',
+                color: '#8C383E',
+                fontSize: '32px'
               }}
             >
               Analytics & Reports
             </Typography>
             
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              flexWrap: { xs: 'wrap', sm: 'nowrap' },
+              width: { xs: '100%', md: 'auto' }
+            }}>
               <Button
                 variant="contained"
                 onClick={() => setActiveView('completion')}
                 sx={{
-                  backgroundColor: activeView === 'completion' ? '#A85858' : '#d7a6a6',
+                  backgroundColor: activeView === 'completion' ? '#8C383E' : '#d7a6a6',
                   color: '#fff',
-                  borderRadius: '20px',
+                  borderRadius: '15px',
                   '&:hover': {
-                    backgroundColor: '#8B3D3D',
+                    backgroundColor: activeView === 'completion' ? '#6e2c30' : '#b58989',
                   },
+                  flexGrow: { xs: 1, md: 0 }
                 }}
               >
                 Library Hours Completion Rate
@@ -73,12 +99,13 @@ const Analytics = () => {
                 variant="contained"
                 onClick={() => setActiveView('participants')}
                 sx={{
-                  backgroundColor: activeView === 'participants' ? '#A85858' : '#d7a6a6',
+                  backgroundColor: activeView === 'participants' ? '#8C383E' : '#d7a6a6',
                   color: '#fff',
-                  borderRadius: '20px',
+                  borderRadius: '15px',
                   '&:hover': {
-                    backgroundColor: '#8B3D3D',
+                    backgroundColor: activeView === 'participants' ? '#6e2c30' : '#b58989',
                   },
+                  flexGrow: { xs: 1, md: 0 }
                 }}
               >
                 Active Library Hours Participants
@@ -86,8 +113,17 @@ const Analytics = () => {
             </Box>
           </Box>
           
-          {/* Render the active component */}
-          {renderActiveComponent()}
+          {/* Wrapper for the active component that allows for proper scrolling */}
+          <Box 
+            sx={{ 
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              // We don't need overflow: 'auto' here as parent box already has scrolling
+            }}
+          >
+            {renderActiveComponent()}
+          </Box>
         </Box>
       </Box>
     </>

@@ -252,24 +252,6 @@ const LibrarianLogin = () => {
                 }}
               />
 
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  mt: 1,
-                }}
-              >
-                <Link
-                  to="/ResetPassword"
-                  style={{
-                    color: "#8B3D3D",
-                    textDecoration: "none",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  Forgot password?
-                </Link>
-              </Box>
 
               <Button
                 type="submit"
@@ -316,18 +298,7 @@ const LibrarianLogin = () => {
                 Back to main login
               </Link>
               
-              <Typography variant="body2" color="text.secondary">
-                Need help? Contact{" "}
-                <Link
-                  to="/contact"
-                  style={{
-                    color: "#8B3D3D",
-                    textDecoration: "none",
-                  }}
-                >
-                  IT Support
-                </Link>
-              </Typography>
+
             </Box>
           </Paper>
         </Box>

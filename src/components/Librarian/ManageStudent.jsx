@@ -53,21 +53,54 @@ const ManageStudent = () => {
   const [isAddAcademicYearModalOpen, setIsAddAcademicYearModalOpen] = useState(false);
   const [isAddGradeSectionModalOpen, setIsAddGradeSectionModalOpen] = useState(false);
 
-  // Fetch students data
+  // Fetch students data with library hour subjects
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // First fetch all students
         const response = await fetch('http://localhost:8080/api/students/all');
         if (!response.ok) {
           throw new Error('Failed to fetch students');
         }
-        const result = await response.json();
-        setData(result);
+        const studentsResult = await response.json();
+        
+        // Get unique grade levels
+        const uniqueGrades = [...new Set(studentsResult.map(student => student.grade))];
+        
+        // Create a map to store library hour subjects by grade
+        const libraryHoursByGrade = {};
+        
+        // Fetch library hours for each grade level
+        for (const grade of uniqueGrades) {
+          try {
+            const libraryResponse = await fetch(`http://localhost:8080/api/set-library-hours/approved/${grade}`);
+            if (libraryResponse.ok) {
+              const libraryHours = await libraryResponse.json();
+              libraryHoursByGrade[grade] = libraryHours;
+            }
+          } catch (error) {
+            console.error(`Error fetching library hours for grade ${grade}:`, error);
+          }
+        }
+        
+        // Assign library hour subjects to students
+        const enhancedStudents = studentsResult.map(student => {
+          const gradeLibraryHours = libraryHoursByGrade[student.grade] || [];
+          // Get subjects for this grade and deduplicate them
+          const subjects = [...new Set(gradeLibraryHours.map(hour => hour.subject).filter(Boolean))];
+          
+          return {
+            ...student,
+            subject: subjects.length > 0 ? subjects.join(', ') : "No library hours assigned"
+          };
+        });
+        
+        setData(enhancedStudents);
         
         // If there's a resetPasswordUserId param, find and open that student's form
         if (resetPasswordUserId) {
           const studentId = parseInt(resetPasswordUserId, 10);
-          const student = result.find(s => s.id === studentId);
+          const student = enhancedStudents.find(s => s.id === studentId);
           if (student) {
             setStudentToUpdate(student);
             setIsUpdateFormOpen(true);
@@ -145,17 +178,32 @@ const ManageStudent = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
 
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 120px 32px', // Increased bottom padding for better scrolling
             flexGrow: 1,
             backgroundColor: '#ffffff',
             display: 'flex',
             flexDirection: 'column',
-            maxHeight: 'calc(100vh - 140px)',
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Typography
@@ -344,12 +392,14 @@ const ManageStudent = () => {
                 sx={{
                   borderRadius: '15px',
                   boxShadow: 3,
-                  overflow: 'auto',
-                  maxHeight: 'calc(100vh - 340px)',
-                  marginTop: 3,
+                  overflow: 'visible', // Changed from 'auto' to 'visible' to ensure pagination is visible
+                  flexGrow: 1, // Allow table to grow with content
+                  marginBottom: 5, // Added margin bottom for pagination visibility
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
               >
-                <Table stickyHeader>
+                <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
@@ -384,7 +434,22 @@ const ManageStudent = () => {
                           <TableCell>{student.idNumber}</TableCell>
                           <TableCell>{`${student.firstName} ${student.middleName ? student.middleName.charAt(0) + '.' : ''} ${student.lastName}`}</TableCell>
                           <TableCell>{`${student.grade} - ${student.section}`}</TableCell>
-                          <TableCell>{student.subject}</TableCell>
+                          <TableCell>
+                            {student.subject && student.subject !== "No library hours assigned" ? (
+                              <Typography 
+                                sx={{ 
+                                  fontWeight: 'medium',
+                                  color: '#800000'  // Uses your theme's maroon color
+                                }}
+                              >
+                                {student.subject}
+                              </Typography>
+                            ) : (
+                              <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                No library hours assigned
+                              </Typography>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Button
                               variant="outlined"
@@ -430,9 +495,8 @@ const ManageStudent = () => {
                       ))}
                   </TableBody>
                 </Table>
-              </TableContainer>
-
-              <Box sx={{ position: 'relative', width: '100%' }}>
+                
+                {/* Integrated pagination inside the TableContainer */}
                 <TablePagination
                   rowsPerPageOptions={[5, 10, 25]}
                   component="div"
@@ -442,19 +506,26 @@ const ManageStudent = () => {
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
                   sx={{
+                    paddingTop: 2,
+                    paddingBottom: 2,
+                    backgroundColor: 'transparent',
+                    fontWeight: 'bold',
                     display: 'flex',
                     justifyContent: 'center',
-                    paddingTop: 2,
-                    width: '100%'
+                    width: '100%',
+                    position: 'relative', // Ensure visibility
                   }}
                 />
-              </Box>
+              </TableContainer>
             </>
           )}
 
           {currentView === 'academic' && <AcademicYearTable />}
 
           {currentView === 'gradeSection' && <GradeSectionTable />}
+          
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 60, width: '100%' }} />
         </Box>
       </Box>
 

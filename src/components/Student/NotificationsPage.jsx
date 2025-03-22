@@ -131,16 +131,31 @@ const StudentNotificationsPage = () => {
     <>
       <ToastContainer />
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 120px 32px', // Increased bottom padding
             flexGrow: 1,
             backgroundImage: "url('/studentbackground.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            overflow: 'auto',
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Ensure content area fills available height
+            '&::-webkit-scrollbar': { // Show scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -163,11 +178,20 @@ const StudentNotificationsPage = () => {
           </Box>
           
           {notifications.length === 0 ? (
-            <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+            <Paper sx={{ 
+              p: 3, 
+              textAlign: 'center', 
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              borderRadius: '15px',
+            }}>
               <Typography variant="h6">No notifications</Typography>
             </Paper>
           ) : (
-            <Paper sx={{ backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: '15px' }}>
+            <Paper sx={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+              borderRadius: '15px',
+              marginBottom: 4, // Added bottom margin
+            }}>
               <List>
                 {notifications.map((notification, index) => (
                   <React.Fragment key={notification.id}>
@@ -217,6 +241,9 @@ const StudentNotificationsPage = () => {
               </List>
             </Paper>
           )}
+          
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 60, width: '100%' }} />
         </Box>
       </Box>
     </>

@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   IconButton,
-  TextField,
   Button,
   Dialog,
   DialogTitle,
@@ -14,12 +13,12 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import axios from 'axios';
-import { format } from 'date-fns';
+import { format, isAfter, isBefore } from 'date-fns';
 
 const AddAcademicYear = ({ open, onClose }) => {
   const [formData, setFormData] = useState({
-    startYear: '',
-    endYear: '',
+    startYear: null,
+    endYear: null,
     quarters: {
       first: { startDate: null, endDate: null },
       second: { startDate: null, endDate: null },
@@ -27,6 +26,23 @@ const AddAcademicYear = ({ open, onClose }) => {
       fourth: { startDate: null, endDate: null }
     }
   });
+
+  const handleYearChange = (yearType) => (newValue) => {
+    // For year pickers, set to January 1st of selected year
+    const yearDate = newValue 
+      ? new Date(
+          newValue.getFullYear(), 
+          0, // January
+          1, 
+          0, 0, 0
+        ) 
+      : null;
+
+    setFormData(prev => ({
+      ...prev,
+      [yearType]: yearDate
+    }));
+  };
 
   const handleDateChange = (quarterKey, dateType) => (newValue) => {
     // Ensure the date is set to the start of the day
@@ -56,8 +72,8 @@ const AddAcademicYear = ({ open, onClose }) => {
     
     // Transform the data to match backend entity
     const academicYearData = {
-      startYear: formData.startYear,
-      endYear: formData.endYear,
+      startYear: formData.startYear ? formData.startYear.getFullYear().toString() : '',
+      endYear: formData.endYear ? formData.endYear.getFullYear().toString() : '',
       firstQuarter: {
         startDate: formData.quarters.first.startDate 
           ? format(formData.quarters.first.startDate, 'yyyy-MM-dd') 
@@ -101,6 +117,42 @@ const AddAcademicYear = ({ open, onClose }) => {
     }
   };
 
+  // Function to check if a date should be disabled
+  const shouldDisableStartDate = (date, quarterKey) => {
+    // No restrictions for start dates, but you could add custom logic here
+    return false;
+  };
+
+  // Function to check if an end date should be disabled
+  const shouldDisableEndDate = (date, quarterKey) => {
+    const startDate = formData.quarters[quarterKey].startDate;
+    // Disable end dates that are before the quarter's start date
+    return startDate ? isBefore(date, startDate) : false;
+  };
+
+  // Function to check if end year should be disabled
+  const shouldDisableEndYear = (date) => {
+    const startYear = formData.startYear;
+    // Disable end years that are before the start year
+    return startYear ? isBefore(date, startYear) : false;
+  };
+
+  // Check if there are any validation errors
+  const hasYearError = formData.endYear && formData.startYear && isBefore(formData.endYear, formData.startYear);
+  
+  const hasQuarterErrors = [
+    formData.quarters.first.endDate && formData.quarters.first.startDate && 
+      isBefore(formData.quarters.first.endDate, formData.quarters.first.startDate),
+    formData.quarters.second.endDate && formData.quarters.second.startDate && 
+      isBefore(formData.quarters.second.endDate, formData.quarters.second.startDate),
+    formData.quarters.third.endDate && formData.quarters.third.startDate && 
+      isBefore(formData.quarters.third.endDate, formData.quarters.third.startDate),
+    formData.quarters.fourth.endDate && formData.quarters.fourth.startDate && 
+      isBefore(formData.quarters.fourth.endDate, formData.quarters.fourth.startDate)
+  ].some(error => error === true);
+  
+  const hasErrors = hasYearError || hasQuarterErrors;
+
   return (
     <Dialog 
       open={open} 
@@ -122,18 +174,37 @@ const AddAcademicYear = ({ open, onClose }) => {
       <DialogContent sx={{ p: 2 }}>
         <form onSubmit={handleSubmit}>
           <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-            <TextField
-              label="Start Year"
-              fullWidth
-              value={formData.startYear}
-              onChange={(e) => setFormData({ ...formData, startYear: e.target.value })}
-            />
-            <TextField
-              label="End Year"
-              fullWidth
-              value={formData.endYear}
-              onChange={(e) => setFormData({ ...formData, endYear: e.target.value })}
-            />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Start Year"
+                views={['year']}
+                value={formData.startYear}
+                onChange={handleYearChange('startYear')}
+                slotProps={{ 
+                  textField: { 
+                    variant: 'outlined',
+                    fullWidth: true
+                  } 
+                }}
+              />
+              <DatePicker
+                label="End Year"
+                views={['year']}
+                value={formData.endYear}
+                onChange={handleYearChange('endYear')}
+                shouldDisableDate={shouldDisableEndYear}
+                slotProps={{ 
+                  textField: { 
+                    variant: 'outlined',
+                    fullWidth: true,
+                    error: hasYearError,
+                    helperText: hasYearError 
+                      ? 'End year must be after start year' 
+                      : ''
+                  } 
+                }}
+              />
+            </LocalizationProvider>
           </Box>
 
           <Typography variant="h6" sx={{ mb: 2 }}>
@@ -159,9 +230,11 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="Start Date"
                     value={formData.quarters.first.startDate}
                     onChange={handleDateChange('first', 'startDate')}
+                    shouldDisableDate={(date) => shouldDisableStartDate(date, 'first')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -170,9 +243,16 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="End Date"
                     value={formData.quarters.first.endDate}
                     onChange={handleDateChange('first', 'endDate')}
+                    shouldDisableDate={(date) => shouldDisableEndDate(date, 'first')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true,
+                        error: formData.quarters.first.endDate && formData.quarters.first.startDate && 
+                               isBefore(formData.quarters.first.endDate, formData.quarters.first.startDate),
+                        helperText: formData.quarters.first.endDate && formData.quarters.first.startDate && 
+                                   isBefore(formData.quarters.first.endDate, formData.quarters.first.startDate) 
+                                   ? 'End date must be after start date' : ''
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -180,7 +260,6 @@ const AddAcademicYear = ({ open, onClose }) => {
                 </Box>
               </Box>
 
-              {/* Similar modifications for other quarters */}
               {/* Second Quarter */}
               <Box>
                 <Typography variant="subtitle1" sx={{ mb: 1 }}>
@@ -191,9 +270,11 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="Start Date"
                     value={formData.quarters.second.startDate}
                     onChange={handleDateChange('second', 'startDate')}
+                    shouldDisableDate={(date) => shouldDisableStartDate(date, 'second')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -202,9 +283,16 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="End Date"
                     value={formData.quarters.second.endDate}
                     onChange={handleDateChange('second', 'endDate')}
+                    shouldDisableDate={(date) => shouldDisableEndDate(date, 'second')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true,
+                        error: formData.quarters.second.endDate && formData.quarters.second.startDate && 
+                               isBefore(formData.quarters.second.endDate, formData.quarters.second.startDate),
+                        helperText: formData.quarters.second.endDate && formData.quarters.second.startDate && 
+                                   isBefore(formData.quarters.second.endDate, formData.quarters.second.startDate) 
+                                   ? 'End date must be after start date' : ''
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -222,9 +310,11 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="Start Date"
                     value={formData.quarters.third.startDate}
                     onChange={handleDateChange('third', 'startDate')}
+                    shouldDisableDate={(date) => shouldDisableStartDate(date, 'third')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -233,9 +323,16 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="End Date"
                     value={formData.quarters.third.endDate}
                     onChange={handleDateChange('third', 'endDate')}
+                    shouldDisableDate={(date) => shouldDisableEndDate(date, 'third')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true,
+                        error: formData.quarters.third.endDate && formData.quarters.third.startDate && 
+                               isBefore(formData.quarters.third.endDate, formData.quarters.third.startDate),
+                        helperText: formData.quarters.third.endDate && formData.quarters.third.startDate && 
+                                   isBefore(formData.quarters.third.endDate, formData.quarters.third.startDate) 
+                                   ? 'End date must be after start date' : ''
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -253,9 +350,11 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="Start Date"
                     value={formData.quarters.fourth.startDate}
                     onChange={handleDateChange('fourth', 'startDate')}
+                    shouldDisableDate={(date) => shouldDisableStartDate(date, 'fourth')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -264,9 +363,16 @@ const AddAcademicYear = ({ open, onClose }) => {
                     label="End Date"
                     value={formData.quarters.fourth.endDate}
                     onChange={handleDateChange('fourth', 'endDate')}
+                    shouldDisableDate={(date) => shouldDisableEndDate(date, 'fourth')}
                     slotProps={{ 
                       textField: { 
-                        variant: 'outlined' 
+                        variant: 'outlined',
+                        fullWidth: true,
+                        error: formData.quarters.fourth.endDate && formData.quarters.fourth.startDate && 
+                               isBefore(formData.quarters.fourth.endDate, formData.quarters.fourth.startDate),
+                        helperText: formData.quarters.fourth.endDate && formData.quarters.fourth.startDate && 
+                                   isBefore(formData.quarters.fourth.endDate, formData.quarters.fourth.startDate) 
+                                   ? 'End date must be after start date' : ''
                       } 
                     }}
                     format="MM/dd/yyyy"
@@ -276,15 +382,16 @@ const AddAcademicYear = ({ open, onClose }) => {
             </Box>
           </LocalizationProvider>
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
             <Button
               type="submit"
               variant="contained"
+              disabled={hasErrors}
               sx={{
-                backgroundColor: '#FFD700',
-                color: '#000',
+                backgroundColor: hasErrors ? '#d3d3d3' : '#FFD700',
+                color: hasErrors ? '#666' : '#000',
                 fontWeight: 'bold',
-                '&:hover': { backgroundColor: '#FFC107' },
+                '&:hover': { backgroundColor: hasErrors ? '#d3d3d3' : '#FFC107' },
                 width: '200px'
               }}
             >
