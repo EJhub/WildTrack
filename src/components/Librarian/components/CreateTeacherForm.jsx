@@ -1,3 +1,4 @@
+// Modified CreateTeacherForm.js with subject dropdown
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -39,6 +40,9 @@ const CreateTeacherForm = ({ open, onClose }) => {
     section: '',
     idNumber: '',
   });
+  
+  // Subject options
+  const subjectOptions = ['English', 'Filipino'];
   
   // Form validation states
   const [formValid, setFormValid] = useState(false);
@@ -500,16 +504,39 @@ const CreateTeacherForm = ({ open, onClose }) => {
               sx={{ mt: 2 }}
             />
 
+            {/* Modified Subject field - changed from text input to dropdown */}
             <TextField
-              label="Subject"
               name="subject"
+              label="Subject"
+              select
               value={formData.subject}
               onChange={handleInputChange}
-              variant="outlined"
               fullWidth
               required
+              variant="outlined"
               sx={{ mt: 2 }}
-            />
+              SelectProps={{
+                native: true,
+              }}
+              InputLabelProps={{ 
+                shrink: true, 
+                style: { 
+                  position: 'absolute', 
+                  top: -10, 
+                  left: -10, 
+                  backgroundColor: 'white', 
+                  padding: '0 5px', 
+                  zIndex: 1 
+                } 
+              }}
+            >
+              <option value="">Select Subject</option>
+              {subjectOptions.map((subject) => (
+                <option key={subject} value={subject}>
+                  {subject}
+                </option>
+              ))}
+            </TextField>
 
             <Grid container spacing={2} sx={{ mt: 0 }}>
               <Grid item xs={6}>

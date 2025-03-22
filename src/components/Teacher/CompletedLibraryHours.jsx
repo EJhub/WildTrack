@@ -160,6 +160,7 @@ const CompletedLibraryHours = () => {
   // Handle search input change
   const handleSearch = (e) => {
     setSearch(e.target.value);
+    setPage(0); // Reset to first page when searching
   };
 
   // Apply filters
@@ -177,6 +178,7 @@ const CompletedLibraryHours = () => {
     });
     
     fetchCompletedLibraryHours(filterParams);
+    setPage(0); // Reset to first page when filtering
   };
 
   // Reset filters
@@ -187,6 +189,7 @@ const CompletedLibraryHours = () => {
     setFilteredQuarter('');
     
     fetchCompletedLibraryHours();
+    setPage(0); // Reset to first page when resetting filters
   };
 
   // Filter locally by search term (for client-side filtering)
@@ -208,7 +211,7 @@ const CompletedLibraryHours = () => {
   };
   
   // Get current page records
-  const paginatedRecords = filteredStudents.slice(
+  const displayedRecords = filteredStudents.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -217,34 +220,73 @@ const CompletedLibraryHours = () => {
     <>
       <ToastContainer />
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 64px 32px', // Increased bottom padding
             flexGrow: 1,
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
             display: 'flex',
             flexDirection: 'column',
-            maxHeight: 'calc(100vh - 140px)',
-            overflow: 'auto',
-            backgroundColor: '#fff',
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           {/* Title */}
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 'bold', color: '#000', textAlign: 'left', marginBottom: 3 }}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              marginBottom: 3,
+            }}
           >
-            Completed Library Hours - {teacherGradeLevel} - {teacherSubject}
-          </Typography>
-          <Typography sx={{ color: '#000', fontWeight: 'bold', textAlign: 'right', marginTop: '-40px'}}>
-            Total no. of completed library hours: {filteredStudents.length}
-            <br />
-            Total no. of students: {new Set(filteredStudents.map(record => record.idNumber)).size}
-          </Typography>
+            <Typography
+              variant="h4"
+              sx={{ 
+                fontWeight: 'bold', 
+                color: '#000', 
+                textAlign: 'left',
+                fontSize: '32px'
+              }}
+            >
+              Completed Library Hours - {teacherGradeLevel} - {teacherSubject}
+            </Typography>
+            <Typography 
+              sx={{ 
+                color: '#000', 
+                fontWeight: 'bold', 
+                textAlign: 'right',
+              }}
+            >
+              Total no. of completed library hours: {filteredStudents.length}
+              <br />
+              Total no. of students: {new Set(filteredStudents.map(record => record.idNumber)).size}
+            </Typography>
+          </Box>
 
           {/* Search Bar */}
-          <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 3, gap: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              marginBottom: 3,
+            }}
+          >
             <TextField
               placeholder="Type here.."
               variant="outlined"
@@ -252,19 +294,13 @@ const CompletedLibraryHours = () => {
               value={search}
               onChange={handleSearch}
               sx={{
-                backgroundColor: '#f1f1f1',
-                borderRadius: '28px',
+                backgroundColor: '#fff',
+                borderRadius: '15px',
                 width: { xs: '100%', sm: '360px' },
-                '& .MuiOutlinedInput-root': { padding: '5px 10px' },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MenuIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
                     <SearchIcon />
                   </InputAdornment>
                 ),
@@ -273,76 +309,88 @@ const CompletedLibraryHours = () => {
           </Box>
 
           {/* Filter Section */}
-          <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 3, gap: 2, flexWrap: 'wrap' }}>
-            <TextField
-              label="Date From"
-              type="date"
-              variant="outlined"
-              size="small"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Date To"
-              type="date"
-              variant="outlined"
-              size="small"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
-              InputLabelProps={{ shrink: true }}
-            />
-            {/* Quarter filter */}
-            <TextField
-              label="Quarter"
-              select
-              variant="outlined"
-              size="small"
-              value={filteredQuarter}
-              onChange={(e) => setFilteredQuarter(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', minWidth: '150px' }}
-            >
-              <MenuItem value="">All Quarters</MenuItem>
-              <MenuItem value="First">First</MenuItem>
-              <MenuItem value="Second">Second</MenuItem>
-              <MenuItem value="Third">Third</MenuItem>
-              <MenuItem value="Fourth">Fourth</MenuItem>
-            </TextField>
-            <TextField
-              label="Academic Year"
-              select
-              variant="outlined"
-              size="small"
-              value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', minWidth: '200px' }}
-            >
-              <MenuItem value="">Select Academic Year</MenuItem>
-              <MenuItem value="2024-2025">2024-2025</MenuItem>
-              <MenuItem value="2023-2024">2023-2024</MenuItem>
-              <MenuItem value="2022-2023">2022-2023</MenuItem>
-            </TextField>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 2,
+              marginBottom: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                label="Date From"
+                type="date"
+                variant="outlined"
                 size="small"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Date To"
+                type="date"
+                variant="outlined"
+                size="small"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                InputLabelProps={{ shrink: true }}
+              />
+              {/* Quarter filter */}
+              <TextField
+                label="Quarter"
+                select
+                variant="outlined"
+                size="small"
+                value={filteredQuarter}
+                onChange={(e) => setFilteredQuarter(e.target.value)}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px', minWidth: '150px' }}
+              >
+                <MenuItem value="">All Quarters</MenuItem>
+                <MenuItem value="First">First</MenuItem>
+                <MenuItem value="Second">Second</MenuItem>
+                <MenuItem value="Third">Third</MenuItem>
+                <MenuItem value="Fourth">Fourth</MenuItem>
+              </TextField>
+              <TextField
+                label="Academic Year"
+                select
+                variant="outlined"
+                size="small"
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px', minWidth: '200px' }}
+              >
+                <MenuItem value="">Select Academic Year</MenuItem>
+                <MenuItem value="2024-2025">2024-2025</MenuItem>
+                <MenuItem value="2023-2024">2023-2024</MenuItem>
+                <MenuItem value="2022-2023">2022-2023</MenuItem>
+              </TextField>
+              <Button
+                variant="contained"
                 onClick={handleApplyFilters}
                 sx={{
-                  backgroundColor: '#FFD700',
-                  color: '#000',
-                  height: '40px',
-                  '&:hover': { backgroundColor: '#FFC107' },
+                  backgroundColor: "#FFD700",
+                  color: "#000",
+                  "&:hover": { backgroundColor: "#FFC107" },
                 }}
               >
-                Apply Filters
+                Filter
               </Button>
               <Button
-                size="small"
                 variant="outlined"
                 onClick={handleResetFilters}
                 sx={{
-                  height: '40px',
+                  borderColor: "#FFD700",
+                  color: "#000",
+                  "&:hover": { 
+                    backgroundColor: "rgba(255, 215, 0, 0.1)",
+                    borderColor: "#FFD700"
+                  },
                 }}
               >
                 Reset
@@ -350,33 +398,37 @@ const CompletedLibraryHours = () => {
             </Box>
           </Box>
 
-          {/* Table */}
+          {/* Table Container */}
           <TableContainer
             component={Paper}
             sx={{
-              flexGrow: 1,
               borderRadius: '15px',
-              overflow: 'auto',
-              maxHeight: 'calc(100vh - 345px)',
-              border: '1px solid #A85858',
+              boxShadow: 3,
+              overflow: 'visible', // Changed from 'auto' to 'visible'
+              marginTop: 3,
+              marginBottom: 5, // Added bottom margin
+              backgroundColor: "rgba(255, 255, 255, 0.9)",
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            <Table stickyHeader>
+            <Table sx={{ flexGrow: 1 }}> {/* Removed stickyHeader */}
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>
                     ID Number
                   </TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>
                     Name
                   </TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>
                     Subject
                   </TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>
                     Quarter
                   </TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold', backgroundColor: '#A85858' }}>
+                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>
                     Date Completed
                   </TableCell>
                 </TableRow>
@@ -395,14 +447,14 @@ const CompletedLibraryHours = () => {
                       {error}
                     </TableCell>
                   </TableRow>
-                ) : paginatedRecords.length === 0 ? (
+                ) : displayedRecords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                      No completed library hours found
+                    <TableCell colSpan={5} align="center">
+                      No completed library hours found matching your criteria
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedRecords.map((record, index) => (
+                  displayedRecords.map((record, index) => (
                     <TableRow key={index} hover>
                       <TableCell>{record.idNumber}</TableCell>
                       <TableCell>{record.name}</TableCell>
@@ -414,19 +466,27 @@ const CompletedLibraryHours = () => {
                 )}
               </TableBody>
             </Table>
-          </TableContainer>
 
-          {/* Pagination */}
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 15]}
-            component="div"
-            count={filteredStudents.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            sx={{ alignSelf: 'center', marginTop: 2 }}
-          />
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={filteredStudents.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              sx={{
+                paddingTop: 2,
+                paddingBottom: 2, // Added bottom padding
+                backgroundColor: "transparent",
+                fontWeight: "bold",
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                position: "relative", // Ensure visibility
+              }}
+            />
+          </TableContainer>
         </Box>
       </Box>
     </>

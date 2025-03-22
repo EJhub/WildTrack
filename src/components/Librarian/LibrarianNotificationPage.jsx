@@ -143,43 +143,42 @@ const LibrarianNotificationPage = () => {
   };
 
   // Handle reset password request
- // This function should be updated in your LibrarianNotificationPage component
-const handleResetPassword = async (notification) => {
-  const idNumber = extractUserIdFromMessage(notification.message);
-  
-  if (!idNumber) {
-    showSnackbar("Could not identify the user from the notification", "error");
-    return;
-  }
-  
-  try {
-    // First, get the user details to determine if they're a student or teacher
-    const userResponse = await axios.get(`http://localhost:8080/api/users/${idNumber}`);
+  const handleResetPassword = async (notification) => {
+    const idNumber = extractUserIdFromMessage(notification.message);
     
-    if (userResponse.data) {
-      const userId = userResponse.data.id;
-      const userRole = userResponse.data.role;
-      
-      // Mark notification as read
-      await handleMarkAsRead(notification.id);
-      
-      // Navigate to the appropriate page with a query parameter
-      if (userRole === 'Student') {
-        navigate(`/librarian/LibrarianManageStudent?resetPasswordUserId=${userId}`);
-      } else if (userRole === 'Teacher') {
-        navigate(`/librarian/LibrarianManageTeacher?resetPasswordUserId=${userId}`);
-      } else {
-        // For other roles
-        navigate(`/librarian/UserManagement?resetPasswordUserId=${userId}`);
-      }
-    } else {
-      showSnackbar("User not found", "error");
+    if (!idNumber) {
+      showSnackbar("Could not identify the user from the notification", "error");
+      return;
     }
-  } catch (err) {
-    console.error('Error processing password reset:', err);
-    showSnackbar("Failed to process password reset request", "error");
-  }
-};
+    
+    try {
+      // First, get the user details to determine if they're a student or teacher
+      const userResponse = await axios.get(`http://localhost:8080/api/users/${idNumber}`);
+      
+      if (userResponse.data) {
+        const userId = userResponse.data.id;
+        const userRole = userResponse.data.role;
+        
+        // Mark notification as read
+        await handleMarkAsRead(notification.id);
+        
+        // Navigate to the appropriate page with a query parameter
+        if (userRole === 'Student') {
+          navigate(`/librarian/LibrarianManageStudent?resetPasswordUserId=${userId}`);
+        } else if (userRole === 'Teacher') {
+          navigate(`/librarian/LibrarianManageTeacher?resetPasswordUserId=${userId}`);
+        } else {
+          // For other roles
+          navigate(`/librarian/UserManagement?resetPasswordUserId=${userId}`);
+        }
+      } else {
+        showSnackbar("User not found", "error");
+      }
+    } catch (err) {
+      console.error('Error processing password reset:', err);
+      showSnackbar("Failed to process password reset request", "error");
+    }
+  };
 
   // Menu handlers
   const handleMenuOpen = (event, notification) => {
@@ -290,16 +289,33 @@ const handleResetPassword = async (notification) => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <>
       <NavBar />
-      <Box sx={{ display: 'flex', flexGrow: 1 }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 120px 32px', // Increased bottom padding
             flexGrow: 1,
             backgroundColor: '#f5f5f5',
-            overflow: 'auto',
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Ensure content area fills available height
+            '&::-webkit-scrollbar': { // Custom scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Box sx={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -339,7 +355,11 @@ const handleResetPassword = async (notification) => {
                 <Typography variant="h6">No notifications</Typography>
               </Paper>
             ) : (
-              <Paper sx={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '15px' }}>
+              <Paper sx={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+                borderRadius: '15px',
+                marginBottom: 4, // Added bottom margin
+              }}>
                 <List>
                   {notifications.map((notification, index) => (
                     <React.Fragment key={notification.id}>
@@ -493,6 +513,9 @@ const handleResetPassword = async (notification) => {
                 </List>
               </Paper>
             )}
+            
+            {/* Extra spacer to ensure scrollability */}
+            <Box sx={{ height: 60, width: '100%' }} />
           </Box>
         </Box>
       </Box>
@@ -618,7 +641,7 @@ const handleResetPassword = async (notification) => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    </Box>
+    </>
   );
 };
 

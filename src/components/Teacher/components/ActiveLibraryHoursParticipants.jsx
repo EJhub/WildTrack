@@ -199,7 +199,7 @@ const ActiveLibraryHoursParticipants = () => {
         datasets: [{
           label: 'No Data Available',
           data: [],
-          backgroundColor: '#A85858',
+          backgroundColor: '#8C383E',
           borderColor: '#000',
           borderWidth: 1,
         }]
@@ -237,7 +237,7 @@ const ActiveLibraryHoursParticipants = () => {
       datasets: [{
         label: labelParts.join(' - '),
         data: values,
-        backgroundColor: '#A85858',
+        backgroundColor: '#8C383E',
         borderColor: '#000',
         borderWidth: 1,
       }]
@@ -321,6 +321,26 @@ const ActiveLibraryHoursParticipants = () => {
       dateFrom,
       dateTo
     });
+  };
+
+  // Handle clear filters button click
+  const handleClearFilters = () => {
+    setSection('');
+    setDateFrom('');
+    setDateTo('');
+    setAcademicYear('');
+    setAppliedFilters({
+      section: '',
+      academicYear: '',
+      dateRange: { from: '', to: '' }
+    });
+    
+    // Refresh data with cleared filters
+    fetchParticipantsData({
+      gradeLevel
+    });
+    
+    toast.info('Filters cleared');
   };
 
   // Effect to update chart x-axis label when dataView changes
@@ -421,7 +441,16 @@ const ActiveLibraryHoursParticipants = () => {
     <>
       <ToastContainer />
       {/* Filter Section */}
-      <Box sx={{ width: '100%', marginBottom: 3 }}>
+      <Box 
+        sx={{ 
+          width: '100%', 
+          marginBottom: 3,
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          borderRadius: '15px',
+          padding: 2,
+          boxShadow: 1
+        }}
+      >
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography sx={{ marginRight: 1 }}>Date From:</Typography>
@@ -431,8 +460,12 @@ const ActiveLibraryHoursParticipants = () => {
               size="small"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '180px' }}
               InputLabelProps={{ shrink: true }}
+              sx={{
+                backgroundColor: '#fff',
+                borderRadius: '15px',
+                width: '180px'
+              }}
             />
           </Box>
           
@@ -444,8 +477,12 @@ const ActiveLibraryHoursParticipants = () => {
               size="small"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px', width: '180px' }}
               InputLabelProps={{ shrink: true }}
+              sx={{
+                backgroundColor: '#fff',
+                borderRadius: '15px',
+                width: '180px'
+              }}
             />
           </Box>
           
@@ -456,7 +493,7 @@ const ActiveLibraryHoursParticipants = () => {
                 size="small"
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
-                sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                 displayEmpty
               >
                 <MenuItem value="">Select Academic Year</MenuItem>
@@ -470,32 +507,15 @@ const ActiveLibraryHoursParticipants = () => {
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
               variant="outlined"
-              size="small"
-              onClick={() => {
-                setSection('');
-                setDateFrom('');
-                setDateTo('');
-                setAcademicYear('');
-                setAppliedFilters({
-                  section: '',
-                  academicYear: '',
-                  dateRange: { from: '', to: '' }
-                });
-                
-                // Refresh data with cleared filters
-                fetchParticipantsData({
-                  gradeLevel
-                });
-                
-                toast.info('Filters cleared');
-              }}
+              onClick={handleClearFilters}
               sx={{
-                borderRadius: '5px',
-                borderColor: '#A85858',
-                color: '#A85858',
-                '&:hover': {
-                  backgroundColor: 'rgba(168, 88, 88, 0.1)',
+                borderColor: "#FFD700",
+                color: "#000",
+                "&:hover": { 
+                  backgroundColor: "rgba(255, 215, 0, 0.1)",
+                  borderColor: "#FFD700"
                 },
+                borderRadius: '15px',
               }}
               disabled={!appliedFilters.section && !appliedFilters.academicYear && !appliedFilters.dateRange.from && !appliedFilters.dateRange.to}
             >
@@ -504,15 +524,12 @@ const ActiveLibraryHoursParticipants = () => {
             
             <Button
               variant="contained"
-              size="small"
               onClick={handleFilterClick}
               sx={{
-                borderRadius: '5px',
-                backgroundColor: '#A85858',
-                color: '#fff',
-                '&:hover': {
-                  backgroundColor: '#8B3D3D',
-                },
+                backgroundColor: "#FFD700",
+                color: "#000",
+                "&:hover": { backgroundColor: "#FFC107" },
+                borderRadius: '15px',
               }}
             >
               Apply Filters
@@ -528,7 +545,7 @@ const ActiveLibraryHoursParticipants = () => {
                 size="small"
                 value={gradeLevel}
                 onChange={(e) => setGradeLevel(e.target.value)}
-                sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                 displayEmpty
                 disabled={!!teacherGradeLevel} // Disable if teacher has assigned grade
               >
@@ -550,7 +567,7 @@ const ActiveLibraryHoursParticipants = () => {
                 size="small"
                 value={section}
                 onChange={(e) => setSection(e.target.value)}
-                sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                 displayEmpty
                 // Always enabled to allow section changes
               >
@@ -571,7 +588,7 @@ const ActiveLibraryHoursParticipants = () => {
                 size="small"
                 value={dataView}
                 onChange={(e) => setDataView(e.target.value)}
-                sx={{ backgroundColor: '#f1f1f1', borderRadius: '5px' }}
+                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
               >
                 <MenuItem value="Weekly">Weekly</MenuItem>
                 <MenuItem value="Monthly">Monthly</MenuItem>
@@ -581,10 +598,66 @@ const ActiveLibraryHoursParticipants = () => {
         </Box>
       </Box>
       
+      {/* Active Filters Display */}
+      {(appliedFilters.section || appliedFilters.academicYear || appliedFilters.dateRange.from || appliedFilters.dateRange.to) && (
+        <Box sx={{ 
+          mt: 1, 
+          mb: 2, 
+          p: 1.5, 
+          bgcolor: 'rgba(255, 215, 0, 0.1)', 
+          borderRadius: '15px',
+          border: '1px solid rgba(255, 215, 0, 0.3)' 
+        }}>
+          <Typography variant="subtitle2" fontWeight="bold">Active Filters:</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+            {appliedFilters.section && (
+              <Chip 
+                label={`Section: ${appliedFilters.section}`} 
+                size="small" 
+                variant="outlined"
+                sx={{ borderColor: '#FFD700', color: '#000' }}
+              />
+            )}
+            {appliedFilters.academicYear && (
+              <Chip 
+                label={`Academic Year: ${appliedFilters.academicYear}`} 
+                size="small" 
+                variant="outlined"
+                sx={{ borderColor: '#FFD700', color: '#000' }}
+              />
+            )}
+            {appliedFilters.dateRange.from && (
+              <Chip 
+                label={`From: ${appliedFilters.dateRange.from}`} 
+                size="small" 
+                variant="outlined"
+                sx={{ borderColor: '#FFD700', color: '#000' }}
+              />
+            )}
+            {appliedFilters.dateRange.to && (
+              <Chip 
+                label={`To: ${appliedFilters.dateRange.to}`} 
+                size="small" 
+                variant="outlined"
+                sx={{ borderColor: '#FFD700', color: '#000' }}
+              />
+            )}
+          </Box>
+        </Box>
+      )}
+      
       {/* Chart Section */}
-      <Paper sx={{ padding: 3, borderRadius: '15px', border: '1px solid #ddd' }}>
+      <Paper 
+        sx={{ 
+          padding: 3, 
+          borderRadius: '15px', 
+          boxShadow: 3,
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          marginBottom: 4
+        }}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#8C383E' }}>
             Active Library Hours Participants - {teacherSubject || 'All Subjects'}
             {appliedFilters.section ? ` - Section ${appliedFilters.section}` : ''}
             {appliedFilters.academicYear ? ` - AY ${appliedFilters.academicYear}` : ''}
@@ -593,7 +666,7 @@ const ActiveLibraryHoursParticipants = () => {
             <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center' }}>
               Legend:
               <Box sx={{ display: 'flex', alignItems: 'center', marginLeft: 1 }}>
-                <Box sx={{ width: 12, height: 12, backgroundColor: '#A85858', marginRight: 0.5 }}></Box>
+                <Box sx={{ width: 12, height: 12, backgroundColor: '#8C383E', marginRight: 0.5 }}></Box>
                 <Typography variant="body2">Active Participants</Typography>
               </Box>
             </Typography>
@@ -605,47 +678,6 @@ const ActiveLibraryHoursParticipants = () => {
           {appliedFilters.section ? ` - Section ${appliedFilters.section}` : ''}
           {appliedFilters.academicYear ? ` - Academic Year ${appliedFilters.academicYear}` : ''}
         </Typography>
-        
-        {/* Active Filters Display */}
-        {(appliedFilters.section || appliedFilters.academicYear || appliedFilters.dateRange.from || appliedFilters.dateRange.to) && (
-          <Box sx={{ mt: 1, mb: 2, p: 1.5, bgcolor: 'rgba(168, 88, 88, 0.1)', borderRadius: 1 }}>
-            <Typography variant="subtitle2" fontWeight="bold">Active Filters:</Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-              {appliedFilters.section && (
-                <Chip 
-                  label={`Section: ${appliedFilters.section}`} 
-                  size="small" 
-                  color="primary" 
-                  variant="outlined"
-                />
-              )}
-              {appliedFilters.academicYear && (
-                <Chip 
-                  label={`Academic Year: ${appliedFilters.academicYear}`} 
-                  size="small" 
-                  color="primary" 
-                  variant="outlined"
-                />
-              )}
-              {appliedFilters.dateRange.from && (
-                <Chip 
-                  label={`From: ${appliedFilters.dateRange.from}`} 
-                  size="small" 
-                  color="primary" 
-                  variant="outlined"
-                />
-              )}
-              {appliedFilters.dateRange.to && (
-                <Chip 
-                  label={`To: ${appliedFilters.dateRange.to}`} 
-                  size="small" 
-                  color="primary" 
-                  variant="outlined"
-                />
-              )}
-            </Box>
-          </Box>
-        )}
         
         <Box sx={{ height: '350px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           {loading ? (
@@ -668,7 +700,7 @@ const ActiveLibraryHoursParticipants = () => {
               '&:hover': {
                 backgroundColor: '#FFC107',
               },
-              borderRadius: '20px',
+              borderRadius: '15px',
             }}
           >
             Export PDF
@@ -676,12 +708,12 @@ const ActiveLibraryHoursParticipants = () => {
           <Button
             variant="contained"
             sx={{
-              backgroundColor: '#A85858',
+              backgroundColor: '#8C383E',
               color: '#fff',
               '&:hover': {
-                backgroundColor: '#8B3D3D',
+                backgroundColor: '#6e2c30',
               },
-              borderRadius: '20px',
+              borderRadius: '15px',
             }}
           >
             Export Excel

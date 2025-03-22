@@ -323,16 +323,33 @@ const BookLog = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: "flex", height: "100vh" }}>
+      <Box 
+        sx={{ 
+          display: "flex", 
+          height: "100vh",
+          overflow: "hidden" // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
-            padding: 4,
+            padding: "32px 32px 64px 32px", // Increased bottom padding
             flexGrow: 1,
             backgroundImage: 'url("/studentbackground.png")',
             backgroundSize: "cover",
             backgroundPosition: "center",
-            overflow: "auto",
+            overflow: "auto", // Enable scrolling for main content
+            height: "100%", // Fill available height
+            display: "flex",
+            flexDirection: "column",
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Box
@@ -488,13 +505,16 @@ const BookLog = () => {
             sx={{
               borderRadius: '15px',
               boxShadow: 3,
-              overflow: 'auto',
-              maxHeight: 'calc(100vh - 340px)',
+              overflow: 'visible', // Changed from 'auto' to 'visible'
               marginTop: 3,
+              marginBottom: 5, // Added bottom margin
               backgroundColor: "rgba(255, 255, 255, 0.8)",
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            <Table stickyHeader sx={{ flexGrow: 1 }}>
+            <Table sx={{ flexGrow: 1 }}> {/* Removed stickyHeader */}
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Book Title</TableCell>
@@ -535,11 +555,13 @@ const BookLog = () => {
               onRowsPerPageChange={handleChangeRowsPerPage}
               sx={{
                 paddingTop: 2,
-                backgroundColor: "transparent", // Make background transparent
+                paddingBottom: 2, // Added bottom padding
+                backgroundColor: "transparent",
                 fontWeight: "bold",
-                display: "flex", // Use flexbox to align items
-                justifyContent: "center", // Center the pagination
+                display: "flex",
+                justifyContent: "center",
                 width: "100%",
+                position: "relative", // Ensure visibility
               }}
             />
           </TableContainer>

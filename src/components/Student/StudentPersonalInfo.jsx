@@ -244,26 +244,42 @@ const PersonalInformation = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: "flex", height: "100vh" }}>
+      <Box 
+        sx={{ 
+          display: "flex", 
+          height: "100vh",
+          overflow: "hidden" // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
             flexGrow: 1,
-            padding: 3,
+            padding: "32px 32px 64px 32px", // Increased bottom padding
             backgroundImage: 'url("/studentbackground.png")',
             backgroundSize: "cover",
             backgroundPosition: "center",
+            overflow: "auto", // Enable scrolling for main content
+            height: "100%", // Fill available height
             display: "flex",
             justifyContent: "center",
-            alignItems: "center",
+            alignItems: "flex-start", // Changed from center to flex-start for better scrolling
+            '&::-webkit-scrollbar': { // Show scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
-          <br></br>
           <Paper
             sx={{
               backgroundColor: "rgba(120, 27, 27, 0.8)",
               padding: 4,
               marginTop: "20px",
+              marginBottom: "50px", // Added margin bottom
               borderRadius: 2,
               maxWidth: 400,
               width: "90%",

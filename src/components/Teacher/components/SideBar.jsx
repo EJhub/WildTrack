@@ -68,7 +68,35 @@ const TeacherSideBar = () => {
           justifyContent: 'space-between',
         }}
       >
-        <List component="nav" sx={{ flexGrow: 1, paddingTop: '20px' }}>
+        {/* Icons moved to the top of sidebar and centered */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            paddingTop: '1.5rem',
+          }}
+        >
+          <IconButton 
+            onClick={handleReportClick} 
+            sx={{ 
+              minWidth: 0,
+              '&:hover': {
+                bgcolor: 'rgba(255, 215, 0, 0.1)'
+              },
+              borderRadius: '50%',
+              p: 1,
+              mr: 2
+            }}
+          >
+            <AssessmentIcon sx={{ color: '#FFD700' }} />
+          </IconButton>
+
+          <TeacherNotificationBadge />
+        </Box>
+        
+        <List component="nav" sx={{ flexGrow: 1, paddingTop: '10px' }}>
           {navigationItems.map((item) => (
             <ListItem
               key={item.path}
@@ -106,9 +134,9 @@ const TeacherSideBar = () => {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-around',
+            justifyContent: 'center',
             padding: '0.5rem 1rem 1rem',
-            flexDirection: isSmallScreen ? 'column' : 'row',
+            flexDirection: 'row',
             gap: 1
           }}
         >
@@ -120,6 +148,7 @@ const TeacherSideBar = () => {
               border: 'solid 2px',
               borderRadius: '12px',
               padding: '4px 12px',
+              width: '80%',
               minWidth: isSmallScreen ? '50px' : 'auto',
               '&:hover': {
                 backgroundColor: '#FFC107',
@@ -128,24 +157,6 @@ const TeacherSideBar = () => {
           >
             {isSmallScreen ? 'LO' : 'Log Out'}
           </Button>
-   
-          {/* Adding Report Icon Button */}
-          <IconButton 
-            onClick={handleReportClick} 
-            sx={{ 
-              minWidth: 0,
-              '&:hover': {
-                bgcolor: 'rgba(255, 215, 0, 0.1)'
-              },
-              borderRadius: '50%',
-              p: 1
-            }}
-          >
-            <AssessmentIcon sx={{ color: '#FFD700' }} />
-          </IconButton>
-   
-          {/* Using TeacherNotificationBadge component instead of inline Badge */}
-          <TeacherNotificationBadge />
         </Box>
       </Box>
       

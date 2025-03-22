@@ -44,11 +44,34 @@ const Analytics = () => {
   }, [viewParam]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+    <>
       <NavBar />
-      <Box sx={{ display: 'flex', flexGrow: 1 }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
-        <Box sx={{ flexGrow: 1, padding: 3 }}>
+        <Box
+          sx={{
+            padding: '32px 32px 160px 32px', // Increased bottom padding to 160px
+            flexGrow: 1,
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            display: 'flex',
+            flexDirection: 'column',
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
+          }}
+        >
           {/* Title with View Toggle Buttons */}
           <Box sx={{ 
             display: 'flex', 
@@ -107,7 +130,7 @@ const Analytics = () => {
             // ANALYTICS VIEW
             <>
               {/* Chart Type Buttons */}
-              <Box sx={{ display: 'flex', gap: 1, marginBottom: 3, justifyContent: 'flex-start' }}>
+              <Box sx={{ display: 'flex', gap: 1, marginBottom: 3, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
                 <Button
                   variant="contained"
                   sx={{
@@ -159,21 +182,32 @@ const Analytics = () => {
               </Box>
 
               {/* Chart Display */}
-              <Paper sx={{ 
-                padding: 2, 
-                borderRadius: 2, 
-                borderStyle: 'solid',
-                borderWidth: 1,
-                borderColor: '#ddd',
-                boxShadow: 'none',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
-                <Box sx={{ 
-                  width: '100%', 
+              <Paper 
+                sx={{ 
+                  padding: 2, 
+                  borderRadius: 2, 
+                  borderStyle: 'solid',
+                  borderWidth: 1,
+                  borderColor: '#ddd',
+                  boxShadow: 'none',
+                  overflow: 'visible', // Allow content to expand beyond container
                   position: 'relative',
-                  minHeight: '500px'
-                }}>
+                  flexGrow: 1, // Allow paper to grow within the container
+                  display: 'flex',
+                  flexDirection: 'column',
+                  marginBottom: '100px', // Add bottom margin to ensure export buttons are visible
+                }}
+              >
+                <Box 
+                  sx={{ 
+                    width: '100%', 
+                    position: 'relative',
+                    minHeight: '500px',
+                    flexGrow: 1, // Allow the box to grow
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
                   {selectedGraph === 'participants' ? (
                     <LibraryHoursParticipants />
                   ) : selectedGraph === 'frequency' ? (
@@ -182,17 +216,20 @@ const Analytics = () => {
                     <LibraryHoursCompletionRate />
                   )}
                 </Box>
-                
-                {/* Note: Export buttons are now inside each chart component */}
               </Paper>
             </>
           ) : (
             // REPORTS VIEW
-            <ReportsView />
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+              <ReportsView />
+            </Box>
           )}
+          
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 80, width: '100%' }} /> {/* Increased height to 80px */}
         </Box>
       </Box>
-    </Box>
+    </>
   );
 };
 

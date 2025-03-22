@@ -59,152 +59,214 @@ const SideBar = () => {
       <Box
         sx={{
           width: isSmallScreen ? '80px' : '250px',
-          height: 'auto',
+          height: '100%', // Take full height
           background: 'linear-gradient(to bottom, #CD6161, #8B3D3D)',
           padding: '0px',
           boxSizing: 'border-box',
           borderRight: '2px solid #000',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          position: 'relative', // Make this a positioning context
+          overflow: 'hidden', // Hide overflow
+          marginTop: '10px',
         }}
       >
-        <List component="nav" sx={{ flexGrow: 1, paddingTop: '20px' }}>
-          <ListItem
-            button
-            component={Link}
-            to="/librarian/Home"
-            sx={getListItemStyles('/librarian/Home')}
-          >
-            <ListItemText
-              primary={isSmallScreen ? 'H' : 'Dashboard'}
-              primaryTypographyProps={{
-                align: 'center',
-                fontWeight:
-                  location.pathname === '/librarian/Home' ? 'bold' : 'normal',
-              }}
-            />
-          </ListItem>
- 
-          <ListItem
-            button
-            component={Link}
-            to="/librarian/LibrarianStudentLibraryHours"
-            sx={getListItemStyles('/librarian/LibrarianStudentLibraryHours')}
-          >
-            <ListItemText
-              primary={isSmallScreen ? 'CLH' : 'Student Library Hours'}
-              primaryTypographyProps={{
-                align: 'center',
-                fontWeight:
-                  location.pathname ===
-                  '/librarian/LibrarianStudentLibraryHours'
-                    ? 'bold'
-                    : 'normal',
-              }}
-            />
-          </ListItem>
- 
-          <ListItem
-            button
-            component={Link}
-            to="/librarian/LibrarianAnalytics"
-            sx={getListItemStyles('/librarian/LibrarianAnalytics')}
-          >
-            <ListItemText
-              primary={isSmallScreen ? 'A' : 'Analytics and Reports'}
-              primaryTypographyProps={{
-                align: 'center',
-                fontWeight:
-                  location.pathname === '/librarian/LibrarianAnalytics'
-                    ? 'bold'
-                    : 'normal',
-              }}
-            />
-          </ListItem>
-          <br></br><br></br>
- 
-          {/* Manage Section */}
-          <ListItem button onClick={toggleManage} sx={{paddingY: '1rem', marginLeft: isSmallScreen ? 0 : '-60px'}}>
-            <ListItemText
-              primary={isSmallScreen ? 'M' : 'Manage'}
-              primaryTypographyProps={{
-                align: 'center',
-                fontWeight: 'bold',
-                color: '#FFD700',
-                textTransform: 'uppercase',
-              }}
-            />
-            {!isSmallScreen && (manageOpen ? <ExpandLessIcon sx={{ color: '#FFD700'}} /> : <ExpandMoreIcon sx={{ color: '#FFD700' }} />)}
-          </ListItem>
- 
-          {manageOpen && (
-            <>
-              <ListItem 
-                button
-                component={Link}
-                to="/librarian/LibrarianManageStudent"
-                sx={getListItemStyles('/librarian/LibrarianManageStudent')}
-              >
-                <ListItemText 
-                  primary={isSmallScreen ? 'S' : 'Student'} 
-                  primaryTypographyProps={{align: 'center'}}
-                />
-              </ListItem>
- 
-              <ListItem
-                button
-                component={Link}
-                to="/librarian/LibrarianManageTeacher"
-                sx={getListItemStyles('/librarian/LibrarianManageTeacher')}
-              >
-                <ListItemText 
-                  primary={isSmallScreen ? 'T' : 'Teacher'} 
-                  primaryTypographyProps={{align: 'center'}}
-                />
-              </ListItem>
- 
-              <ListItem
-                button
-                component={Link}
-                to="/librarian/LibrarianManageRecords"
-                sx={getListItemStyles('/librarian/LibrarianManageRecords')}
-              >
-                <ListItemText 
-                  primary={isSmallScreen ? 'R' : 'Records'} 
-                  primaryTypographyProps={{align: 'center'}}
-                />
-              </ListItem>
- 
-              <ListItem
-                button
-                component={Link}
-                to="/librarian/LibrarianManageBooks"
-                sx={getListItemStyles('/librarian/LibrarianManageBooks')}
-              >
-                <ListItemText 
-                  primary={isSmallScreen ? 'B' : 'Books'} 
-                  primaryTypographyProps={{align: 'center'}}
-                />
-              </ListItem>
- 
-              <ListItem
-                button
-                component={Link}
-                to="/librarian/Genre"
-                sx={getListItemStyles('/librarian/Genre')}
-              >
-                <ListItemText 
-                  primary={isSmallScreen ? 'G' : 'Genre'} 
-                  primaryTypographyProps={{align: 'center'}}
-                />
-              </ListItem>
-            </>
-          )}
-        </List>
- 
-        {/* Bottom Controls with Welcome Message */}
-        <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', pt: 2 }}>
+        {/* Icons moved to the top of sidebar and centered */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            paddingTop: '1.5rem',
+            zIndex: 2 // Ensure these stay on top
+          }}
+        >
+          <Button onClick={handleOpenSettings} sx={{ minWidth: 0, mr: 2 }}>
+            <SettingsIcon sx={{ color: '#FFD700' }} />
+          </Button>
+    
+          <LibrarianNotificationBadge />
+        </Box>
+
+        {/* Scrollable Navigation Area */}
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflowY: 'auto', // Vertical scroll only
+            overflowX: 'hidden', // Hide horizontal scrollbar
+            scrollbarWidth: 'none', // Hide scrollbar in Firefox
+            msOverflowStyle: 'none', // Hide scrollbar in IE/Edge
+            '&::-webkit-scrollbar': {
+              display: 'none', // Hide scrollbar completely in WebKit browsers
+            },
+            // Adding custom scrollbar for hover effect only
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '2px',
+              height: '100%',
+              opacity: 0,
+              background: 'rgba(255,215,0,0.15)',
+              borderRadius: '2px',
+              transition: 'opacity 0.3s ease',
+            },
+            '&:hover::after': {
+              opacity: 1,
+            }
+          }}
+        >
+          <List component="nav" sx={{ paddingTop: '10px' }}>
+            <ListItem
+              button
+              component={Link}
+              to="/librarian/Home"
+              sx={getListItemStyles('/librarian/Home')}
+            >
+              <ListItemText
+                primary={isSmallScreen ? 'H' : 'Dashboard'}
+                primaryTypographyProps={{
+                  align: 'center',
+                  fontWeight:
+                    location.pathname === '/librarian/Home' ? 'bold' : 'normal',
+                }}
+              />
+            </ListItem>
+  
+            <ListItem
+              button
+              component={Link}
+              to="/librarian/LibrarianCompletedHours"
+              sx={getListItemStyles('/librarian/LibrarianCompletedHours')}
+            >
+              <ListItemText
+                primary={isSmallScreen ? 'CLH' : 'Completed Library Hours'}
+                primaryTypographyProps={{
+                  align: 'center',
+                  fontWeight:
+                    location.pathname ===
+                    '/librarian/LibrarianCompletedHours'
+                      ? 'bold'
+                      : 'normal',
+                }}
+              />
+            </ListItem>
+  
+            <ListItem
+              button
+              component={Link}
+              to="/librarian/LibrarianAnalytics"
+              sx={getListItemStyles('/librarian/LibrarianAnalytics')}
+            >
+              <ListItemText
+                primary={isSmallScreen ? 'A' : 'Analytics and Reports'}
+                primaryTypographyProps={{
+                  align: 'center',
+                  fontWeight:
+                    location.pathname === '/librarian/LibrarianAnalytics'
+                      ? 'bold'
+                      : 'normal',
+                }}
+              />
+            </ListItem>
+            <br></br><br></br>
+  
+            {/* Manage Section */}
+            <ListItem button onClick={toggleManage} sx={{paddingY: '1rem', marginLeft: isSmallScreen ? 0 : '-60px'}}>
+              <ListItemText
+                primary={isSmallScreen ? 'M' : 'Manage'}
+                primaryTypographyProps={{
+                  align: 'center',
+                  fontWeight: 'bold',
+                  color: '#FFD700',
+                  textTransform: 'uppercase',
+                }}
+              />
+              {!isSmallScreen && (manageOpen ? <ExpandLessIcon sx={{ color: '#FFD700'}} /> : <ExpandMoreIcon sx={{ color: '#FFD700' }} />)}
+            </ListItem>
+  
+            {manageOpen && (
+              <>
+                <ListItem 
+                  button
+                  component={Link}
+                  to="/librarian/LibrarianManageStudent"
+                  sx={getListItemStyles('/librarian/LibrarianManageStudent')}
+                >
+                  <ListItemText 
+                    primary={isSmallScreen ? 'S' : 'Student'} 
+                    primaryTypographyProps={{align: 'center'}}
+                  />
+                </ListItem>
+  
+                <ListItem
+                  button
+                  component={Link}
+                  to="/librarian/LibrarianManageTeacher"
+                  sx={getListItemStyles('/librarian/LibrarianManageTeacher')}
+                >
+                  <ListItemText 
+                    primary={isSmallScreen ? 'T' : 'Teacher'} 
+                    primaryTypographyProps={{align: 'center'}}
+                  />
+                </ListItem>
+  
+                <ListItem
+                  button
+                  component={Link}
+                  to="/librarian/LibrarianManageRecords"
+                  sx={getListItemStyles('/librarian/LibrarianManageRecords')}
+                >
+                  <ListItemText 
+                    primary={isSmallScreen ? 'R' : 'Records'} 
+                    primaryTypographyProps={{align: 'center'}}
+                  />
+                </ListItem>
+  
+                <ListItem
+                  button
+                  component={Link}
+                  to="/librarian/LibrarianManageBooks"
+                  sx={getListItemStyles('/librarian/LibrarianManageBooks')}
+                >
+                  <ListItemText 
+                    primary={isSmallScreen ? 'B' : 'Books'} 
+                    primaryTypographyProps={{align: 'center'}}
+                  />
+                </ListItem>
+  
+                <ListItem
+                  button
+                  component={Link}
+                  to="/librarian/Genre"
+                  sx={getListItemStyles('/librarian/Genre')}
+                >
+                  <ListItemText 
+                    primary={isSmallScreen ? 'G' : 'Genre'} 
+                    primaryTypographyProps={{align: 'center'}}
+                  />
+                </ListItem>
+              </>
+            )}
+          </List>
+        </Box>
+  
+        {/* Fixed Footer Section */}
+        <Box 
+          sx={{ 
+            borderTop: '1px solid rgba(255,255,255,0.1)', 
+            pt: 2,
+            mt: 'auto', // Push to bottom
+            background: 'linear-gradient(to bottom, #8B3D3D, #8B3D3D)', // Match the background gradient
+            position: 'sticky',
+            bottom: 0,
+            width: '100%',
+            zIndex: 1,
+          }}
+        >
           {/* Welcome message above logout button */}
           {user && (
             <Box sx={{ px: 2, pb: 2, textAlign: 'center' }}>
@@ -227,9 +289,9 @@ const SideBar = () => {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isSmallScreen ? 'center' : 'space-around',
+              justifyContent: 'center',
               padding: '1rem',
-              flexDirection: isSmallScreen ? 'column' : 'row',
+              flexDirection: 'row',
               gap: 1
             }}
           >
@@ -241,12 +303,14 @@ const SideBar = () => {
                 border: 'solid 2px',
                 borderRadius: '12px',
                 padding: '4px 12px',
+                width: '80%',
                 minWidth: isSmallScreen ? '50px' : 'auto',
                 '&:hover': {
                   backgroundColor: '#FFC107',
                 },
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '4px'
               }}
             >
@@ -259,12 +323,6 @@ const SideBar = () => {
                 </>
               )}
             </Button>
-    
-            <Button onClick={handleOpenSettings} sx={{ minWidth: 0 }}>
-              <SettingsIcon sx={{ color: '#FFD700' }} />
-            </Button>
-    
-            <LibrarianNotificationBadge />
           </Box>
         </Box>
       </Box>

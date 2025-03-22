@@ -235,17 +235,32 @@ const LibrarianManageRecords = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
 
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 120px 32px', // Increased bottom padding
             flexGrow: 1,
             backgroundColor: '#ffffff',
             display: 'flex',
             flexDirection: 'column',
-            maxHeight: 'calc(100vh - 140px)',
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Typography
@@ -352,8 +367,10 @@ const LibrarianManageRecords = () => {
             sx={{
               flexGrow: 1,
               borderRadius: '15px',
-              overflow: 'auto',
-              maxHeight: 'calc(100vh - 340px)',
+              overflow: 'visible', // Changed from 'auto' to 'visible'
+              marginBottom: 5, // Added bottom margin for pagination
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <Table stickyHeader>
@@ -429,24 +446,31 @@ const LibrarianManageRecords = () => {
                   ))}
               </TableBody>
             </Table>
+            
+            {/* Integrated pagination inside the TableContainer */}
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={data.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              sx={{
+                paddingTop: 2,
+                paddingBottom: 2,
+                backgroundColor: 'transparent',
+                fontWeight: 'bold',
+                display: 'flex',
+                justifyContent: 'center',
+                width: '100%',
+                position: 'relative', // Ensure visibility
+              }}
+            />
           </TableContainer>
-
-          {/* Pagination Section */}
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={data.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',  // This will center the pagination horizontally
-              paddingTop: 2,
-              width: '100%',              // Ensures the pagination takes full width
-            }}
-          />
+          
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 60, width: '100%' }} />
 
           {/* Update Modal */}
           <UpdateModal />

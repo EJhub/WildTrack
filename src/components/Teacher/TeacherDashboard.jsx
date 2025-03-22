@@ -40,9 +40,11 @@ const TeacherDashboard = () => {
   const [gradeLevel, setGradeLevel] = useState('');
   const [section, setSection] = useState('');
   const [deadlines, setDeadlines] = useState([]);
+  const [assignedDeadlines, setAssignedDeadlines] = useState([]); // New state for assigned deadlines
   const [participantsData, setParticipantsData] = useState([]);
   const [participantsLoading, setParticipantsLoading] = useState(true);
   const [statisticsLoading, setStatisticsLoading] = useState(true);
+  const [assignedDeadlinesLoading, setAssignedDeadlinesLoading] = useState(true); // New loading state
   const [statistics, setStatistics] = useState({
     studentsInsideLibrary: 0,
     totalRegisteredStudents: 0
@@ -75,9 +77,10 @@ const TeacherDashboard = () => {
       // Create params for filtering
       const params = new URLSearchParams();
       
-      // Add grade level filter if specified
-      if (gradeLevel) {
-        params.append('gradeLevel', gradeLevel);
+      // Always include the teacher's assigned grade level if available
+      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
+      if (gradeToFilter) {
+        params.append('gradeLevel', gradeToFilter);
       }
       
       // Only add section filter if it's in the filterParams
@@ -105,7 +108,7 @@ const TeacherDashboard = () => {
     } finally {
       setStatisticsLoading(false);
     }
-  }, [gradeLevel, teacherSubject]);
+  }, [teacherAssignments.assignedGrade, gradeLevel, teacherSubject]);
 
   // Function to fetch teacher assignments (grade, section, and subject)
   const fetchTeacherAssignments = async () => {
@@ -170,6 +173,55 @@ const TeacherDashboard = () => {
     }
   };
 
+  // NEW FUNCTION: Fetch assigned deadlines (not affected by filters)
+  const fetchAssignedDeadlines = async () => {
+    try {
+      setAssignedDeadlinesLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Configure axios with auth token
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      // Build query parameters - ALWAYS filter by teacher's assigned grade level and subject
+      const params = new URLSearchParams();
+      
+      // IMPORTANT: Always use teacher's assigned grade level
+      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
+      if (gradeToFilter) {
+        params.append('gradeLevel', gradeToFilter);
+      }
+      
+      // Always use teacher's subject if available
+      if (teacherSubject) {
+        params.append('subject', teacherSubject);
+      }
+      
+      // Fetch assigned deadlines
+      const deadlinesResponse = await axios.get(`http://localhost:8080/api/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`);
+      
+      // Add client-side filtering to ensure only the teacher's grade level and subject is displayed
+      const filteredDeadlines = deadlinesResponse.data.filter(deadline => {
+        // Always filter by grade level
+        const gradeMatch = deadline.gradeLevel === gradeToFilter;
+        
+        // If teacher has an assigned subject, filter by that too
+        if (teacherSubject) {
+          return gradeMatch && deadline.subject === teacherSubject;
+        }
+        
+        // Otherwise just filter by grade
+        return gradeMatch;
+      });
+      
+      setAssignedDeadlines(filteredDeadlines);
+    } catch (error) {
+      console.error('Error fetching assigned deadlines:', error);
+      toast.error("Failed to fetch assigned deadlines: " + (error.response?.data?.message || error.message));
+    } finally {
+      setAssignedDeadlinesLoading(false);
+    }
+  };
+
   // Initial setup when component mounts
   useEffect(() => {
     // Check if user is authenticated and has Teacher role
@@ -191,7 +243,10 @@ const TeacherDashboard = () => {
     // Fetch dashboard statistics when grade level changes
     fetchDashboardStatistics();
     
-    // Function to fetch deadlines
+    // Fetch assigned deadlines (not affected by filters)
+    fetchAssignedDeadlines();
+    
+    // Function to fetch filtered deadlines (affected by filters)
     const fetchDeadlines = async () => {
       try {
         setLoading(true);
@@ -200,18 +255,37 @@ const TeacherDashboard = () => {
         // Configure axios with auth token
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        // Build query parameters - ALWAYS filter by teacher's grade level and subject
+        // Build query parameters - ALWAYS filter by teacher's assigned grade level and subject
         const params = new URLSearchParams();
-        if (gradeLevel) {
-          params.append('gradeLevel', gradeLevel);
+        
+        // IMPORTANT: Always use teacher's assigned grade level
+        const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
+        if (gradeToFilter) {
+          params.append('gradeLevel', gradeToFilter);
         }
+        
         if (teacherSubject) {
           params.append('subject', teacherSubject);
         }
         
         // Fetch deadlines with filters
         const deadlinesResponse = await axios.get(`http://localhost:8080/api/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`);
-        setDeadlines(deadlinesResponse.data);
+        
+        // Add client-side filtering to ensure only the teacher's grade level and subject is displayed
+        const filteredDeadlines = deadlinesResponse.data.filter(deadline => {
+          // Always filter by grade level
+          const gradeMatch = deadline.gradeLevel === gradeToFilter;
+          
+          // If teacher has an assigned subject, filter by that too
+          if (teacherSubject) {
+            return gradeMatch && deadline.subject === teacherSubject;
+          }
+          
+          // Otherwise just filter by grade
+          return gradeMatch;
+        });
+        
+        setDeadlines(filteredDeadlines);
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error("Failed to fetch data: " + (error.response?.data?.message || error.message));
@@ -227,8 +301,11 @@ const TeacherDashboard = () => {
         
         // Build query parameters
         const params = new URLSearchParams();
-        if (gradeLevel) {
-          params.append('gradeLevel', gradeLevel);
+        
+        // Always include the teacher's assigned grade level if available
+        const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
+        if (gradeToFilter) {
+          params.append('gradeLevel', gradeToFilter);
         }
         
         // Always use monthly view
@@ -265,13 +342,15 @@ const TeacherDashboard = () => {
     // Set up refresh intervals
     const participantsInterval = setInterval(fetchParticipantsData, 300000); // 5 minutes
     const statisticsInterval = setInterval(() => fetchDashboardStatistics(), 60000); // 1 minute
+    const assignedDeadlinesInterval = setInterval(fetchAssignedDeadlines, 60000); // 1 minute
     
     // Cleanup intervals when component unmounts
     return () => {
       clearInterval(participantsInterval);
       clearInterval(statisticsInterval);
+      clearInterval(assignedDeadlinesInterval);
     };
-  }, [user, gradeLevel, teacherSubject, fetchDashboardStatistics]); // Added teacherSubject dependency
+  }, [user, gradeLevel, teacherSubject, fetchDashboardStatistics, teacherAssignments.assignedGrade]); // Added teacherAssignments.assignedGrade dependency
 
   // Updated fetchParticipantsData function with date range and academic year filters
   const fetchParticipantsData = async (filterParams = {}) => {
@@ -280,8 +359,11 @@ const TeacherDashboard = () => {
       
       // Build query parameters
       const params = new URLSearchParams();
-      if (gradeLevel) {
-        params.append('gradeLevel', gradeLevel);
+      
+      // Always include the teacher's assigned grade level if available
+      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
+      if (gradeToFilter) {
+        params.append('gradeLevel', gradeToFilter);
       }
       
       // Always use monthly view
@@ -364,13 +446,9 @@ const TeacherDashboard = () => {
       
       toast.success("Library hours requirement submitted for approval!");
       
-      // Refresh deadlines - always filter by teacher's grade and subject
-      const params = new URLSearchParams();
-      if (gradeLevel) params.append('gradeLevel', gradeLevel);
-      if (teacherSubject) params.append('subject', teacherSubject);
-      
-      const deadlinesResponse = await axios.get(`http://localhost:8080/api/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`);
-      setDeadlines(deadlinesResponse.data);
+      // Refresh both deadlines (filtered and assigned)
+      fetchAssignedDeadlines();
+      applyFilters();
       
       handleClose();
     } catch (error) {
@@ -411,7 +489,13 @@ const TeacherDashboard = () => {
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
       if (academicYear) params.append('academicYear', academicYear);
-      if (gradeLevel) params.append('gradeLevel', gradeLevel);
+      
+      // IMPORTANT: Always use teacher's assigned grade level
+      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
+      if (gradeToFilter) {
+        params.append('gradeLevel', gradeToFilter);
+      }
+      
       if (section) params.append('section', section);
       if (quarter) params.append('quarter', quarter);
       // Always include teacher's subject filter
@@ -424,7 +508,21 @@ const TeacherDashboard = () => {
         },
       });
       
-      setDeadlines(response.data);
+      // Apply client-side filtering for both grade level and subject
+      const filteredDeadlines = response.data.filter(deadline => {
+        // Always filter by grade level
+        const gradeMatch = deadline.gradeLevel === gradeToFilter;
+        
+        // If teacher has an assigned subject, filter by that too
+        if (subjectToFilter) {
+          return gradeMatch && deadline.subject === subjectToFilter;
+        }
+        
+        // Otherwise just filter by grade
+        return gradeMatch;
+      });
+      
+      setDeadlines(filteredDeadlines);
       
       // Build filter description for toast
       const filterDescriptions = [];
@@ -458,7 +556,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  // Clear filters but maintain teacher's subject filter
+  // Clear filters but maintain teacher's subject filter and grade level
   const clearFilters = () => {
     setDateFrom('');
     setDateTo('');
@@ -475,12 +573,12 @@ const TeacherDashboard = () => {
     setFilteredSubject(teacherSubject);
     
     // Apply cleared filters
-    toast.info("Filters cleared (subject filter maintained)");
+    toast.info("Filters cleared (subject and grade level filters maintained)");
     applyFilters();
   };
 
-  // Prepare displayed deadlines for current page
-  const displayedDeadlines = deadlines.slice(
+  // Prepare displayed assigned deadlines for current page
+  const displayedAssignedDeadlines = assignedDeadlines.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -576,429 +674,448 @@ const TeacherDashboard = () => {
     <>
       <ToastContainer />
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 140px)' }}>
-          <Box sx={{ padding: 4 }}>
-            {/* Top row with student stats and library hours button */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              mb: 4
-            }}>
-              {/* Total Registered Students Box */}
-              <Paper
+        <Box
+          sx={{
+            flexGrow: 1,
+            padding: '32px 32px 120px 32px', // Increased bottom padding
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            '&::-webkit-scrollbar': { // Show scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
+          }}
+        >
+          {/* Top row with student stats and library hours button */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            mb: 4
+          }}>
+            {/* Total Registered Students Box */}
+            <Paper
+              sx={{
+                p: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                height: 140,
+                border: '1px solid #000000',
+                borderRadius: 2,
+                width: '300px'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <PersonIcon sx={{ color: '#000000', fontSize: 40, mr: 2 }} />
+                <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
+                  {statisticsLoading ? <CircularProgress size={24} /> : statistics.totalRegisteredStudents}
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
                 sx={{
-                  p: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: 140,
-                  border: '1px solid #000000',
-                  borderRadius: 2,
-                  width: '300px'
+                  backgroundColor: '#FFD700',
+                  color: '#000000',
+                  '&:hover': { backgroundColor: '#FFD700' },
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  width: '100%',
+                  fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <PersonIcon sx={{ color: '#000000', fontSize: 40, mr: 2 }} />
-                  <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
-                    {statisticsLoading ? <CircularProgress size={24} /> : statistics.totalRegisteredStudents}
-                  </Typography>
-                </Box>
-                <Button
-                  variant="contained"
-                  sx={{
-                    backgroundColor: '#FFD700',
-                    color: '#000000',
-                    '&:hover': { backgroundColor: '#FFD700' },
-                    textTransform: 'uppercase',
-                    fontWeight: 'bold',
-                    width: '100%',
-                    fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }
-                  }}
-                >
-                  <CheckIcon sx={{ color: '#800000', mr: 1 }} />
-                  {getStudentCountLabel()}
-                </Button>
-              </Paper>
-
-              {/* Set Library Hours Button */}
-              <Button 
-                variant="contained" 
-                color="warning" 
-                sx={{ 
-                  backgroundColor: '#FFD700', 
-                  color: '#000', 
-                  height: '50px',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase',
-                  px: 3,
-                  '&:hover': { backgroundColor: '#E6C300' }
-                }} 
-                onClick={handleClickOpen}
-              >
-                Set Library Hours
+                <CheckIcon sx={{ color: '#800000', mr: 1 }} />
+                {getStudentCountLabel()}
               </Button>
-            </Box>
-
-            {/* Filters Section */}
-            <Paper sx={{ p: 2, mb: 3, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>Filters</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    label="Date From"
-                    type="date"
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    label="Date To"
-                    type="date"
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    label="Academic Year"
-                    select
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                  >
-                    <MenuItem value="">Select Academic Year</MenuItem>
-                    <MenuItem value="2024-2025">2024-2025</MenuItem>
-                    <MenuItem value="2023-2024">2023-2024</MenuItem>
-                    <MenuItem value="2022-2023">2022-2023</MenuItem>
-                  </TextField>
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={3}>
-                  <TextField
-                    label="Grade Level"
-                    select
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={gradeLevel}
-                    onChange={(e) => setGradeLevel(e.target.value)}
-                    disabled={!!teacherAssignments.assignedGrade} // Disable if teacher has an assigned grade
-                  >
-                    <MenuItem value="">Choose here...</MenuItem>
-                    <MenuItem value="Grade 1">Grade 1</MenuItem>
-                    <MenuItem value="Grade 2">Grade 2</MenuItem>
-                    <MenuItem value="Grade 3">Grade 3</MenuItem>
-                    <MenuItem value="Grade 4">Grade 4</MenuItem>
-                    <MenuItem value="Grade 5">Grade 5</MenuItem>
-                    <MenuItem value="Grade 6">Grade 6</MenuItem>
-                  </TextField>
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={3}>
-                  <TextField
-                    label="Section"
-                    select
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={section}
-                    onChange={(e) => setSection(e.target.value)}
-                  >
-                    <MenuItem value="">All Sections</MenuItem>
-                    {availableSections.map((sectionItem) => (
-                      <MenuItem key={sectionItem.id} value={sectionItem.sectionName}>
-                       {sectionItem.sectionName}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={3}>
-                  <TextField
-                    label="Quarter"
-                    select
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={quarter}
-                    onChange={(e) => setQuarter(e.target.value)}
-                  >
-                    <MenuItem value="">All Quarters</MenuItem>
-                    <MenuItem value="First">First</MenuItem>
-                    <MenuItem value="Second">Second</MenuItem>
-                    <MenuItem value="Third">Third</MenuItem>
-                    <MenuItem value="Fourth">Fourth</MenuItem>
-                  </TextField>
-                </Grid>
-                
-                {/* Subject Filter - Disabled and pre-filled with teacher's subject */}
-                <Grid item xs={12} sm={6} md={3}>
-                  <TextField
-                    label="Subject"
-                    select
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={teacherSubject || subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    disabled={!!teacherSubject} // Disable if teacher has an assigned subject
-                  >
-                    <MenuItem value="">All Subjects</MenuItem>
-                    <MenuItem value="English">English</MenuItem>
-                    <MenuItem value="Filipino">Filipino</MenuItem>
-                  </TextField>
-                </Grid>
-                
-                <Grid item xs={12} display="flex" justifyContent="flex-end" gap={2}>
-                  <Button 
-                    variant="outlined"
-                    startIcon={<ClearIcon />}
-                    onClick={clearFilters}
-                    disabled={!hasActiveFilters()}
-                  >
-                    Clear Filters
-                  </Button>
-                  
-                  <Button 
-                    variant="contained"
-                    startIcon={<FilterAltIcon />}
-                    sx={{ 
-                      backgroundColor: "#FFD700", 
-                      color: "#000", 
-                      "&:hover": { backgroundColor: "#FFC107" } 
-                    }} 
-                    onClick={applyFilters}
-                  >
-                    Apply Filters
-                  </Button>
-                </Grid>
-              </Grid>
-
-              {/* Active Filters Display */}
-              {(hasActiveFilters() || teacherSubject) && (
-                <Box sx={{ mt: 2, p: 1.5, bgcolor: 'rgba(255, 215, 0, 0.1)', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" fontWeight="bold">Active Filters:</Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                    {filteredSection && (
-                      <Chip 
-                        label={`Section: ${filteredSection}`} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
-                    )}
-                    {filteredQuarter && (
-                      <Chip 
-                        label={`Quarter: ${filteredQuarter}`} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
-                    )}
-                    {teacherSubject && (
-                      <Chip 
-                        label={`Subject: ${teacherSubject}`} 
-                        size="small" 
-                        color="secondary" 
-                        variant="filled"
-                      />
-                    )}
-                    {filteredDateFrom && (
-                      <Chip 
-                        label={`From: ${filteredDateFrom}`} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
-                    )}
-                    {filteredDateTo && (
-                      <Chip 
-                        label={`To: ${filteredDateTo}`} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
-                    )}
-                    {filteredAcademicYear && (
-                      <Chip 
-                        label={`AY: ${filteredAcademicYear}`} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                </Box>
-              )}
             </Paper>
 
-            {/* Chart */}
-            <Paper sx={{ padding: '16px', backgroundColor: 'rgba(215, 101, 101, 0.8)', marginBottom: '24px', borderRadius: 2 }}>
-              <Typography variant="h6" sx={{ color: '#000', marginBottom: '16px' }}>
-                {getChartTitle()}
-              </Typography>
-              <Box sx={{ height: '350px' }}>
-                {participantsLoading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                    <CircularProgress />
-                  </Box>
-                ) : participantsData.length === 0 ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                    <Typography>No participants data available</Typography>
-                  </Box>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={participantsData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff" />
-                      <XAxis 
-                        dataKey="name" 
-                        stroke="#000000"
-                        label={{ 
-                          value: 'Month', 
-                          position: 'bottom',
-                          offset: -5 
-                        }}
-                      />
-                      <YAxis 
-                        stroke="#000000"
-                        label={{ 
-                          value: 'Number of Participants', 
-                          angle: -90, 
-                          position: 'insideLeft',
-                          offset: -5
-                        }}
-                      />
-                      <Tooltip 
-                        formatter={(value) => [`${value} participants`]}
-                        contentStyle={{ 
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #000000' 
-                        }}
-                      />
-                      <Legend />
-                      <Bar 
-                        dataKey="participants" 
-                        name={`Participants${filteredQuarter ? ` (${filteredQuarter} Quarter)` : ''}${teacherSubject ? ` (${teacherSubject})` : ''}`}
-                        fill="#FFD700" 
-                        stroke="#000000"
-                        strokeWidth={1}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </Box>
-              
-              {/* Information about participant counting */}
-              {(filteredQuarter || teacherSubject || filteredDateFrom || filteredDateTo || filteredAcademicYear) && (
-                <Box sx={{ mt: 2, p: 1, backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: 1 }}>
-                  <Typography variant="body2">
-                    <strong>Note:</strong> Each student is counted as 1 participant if they have any progress
-                    {filteredQuarter && ` in ${filteredQuarter} Quarter`}
-                    {teacherSubject && ` for ${teacherSubject}`}
-                    {filteredAcademicYear && ` during ${filteredAcademicYear}`}
-                    {(filteredDateFrom || filteredDateTo) && ` within the selected date range`}.
-                  </Typography>
-                </Box>
-              )}
-            </Paper>
-
-            {/* Assigned Deadline Table */}
-            <Typography variant="h6" sx={{ textAlign: 'left', marginBottom: 2 }}>
-              Assigned Deadlines for {teacherSubject || "All Subjects"}
-              {hasActiveFilters() && " (Filtered)"}
-            </Typography>
-
-            <TableContainer sx={{ borderRadius: 2, overflow: 'hidden' }}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#781B1B' }}>
-                    <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
-                    <TableCell sx={{ color: 'white' }}>Subject</TableCell>
-                    <TableCell sx={{ color: 'white' }}>Quarter</TableCell>
-                    <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
-                    <TableCell sx={{ color: 'white' }}>Due Date</TableCell>
-                    <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <CircularProgress size={24} sx={{ mr: 1 }} />
-                        Loading...
-                      </TableCell>
-                    </TableRow>
-                  ) : displayedDeadlines.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        {hasActiveFilters() ? 
-                          `No deadlines found with the current filters for ${teacherSubject || "your subject"}` : 
-                          `No deadlines found for ${teacherSubject || "your subject"}`}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    displayedDeadlines.map((row, index) => (
-                      <TableRow 
-                        key={index} 
-                        sx={{ 
-                          backgroundColor: row.approvalStatus === 'APPROVED' ? 'rgba(76, 175, 80, 0.1)' : 
-                                          row.approvalStatus === 'REJECTED' ? 'rgba(244, 67, 54, 0.1)' : 'white',
-                          color: 'black',
-                          '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' },
-                        }}
-                      >
-                        <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                          {row.gradeLevel}
-                        </TableCell>
-                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                          {row.subject}
-                        </TableCell>
-                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                          {row.quarter}
-                        </TableCell>
-                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                          {row.minutes}
-                        </TableCell>
-                        <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                          {new Date(row.deadline).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                          {getStatusChip(row.approvalStatus)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 15]}
-                component="div"
-                count={deadlines.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </Box>
+            {/* Set Library Hours Button */}
+            <Button 
+              variant="contained" 
+              color="warning" 
+              sx={{ 
+                backgroundColor: '#FFD700', 
+                color: '#000', 
+                height: '50px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                px: 3,
+                '&:hover': { backgroundColor: '#E6C300' }
+              }} 
+              onClick={handleClickOpen}
+            >
+              Set Library Hours
+            </Button>
           </Box>
+
+          {/* Filters Section */}
+          <Paper sx={{ p: 2, mb: 3, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Filters</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  label="Date From"
+                  type="date"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  label="Date To"
+                  type="date"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  label="Academic Year"
+                  select
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={academicYear}
+                  onChange={(e) => setAcademicYear(e.target.value)}
+                >
+                  <MenuItem value="">Select Academic Year</MenuItem>
+                  <MenuItem value="2024-2025">2024-2025</MenuItem>
+                  <MenuItem value="2023-2024">2023-2024</MenuItem>
+                  <MenuItem value="2022-2023">2022-2023</MenuItem>
+                </TextField>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  label="Grade Level"
+                  select
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={gradeLevel}
+                  onChange={(e) => setGradeLevel(e.target.value)}
+                  disabled={!!teacherAssignments.assignedGrade} // Disable if teacher has an assigned grade
+                >
+                  <MenuItem value="">Choose here...</MenuItem>
+                  <MenuItem value="Grade 1">Grade 1</MenuItem>
+                  <MenuItem value="Grade 2">Grade 2</MenuItem>
+                  <MenuItem value="Grade 3">Grade 3</MenuItem>
+                  <MenuItem value="Grade 4">Grade 4</MenuItem>
+                  <MenuItem value="Grade 5">Grade 5</MenuItem>
+                  <MenuItem value="Grade 6">Grade 6</MenuItem>
+                </TextField>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  label="Section"
+                  select
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={section}
+                  onChange={(e) => setSection(e.target.value)}
+                >
+                  <MenuItem value="">All Sections</MenuItem>
+                  {availableSections.map((sectionItem) => (
+                    <MenuItem key={sectionItem.id} value={sectionItem.sectionName}>
+                     {sectionItem.sectionName}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  label="Quarter"
+                  select
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={quarter}
+                  onChange={(e) => setQuarter(e.target.value)}
+                >
+                  <MenuItem value="">All Quarters</MenuItem>
+                  <MenuItem value="First">First</MenuItem>
+                  <MenuItem value="Second">Second</MenuItem>
+                  <MenuItem value="Third">Third</MenuItem>
+                  <MenuItem value="Fourth">Fourth</MenuItem>
+                </TextField>
+              </Grid>
+              
+              {/* Subject Filter - Disabled and pre-filled with teacher's subject */}
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  label="Subject"
+                  select
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={teacherSubject || subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  disabled={!!teacherSubject} // Disable if teacher has an assigned subject
+                >
+                  <MenuItem value="">All Subjects</MenuItem>
+                  <MenuItem value="English">English</MenuItem>
+                  <MenuItem value="Filipino">Filipino</MenuItem>
+                </TextField>
+              </Grid>
+              
+              <Grid item xs={12} display="flex" justifyContent="flex-end" gap={2}>
+                <Button 
+                  variant="outlined"
+                  startIcon={<ClearIcon />}
+                  onClick={clearFilters}
+                  disabled={!hasActiveFilters()}
+                >
+                  Clear Filters
+                </Button>
+                
+                <Button 
+                  variant="contained"
+                  startIcon={<FilterAltIcon />}
+                  sx={{ 
+                    backgroundColor: "#FFD700", 
+                    color: "#000", 
+                    "&:hover": { backgroundColor: "#FFC107" } 
+                  }} 
+                  onClick={applyFilters}
+                >
+                  Apply Filters
+                </Button>
+              </Grid>
+            </Grid>
+
+            {/* Active Filters Display */}
+            {(hasActiveFilters() || teacherSubject) && (
+              <Box sx={{ mt: 2, p: 1.5, bgcolor: 'rgba(255, 215, 0, 0.1)', borderRadius: 1 }}>
+                <Typography variant="subtitle2" fontWeight="bold">Active Filters:</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                  {filteredSection && (
+                    <Chip 
+                      label={`Section: ${filteredSection}`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                  )}
+                  {filteredQuarter && (
+                    <Chip 
+                      label={`Quarter: ${filteredQuarter}`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                  )}
+                  {teacherSubject && (
+                    <Chip 
+                      label={`Subject: ${teacherSubject}`} 
+                      size="small" 
+                      color="secondary" 
+                      variant="filled"
+                    />
+                  )}
+                  {filteredDateFrom && (
+                    <Chip 
+                      label={`From: ${filteredDateFrom}`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                  )}
+                  {filteredDateTo && (
+                    <Chip 
+                      label={`To: ${filteredDateTo}`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                  )}
+                  {filteredAcademicYear && (
+                    <Chip 
+                      label={`AY: ${filteredAcademicYear}`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              </Box>
+            )}
+          </Paper>
+
+          {/* Chart */}
+          <Paper sx={{ padding: '16px', backgroundColor: 'rgba(215, 101, 101, 0.8)', marginBottom: '24px', borderRadius: 2 }}>
+            <Typography variant="h6" sx={{ color: '#000', marginBottom: '16px' }}>
+              {getChartTitle()}
+            </Typography>
+            <Box sx={{ height: '350px' }}>
+              {participantsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <CircularProgress />
+                </Box>
+              ) : participantsData.length === 0 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <Typography>No participants data available</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={participantsData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff" />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke="#000000"
+                      label={{ 
+                        value: 'Month', 
+                        position: 'bottom',
+                        offset: -5 
+                      }}
+                    />
+                    <YAxis 
+                      stroke="#000000"
+                      label={{ 
+                        value: 'Number of Participants', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        offset: -5
+                      }}
+                    />
+                    <Tooltip 
+                      formatter={(value) => [`${value} participants`]}
+                      contentStyle={{ 
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #000000' 
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="participants" 
+                      name={`Participants${filteredQuarter ? ` (${filteredQuarter} Quarter)` : ''}${teacherSubject ? ` (${teacherSubject})` : ''}`}
+                      fill="#FFD700" 
+                      stroke="#000000"
+                      strokeWidth={1}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Box>
+            
+            {/* Information about participant counting */}
+            {(filteredQuarter || teacherSubject || filteredDateFrom || filteredDateTo || filteredAcademicYear) && (
+              <Box sx={{ mt: 2, p: 1, backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: 1 }}>
+                <Typography variant="body2">
+                  <strong>Note:</strong> Each student is counted as 1 participant if they have any progress
+                  {filteredQuarter && ` in ${filteredQuarter} Quarter`}
+                  {teacherSubject && ` for ${teacherSubject}`}
+                  {filteredAcademicYear && ` during ${filteredAcademicYear}`}
+                  {(filteredDateFrom || filteredDateTo) && ` within the selected date range`}.
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+
+          {/* Assigned Deadline Table - Now separate and unaffected by filters */}
+          <Typography variant="h6" sx={{ textAlign: 'left', marginBottom: 2 }}>
+            Assigned Deadlines for {teacherAssignments.assignedGrade || gradeLevel} {teacherSubject || ""}
+          </Typography>
+
+          <TableContainer sx={{ borderRadius: 2, overflow: 'hidden', mb: 4 }}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#781B1B' }}>
+                  <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Subject</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Quarter</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Due Date</TableCell>
+                  <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {assignedDeadlinesLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      <CircularProgress size={24} sx={{ mr: 1 }} />
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : displayedAssignedDeadlines.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      {`No assigned deadlines found for ${teacherAssignments.assignedGrade || gradeLevel} ${teacherSubject || ""}`}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  displayedAssignedDeadlines.map((row, index) => (
+                    <TableRow 
+                      key={index} 
+                      sx={{ 
+                        backgroundColor: row.approvalStatus === 'APPROVED' ? 'rgba(76, 175, 80, 0.1)' : 
+                                        row.approvalStatus === 'REJECTED' ? 'rgba(244, 67, 54, 0.1)' : 'white',
+                        color: 'black',
+                        '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' },
+                      }}
+                    >
+                      <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.gradeLevel}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.subject}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.quarter}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {row.minutes}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {new Date(row.deadline).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+                        {getStatusChip(row.approvalStatus)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '16px', marginBottom: '40px' }}>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 15]}
+              component="div"
+              count={assignedDeadlines.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </Box>
+          
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 60, width: '100%' }} />
         </Box>
       </Box>
       <SetLibraryHours 

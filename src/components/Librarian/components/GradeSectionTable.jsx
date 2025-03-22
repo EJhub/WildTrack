@@ -12,12 +12,14 @@ import {
   IconButton,
   Collapse,
   CircularProgress,
-  Typography
+  Typography,
+  Stack
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import AddGradeSection from './AddGradeSection';
 import AddSectionModal from './AddSectionModal';
+import ViewSectionModal from './ViewSectionModal';
 
 // GradeRow Component
 const GradeRow = ({ 
@@ -28,10 +30,13 @@ const GradeRow = ({
   status, 
   onArchiveGrade, 
   onArchiveSection,
-  onAddSection 
+  onAddSection,
+  onUpdateSection
 }) => {
   const [open, setOpen] = useState(false);
   const [isAddSectionModalOpen, setIsAddSectionModalOpen] = useState(false);
+  const [viewSectionModalOpen, setViewSectionModalOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState(null);
 
   const handleOpenAddSectionModal = () => {
     setIsAddSectionModalOpen(true);
@@ -44,6 +49,19 @@ const GradeRow = ({
   const handleSubmitSection = (sectionData) => {
     onAddSection(sectionData);
     handleCloseAddSectionModal();
+  };
+
+  const handleOpenViewModal = (section) => {
+    setSelectedSection({
+      ...section,
+      gradeLevel: grade // Add the grade level to the section data
+    });
+    setViewSectionModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setViewSectionModalOpen(false);
+    setSelectedSection(null);
   };
 
   return (
@@ -141,19 +159,32 @@ const GradeRow = ({
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="contained"
-                            onClick={() => onArchiveSection(section.id)}
-                            sx={{
-                              backgroundColor: section.status === 'active' ? '#FFD700' : '#90EE90',
-                              color: '#000',
-                              '&:hover': { 
-                                backgroundColor: section.status === 'active' ? '#FFC107' : '#32CD32'
-                              },
-                            }}
-                          >
-                            {section.status === 'active' ? 'Archive' : 'Unarchive'}
-                          </Button>
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              variant="contained"
+                              onClick={() => handleOpenViewModal(section)}
+                              sx={{
+                                backgroundColor: '#FFD700',
+                                color: '#000',
+                                '&:hover': { backgroundColor: '#1E90FF' },
+                              }}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="contained"
+                              onClick={() => onArchiveSection(section.id)}
+                              sx={{
+                                backgroundColor: section.status === 'active' ? '#FFD700' : '#90EE90',
+                                color: '#000',
+                                '&:hover': { 
+                                  backgroundColor: section.status === 'active' ? '#FFC107' : '#32CD32'
+                                },
+                              }}
+                            >
+                              {section.status === 'active' ? 'Archive' : 'Unarchive'}
+                            </Button>
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     ))
@@ -170,6 +201,14 @@ const GradeRow = ({
           </Collapse>
         </TableCell>
       </TableRow>
+
+      {/* View/Edit Section Modal */}
+      <ViewSectionModal
+        open={viewSectionModalOpen}
+        onClose={handleCloseViewModal}
+        section={selectedSection}
+        onUpdateSection={onUpdateSection}
+      />
     </>
   );
 };
@@ -285,6 +324,23 @@ const GradeSectionTable = () => {
     }
   };
 
+  const handleUpdateSection = async (sectionId, updateData) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/grade-sections/${sectionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (!response.ok) throw new Error('Failed to update section');
+      fetchGradeSections();
+    } catch (error) {
+      console.error('Error updating section:', error);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -322,6 +378,7 @@ const GradeSectionTable = () => {
                 onArchiveGrade={handleArchiveGrade}
                 onArchiveSection={handleArchiveSection}
                 onAddSection={handleAddSection}
+                onUpdateSection={handleUpdateSection}
               />
             ))}
           </TableBody>

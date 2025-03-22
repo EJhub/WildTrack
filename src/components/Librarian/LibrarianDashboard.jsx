@@ -3,7 +3,7 @@ import {
   Box, Typography, Grid, Button, Table, TableBody, 
   TableCell, TableContainer, TableHead, TableRow, Paper, 
   Divider, TablePagination, Select, MenuItem, TextField,
-  Container, IconButton, Tooltip, CircularProgress, Dialog,
+  IconButton, Tooltip, CircularProgress, Dialog,
   DialogActions, DialogContent, DialogContentText, DialogTitle,
   Snackbar, Alert, Chip, InputAdornment, FormControl
 } from '@mui/material';
@@ -582,12 +582,35 @@ const LibrarianDashboard = () => {
   };
 
   return (
-    <Box>
+    <>
       <ToastContainer />
       <NavBar />
-      <Box sx={{ display: 'flex' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
-        <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
+        <Box
+          sx={{
+            padding: '32px 32px 120px 32px', // Increased bottom padding even more
+            flexGrow: 1,
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            display: 'flex',
+            flexDirection: 'column',
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
+          }}
+        >
           {/* Summary Boxes */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {/* Students Inside Library Box */}
@@ -598,12 +621,14 @@ const LibrarianDashboard = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   height: 140,
-                  border: '2px solid #000000',
-                  borderRadius: 2
+                  borderRadius: '15px',
+                  boxShadow: 3,
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  border: '2px solid #8C383E',
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, }}>
-                  <AccessTimeIcon sx={{ color: '#000000', fontSize: 40, mr: 2 }} />
+                  <AccessTimeIcon sx={{ color: '#8C383E', fontSize: 40, mr: 2 }} />
                   <Typography variant="h4" component="div">
                     {loading ? 'Loading...' : statistics.studentsInsideLibrary}
                   </Typography>
@@ -613,10 +638,11 @@ const LibrarianDashboard = () => {
                   sx={{
                     backgroundColor: '#FFD700',
                     color: '#000000',
-                    '&:hover': { backgroundColor: '#FFD700' }
+                    borderRadius: '15px',
+                    '&:hover': { backgroundColor: '#FFC107' }
                   }}
                 >
-                  <CheckIcon sx={{ color: '#800000', mr: 1 }} />
+                  <CheckIcon sx={{ color: '#8C383E', mr: 1 }} />
                   Students Inside Library
                 </Button>
               </Paper>
@@ -630,12 +656,14 @@ const LibrarianDashboard = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   height: 140,
-                  border: '2px solid #000000',
-                  borderRadius: 2
+                  borderRadius: '15px',
+                  boxShadow: 3,
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  border: '2px solid #8C383E',
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <PersonIcon sx={{ color: '#000000', fontSize: 40, mr: 2 }} />
+                  <PersonIcon sx={{ color: '#8C383E', fontSize: 40, mr: 2 }} />
                   <Typography variant="h4" component="div">
                     {loading ? 'Loading...' : statistics.totalRegisteredStudents}
                   </Typography>
@@ -645,10 +673,11 @@ const LibrarianDashboard = () => {
                   sx={{
                     backgroundColor: '#FFD700',
                     color: '#000000',
-                    '&:hover': { backgroundColor: '#FFD700' }
+                    borderRadius: '15px',
+                    '&:hover': { backgroundColor: '#FFC107' }
                   }}
                 >
-                  <CheckIcon sx={{ color: '#800000', mr: 1 }} />
+                  <CheckIcon sx={{ color: '#8C383E', mr: 1 }} />
                   Total Registered Students
                 </Button>
               </Paper>
@@ -656,8 +685,14 @@ const LibrarianDashboard = () => {
           </Grid>
 
           {/* Filters */}
-          <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+          <Paper sx={{ 
+            p: 2, 
+            mb: 3, 
+            borderRadius: '15px',
+            boxShadow: 3,
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, color: '#8C383E', fontWeight: 'bold' }}>
               Filter Dashboard Data
             </Typography>
             
@@ -671,11 +706,8 @@ const LibrarianDashboard = () => {
                   size="small"
                   value={dateFrom}
                   onChange={handleDateFromChange}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment/>
-                    ),
-                  }}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                 />
               </Grid>
               
@@ -688,11 +720,8 @@ const LibrarianDashboard = () => {
                   size="small"
                   value={dateTo}
                   onChange={handleDateToChange}
-                  InputProps={{
-                    endAdornment: (
-                       <InputAdornment/>
-                    ),
-                  }}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                 />
               </Grid>
               
@@ -705,6 +734,7 @@ const LibrarianDashboard = () => {
                     onChange={handleGradeLevelChange}
                     displayEmpty
                     disabled={gradeLevelsLoading}
+                    sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                   >
                     <MenuItem value="">All Grades</MenuItem>
                     {gradeLevelsLoading ? (
@@ -729,6 +759,7 @@ const LibrarianDashboard = () => {
                     onChange={handleSectionChange}
                     displayEmpty
                     disabled={!selectedGradeLevel || sectionsLoading}
+                    sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                   >
                     <MenuItem value="">All Sections</MenuItem>
                     {sectionsLoading ? (
@@ -753,6 +784,7 @@ const LibrarianDashboard = () => {
                     onChange={handleAcademicYearChange}
                     displayEmpty
                     disabled={academicYearsLoading}
+                    sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                   >
                     <MenuItem value="">All Years</MenuItem>
                     {academicYearsLoading ? (
@@ -773,10 +805,15 @@ const LibrarianDashboard = () => {
                 <Box sx={{ display: 'flex', gap: 1, mt: 3 }}>
                   <Button
                     variant="contained"
-                    color="primary"
                     startIcon={<FilterAltIcon />}
                     onClick={handleApplyFilters}
-                    sx={{ flex: 1 }}
+                    sx={{ 
+                      flex: 1,
+                      backgroundColor: "#FFD700",
+                      color: "#000",
+                      borderRadius: '15px',
+                      "&:hover": { backgroundColor: "#FFC107" }
+                    }}
                   >
                     Apply
                   </Button>
@@ -784,7 +821,16 @@ const LibrarianDashboard = () => {
                     variant="outlined"
                     startIcon={<ClearIcon />}
                     onClick={handleClearFilters}
-                    sx={{ flex: 1 }}
+                    sx={{ 
+                      flex: 1,
+                      borderColor: "#FFD700",
+                      color: "#000",
+                      borderRadius: '15px',
+                      "&:hover": { 
+                        backgroundColor: "rgba(255, 215, 0, 0.1)",
+                        borderColor: "#FFD700"
+                      }
+                    }}
                     disabled={
                       !appliedFilters.section && 
                       !appliedFilters.academicYear && 
@@ -803,48 +849,57 @@ const LibrarianDashboard = () => {
             {(appliedFilters.section || appliedFilters.academicYear || 
               appliedFilters.gradeLevel || 
               appliedFilters.dateRange.from || appliedFilters.dateRange.to) && (
-              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant="subtitle2" sx={{ mr: 1 }}>Active Filters:</Typography>
-                {appliedFilters.gradeLevel && (
-                  <Chip 
-                    label={`Grade: ${appliedFilters.gradeLevel}`} 
-                    size="small" 
-                    color="primary" 
-                    variant="outlined"
-                  />
-                )}
-                {appliedFilters.section && (
-                  <Chip 
-                    label={`Section: ${appliedFilters.section}`} 
-                    size="small" 
-                    color="primary" 
-                    variant="outlined"
-                  />
-                )}
-                {appliedFilters.academicYear && (
-                  <Chip 
-                    label={`Academic Year: ${appliedFilters.academicYear}`} 
-                    size="small" 
-                    color="primary" 
-                    variant="outlined"
-                  />
-                )}
-                {appliedFilters.dateRange.from && (
-                  <Chip 
-                    label={`From: ${appliedFilters.dateRange.from}`} 
-                    size="small" 
-                    color="primary" 
-                    variant="outlined"
-                  />
-                )}
-                {appliedFilters.dateRange.to && (
-                  <Chip 
-                    label={`To: ${appliedFilters.dateRange.to}`} 
-                    size="small" 
-                    color="primary" 
-                    variant="outlined"
-                  />
-                )}
+              <Box sx={{ 
+                mt: 1, 
+                mb: 2, 
+                p: 1.5, 
+                bgcolor: 'rgba(255, 215, 0, 0.1)', 
+                borderRadius: '15px',
+                border: '1px solid rgba(255, 215, 0, 0.3)' 
+              }}>
+                <Typography variant="subtitle2" fontWeight="bold">Active Filters:</Typography>
+                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {appliedFilters.gradeLevel && (
+                    <Chip 
+                      label={`Grade: ${appliedFilters.gradeLevel}`} 
+                      size="small" 
+                      variant="outlined"
+                      sx={{ borderColor: '#FFD700', color: '#000' }}
+                    />
+                  )}
+                  {appliedFilters.section && (
+                    <Chip 
+                      label={`Section: ${appliedFilters.section}`} 
+                      size="small" 
+                      variant="outlined"
+                      sx={{ borderColor: '#FFD700', color: '#000' }}
+                    />
+                  )}
+                  {appliedFilters.academicYear && (
+                    <Chip 
+                      label={`Academic Year: ${appliedFilters.academicYear}`} 
+                      size="small" 
+                      variant="outlined"
+                      sx={{ borderColor: '#FFD700', color: '#000' }}
+                    />
+                  )}
+                  {appliedFilters.dateRange.from && (
+                    <Chip 
+                      label={`From: ${appliedFilters.dateRange.from}`} 
+                      size="small" 
+                      variant="outlined"
+                      sx={{ borderColor: '#FFD700', color: '#000' }}
+                    />
+                  )}
+                  {appliedFilters.dateRange.to && (
+                    <Chip 
+                      label={`To: ${appliedFilters.dateRange.to}`} 
+                      size="small" 
+                      variant="outlined"
+                      sx={{ borderColor: '#FFD700', color: '#000' }}
+                    />
+                  )}
+                </Box>
               </Box>
             )}
           </Paper>
@@ -853,8 +908,13 @@ const LibrarianDashboard = () => {
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {/* Participants Chart */}
             <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, backgroundColor: '#D98C8C', borderRadius: 2 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
+              <Paper sx={{ 
+                p: 2, 
+                borderRadius: '15px',
+                boxShadow: 3,
+                backgroundColor: "rgba(217, 140, 140, 0.8)", 
+              }}>
+                <Typography variant="h6" sx={{ mb: 2, color: '#8C383E', fontWeight: 'bold' }}>
                   {getParticipantsChartTitle()}
                 </Typography>
                 <Box sx={{ height: 300 }}>
@@ -926,8 +986,13 @@ const LibrarianDashboard = () => {
 
             {/* Completion Rate Chart */}
             <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, backgroundColor: '#D98C8C', borderRadius: 2 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
+              <Paper sx={{ 
+                p: 2, 
+                borderRadius: '15px',
+                boxShadow: 3,
+                backgroundColor: "rgba(217, 140, 140, 0.8)", 
+              }}>
+                <Typography variant="h6" sx={{ mb: 2, color: '#8C383E', fontWeight: 'bold' }}>
                   {getCompletionRateChartTitle()}
                 </Typography>
                 <Box sx={{ height: 300 }}>
@@ -990,20 +1055,30 @@ const LibrarianDashboard = () => {
           </Grid>
 
           {/* Approvals Table */}
-          <Paper sx={{ width: '100%', mb: 2 }}>
-            <Typography variant="h6" sx={{ p: 2 }}>
+          <Paper sx={{ 
+            width: '100%', 
+            mb: 4, 
+            borderRadius: '15px',
+            boxShadow: 3,
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            overflow: 'visible' // Changed from 'hidden' to 'visible'
+          }}>
+            <Typography variant="h6" sx={{ p: 2, color: '#8C383E', fontWeight: 'bold' }}>
               Pending Library Hours Requirement Approvals
             </Typography>
-            <TableContainer>
+            <TableContainer sx={{ 
+              maxHeight: 'none', // Remove any max height constraints
+              overflow: 'visible' // Allow content to extend if needed
+            }}>
               <Table>
                 <TableHead sx={{ backgroundColor: '#FFD700' }}>
                   <TableRow>
-                    <TableCell>Subject</TableCell>
-                    <TableCell>Quarter</TableCell>
-                    <TableCell>Grade Level</TableCell>
-                    <TableCell>Minutes Required</TableCell>
-                    <TableCell>Due Date</TableCell>
-                    <TableCell>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Subject</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Quarter</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Grade Level</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Minutes Required</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1023,7 +1098,7 @@ const LibrarianDashboard = () => {
                     pendingApprovals
                       .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                       .map((approval) => (
-                        <TableRow key={approval.id} sx={{ backgroundColor: '#CD6161' }}>
+                        <TableRow key={approval.id} sx={{ backgroundColor: 'rgba(205, 97, 97, 0.2)' }}>
                           <TableCell>{approval.subject}</TableCell>
                           <TableCell>{approval.quarter}</TableCell>
                           <TableCell>{approval.gradeLevel}</TableCell>
@@ -1063,78 +1138,122 @@ const LibrarianDashboard = () => {
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
+              sx={{
+                paddingTop: 2,
+                paddingBottom: 2,
+                backgroundColor: "transparent",
+                fontWeight: "bold",
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                position: "relative",
+              }}
             />
           </Paper>
-        </Container>
+          
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 40, width: '100%' }} />
+        </Box>
       </Box>
       
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog - Updated UI */}
       <Dialog
         open={dialogOpen}
         onClose={handleCloseDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: '15px',
+            width: '320px',
+            padding: '8px',
+            boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.25)',
+          }
+        }}
       >
-        <DialogTitle>
-          {actionType === 'approve' ? "Approve Library Hours Requirement" : "Reject Library Hours Requirement"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {actionType === 'approve' 
-              ? "Are you sure you want to approve this library hours requirement? Approved requirements will be visible to students."
-              : "Are you sure you want to reject this library hours requirement? Please provide a reason for the rejection."}
-          </DialogContentText>
-          {currentRequirement && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body1">
-                <strong>Subject:</strong> {currentRequirement.subject}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Quarter:</strong> {currentRequirement.quarter}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Grade Level:</strong>{currentRequirement.gradeLevel}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Minutes Required:</strong> {currentRequirement.minutes}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Due Date:</strong> {formatDate(currentRequirement.deadline)}
-              </Typography>
-            </Box>
-          )}
-          
-          {actionType === 'reject' && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', ml: 1, color: '#8C383E' }}>
+            {actionType === 'approve' ? "APPROVE DEADLINE" : "REJECT DEADLINE"}
+          </Typography>
+          <IconButton onClick={handleCloseDialog} size="small">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        
+        {currentRequirement && (
+          <Box sx={{ px: 1, mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>Subject:</strong> {currentRequirement.subject}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>Grade Level:</strong> {currentRequirement.gradeLevel}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>Quarter:</strong> {currentRequirement.quarter}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>Minutes:</strong> {currentRequirement.minutes} mins
+            </Typography>
+            <Typography variant="body2">
+              <strong>Due Date:</strong> {formatDate(currentRequirement.deadline)}
+            </Typography>
+          </Box>
+        )}
+        
+        {actionType === 'reject' && (
+          <Box sx={{ px: 1, mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Please provide reason for rejection:
+            </Typography>
             <TextField
-              margin="dense"
               id="rejection-reason"
-              label="Reason for Rejection"
               type="text"
               fullWidth
               variant="outlined"
               multiline
-              rows={3}
+              rows={2}
+              size="small"
               value={rejectionReason}
               onChange={handleRejectionReasonChange}
-              sx={{ mt: 3 }}
+              sx={{ backgroundColor: '#fff', borderRadius: '8px' }}
             />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary" disabled={actionInProgress}>
-            Cancel
+          </Box>
+        )}
+        
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+          <Button 
+            onClick={handleCloseDialog} 
+            variant="contained"
+            disabled={actionInProgress}
+            sx={{ 
+              backgroundColor: '#FFD700', 
+              color: '#000000', 
+              fontWeight: 'bold',
+              width: '80px',
+              borderRadius: '15px',
+              '&:hover': { backgroundColor: '#FFC107' }
+            }}
+          >
+            No
           </Button>
           <Button 
             onClick={handleConfirmAction} 
-            color={actionType === 'approve' ? "success" : "error"} 
             variant="contained"
             disabled={actionInProgress || (actionType === 'reject' && rejectionReason.trim() === '')}
+            sx={{ 
+              backgroundColor: '#FFD700', 
+              color: '#000000', 
+              fontWeight: 'bold',
+              width: '80px',
+              borderRadius: '15px',
+              '&:hover': { backgroundColor: '#FFC107' }
+            }}
           >
             {actionInProgress ? (
-              <CircularProgress size={24} />
+              <CircularProgress size={20} sx={{ color: '#000000' }} />
             ) : (
-              actionType === 'approve' ? "Approve" : "Reject"
+              "Yes"
             )}
           </Button>
-        </DialogActions>
+        </Box>
       </Dialog>
       
       {/* Snackbar for notifications */}
@@ -1148,7 +1267,7 @@ const LibrarianDashboard = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    </Box>
+    </>
   );
 };
 

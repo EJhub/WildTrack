@@ -127,6 +127,9 @@ const LibraryRequirementsProgress = () => {
         return;
       }
 
+      // Store the current count of requirements before refresh
+      const previousRequirementCount = requirements.length;
+
       // Call the force refresh endpoint
       const response = await axios.post(
         `http://localhost:8080/api/library-progress/refresh/${idNumber}`,
@@ -153,9 +156,19 @@ const LibraryRequirementsProgress = () => {
         );
         
         setSummary(summaryResponse.data);
+        
+        // Show appropriate message based on whether new requirements were added
+        if (response.data.requirements.length > previousRequirementCount) {
+          const newCount = response.data.requirements.length - previousRequirementCount;
+          toast.success(`${newCount} new requirement${newCount > 1 ? 's' : ''} added to your list.`);
+        } else {
+          if (previousRequirementCount === 0 && response.data.requirements.length === 0) {
+            toast.info("No library requirements are currently set for your grade level.");
+          } else {
+            toast.info("No new requirements found for your grade level.");
+          }
+        }
       }
-      
-      toast.success("Requirements refreshed. New requirements will appear if added.");
     } catch (error) {
       console.error("Error refreshing requirements:", error);
       toast.error("Failed to refresh requirements.");
@@ -276,16 +289,33 @@ const LibraryRequirementsProgress = () => {
     <>
       <ToastContainer />
       <NavBar />
-      <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      <Box 
+        sx={{ 
+          display: "flex", 
+          height: "100vh",
+          overflow: "hidden" // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
-            padding: 4,
+            padding: "32px 32px 200px 32px", // Significantly increased bottom padding to 200px
             flexGrow: 1,
             backgroundImage: "url('/studentbackground.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            overflow: "auto",
+            overflow: "auto", // Enable scrolling for main content
+            height: "100%", // Ensure content area fills available height
+            display: "flex",
+            flexDirection: "column",
+            '&::-webkit-scrollbar': { // Show scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
@@ -310,7 +340,7 @@ const LibraryRequirementsProgress = () => {
                 "&:hover": { backgroundColor: "#FFC107" },
               }}
             >
-              {refreshing ? "Checking..." : "Check for New Requirements"}
+              {refreshing ? "Checking..." : requirements.length === 0 ? "Initialize Requirements" : "Check for New Requirements"}
             </Button>
           </Box>
 
@@ -324,20 +354,25 @@ const LibraryRequirementsProgress = () => {
               }}
             >
               <Typography variant="h6" align="center">
-                No library hour requirements found for your grade level.
+                No library hour requirements found.
+              </Typography>
+              <Typography variant="body1" align="center" sx={{ mt: 2 }}>
+                {user?.grade 
+                  ? "Click the button below to initialize library requirements for your current grade level." 
+                  : "No grade level assigned. Please contact your administrator."}
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                 <Button
                   variant="contained"
                   onClick={refreshRequirements}
-                  disabled={refreshing}
+                  disabled={refreshing || !user?.grade}
                   sx={{
                     backgroundColor: "#FFD700",
                     color: "#000",
                     "&:hover": { backgroundColor: "#FFC107" },
                   }}
                 >
-                  {refreshing ? "Checking..." : "Check for New Requirements"}
+                  {refreshing ? "Initializing..." : "Initialize Requirements"}
                 </Button>
               </Box>
             </Card>
@@ -436,7 +471,8 @@ const LibraryRequirementsProgress = () => {
               sx={{
                 borderRadius: "15px",
                 boxShadow: 3,
-                overflow: "hidden",
+                overflow: "visible", // Change from hidden to visible
+                marginBottom: 4, // Add bottom margin
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
               }}
             >
@@ -581,18 +617,39 @@ const LibraryRequirementsProgress = () => {
 
           {/* Overall Progress */}
           {summary && (
-            <Card sx={{ mt: 4, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '15px', boxShadow: 3 }}>
-              <CardContent>
-                <Typography variant="h5" gutterBottom align="center">
+            <Card sx={{ 
+              mt: 4, 
+              mb: 8, // Significant bottom margin
+              backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+              borderRadius: '15px', 
+              boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.15)', // Stronger shadow
+              position: 'relative', 
+              zIndex: 1,
+              minHeight: 160, // Ensure minimum height
+              border: '2px solid #FFC107', // Add border for visibility
+            }}>
+              <CardContent sx={{ p: 3 }}> {/* Increased padding */}
+                <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
                   Overall Reading Progress
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ flexGrow: 1, mr: 2 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mb: 2,
+                  mt: 3, // More space above progress bar
+                }}>
+                  <Box sx={{ 
+                    flexGrow: 1, 
+                    mr: 2,
+                    height: 20, // Taller progress bar
+                    bgcolor: 'rgba(0,0,0,0.05)', // Background for the progress track
+                    borderRadius: 5,
+                  }}>
                     <LinearProgress 
                       variant="determinate" 
                       value={summary.overallPercentage}
                       sx={{
-                        height: 15,
+                        height: 20, // Taller height
                         borderRadius: 5,
                         '& .MuiLinearProgress-bar': {
                           backgroundColor: '#FFD700',
@@ -600,16 +657,19 @@ const LibraryRequirementsProgress = () => {
                       }}
                     />
                   </Box>
-                  <Typography variant="h6">
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', minWidth: '60px', textAlign: 'right' }}>
                     {Math.round(summary.overallPercentage)}%
                   </Typography>
                 </Box>
-                <Typography variant="body1" align="center">
+                <Typography variant="body1" align="center" sx={{ mt: 2, fontWeight: 'medium' }}>
                   {summary.totalMinutesRendered} minutes read out of {summary.totalMinutesRequired} minutes required
                 </Typography>
               </CardContent>
             </Card>
           )}
+          
+          {/* Extra spacer to ensure scrollability to the very bottom */}
+          <Box sx={{ height: 100, width: '100%' }} />
         </Box>
       </Box>
       

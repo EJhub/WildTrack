@@ -67,7 +67,35 @@ const SideBar = () => {
           justifyContent: 'space-between',
         }}
       >
-        <List component="nav" sx={{ flexGrow: 1, paddingTop: '50px' }}>
+        {/* Icons moved to the top of sidebar and centered */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            paddingTop: '1.5rem',
+          }}
+        >
+          <Button 
+            onClick={handleReportClick} 
+            sx={{ 
+              minWidth: 0,
+              '&:hover': {
+                bgcolor: 'rgba(255, 215, 0, 0.1)'
+              },
+              borderRadius: '50%',
+              p: 1,
+              mr: 2
+            }}
+          >
+            <AssessmentIcon sx={{ color: '#FFD700' }} />
+          </Button>
+
+          <NotificationBadge />
+        </Box>
+
+        <List component="nav" sx={{ flexGrow: 1, paddingTop: '10px' }}>
           <ListItem
             button
             onClick={() => navigateTo('/studentDashboard/TimeRemaining')}
@@ -144,7 +172,7 @@ const SideBar = () => {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-around',
+            justifyContent: 'center',
             padding: '1rem',
           }}
         >
@@ -156,7 +184,7 @@ const SideBar = () => {
               border: 'solid 2px',
               borderRadius: '12px',
               padding: '4px 12px',
-              minWidth: 'auto',
+              width: '80%', // Made the logout button wider
               '&:hover': {
                 backgroundColor: '#FFC107',
               },
@@ -164,22 +192,6 @@ const SideBar = () => {
           >
             Log Out
           </Button>
-
-          <Button 
-            onClick={handleReportClick} 
-            sx={{ 
-              minWidth: 0,
-              '&:hover': {
-                bgcolor: 'rgba(255, 215, 0, 0.1)'
-              },
-              borderRadius: '50%',
-              p: 1
-            }}
-          >
-            <AssessmentIcon sx={{ color: '#FFD700' }} />
-          </Button>
-
-          <NotificationBadge />
         </Box>
       </Box>
       

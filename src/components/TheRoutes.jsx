@@ -18,7 +18,7 @@ import LogInHomepage from "./Login/LoginHomePage";
 import LogIn from "./Login/Login";
 import Register from "./Login/Register";
 import LibrarianAnalytics from "./Librarian/LibrarianAnalytics";
-import LibrarianStudentLibraryHours from './Librarian/LibrarianStudentLibraryHours';
+import LibrarianCompletedHours from './Librarian/LibrarianCompletedHours';
 import LibrarianNASActivityLog from './Librarian/LibrarianNASActivityLog';
 import LibrarianManageTeacher from "./Librarian/ManageTeacher";
 import LibrarianManageRecords from "./Librarian/ManageRecords";
@@ -79,9 +79,9 @@ export default function TheRoutes() {
                     <LibrarianAnalytics/>
                 </ProtectedRoute>
             } />
-            <Route path="/librarian/LibrarianStudentLibraryHours" element={
+            <Route path="/librarian/LibrarianCompletedHours" element={
                 <ProtectedRoute allowedRoles={['Librarian']}>
-                    <LibrarianStudentLibraryHours />
+                    <LibrarianCompletedHours />
                 </ProtectedRoute>
             } />
             <Route path="/librarian/LibrarianNASActivityLog" element={
