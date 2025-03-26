@@ -237,6 +237,7 @@ const ManageStudent = () => {
                     : currentView === 'gradeSection'
                     ? 'Search grade level...'
                     : 'Search by name or ID...'
+                    
                 }
                 size="small"
                 value={
@@ -272,14 +273,16 @@ const ManageStudent = () => {
                 variant="outlined"
                 onClick={() => setCurrentView(currentView === 'academic' ? 'students' : 'academic')}
                 sx={{
-                  color: currentView === 'academic' ? '#800000' : '#800000',
-                  backgroundColor: currentView === 'academic' ? '#FFEB3B' : 'white',
-                  border: '1px solid #800000',
+                  color: currentView === 'academic' ? 'black' : 'black',
+                  backgroundColor: currentView === 'academic' ? '#FFEB3B' : '#F8C400',
+                  border: '1px solid #F8C400',
                   fontWeight: 'bold',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                  fontSize: '11px', // Added font size here
                   height: '40px',
                   '&:hover': {
-                    backgroundColor: '#FFEB3B',
-                    color: '#800000',
+                    backgroundColor: '#FFDF16',
+
                   },
                 }}
               >
@@ -290,14 +293,16 @@ const ManageStudent = () => {
                 variant="outlined"
                 onClick={() => setCurrentView(currentView === 'gradeSection' ? 'students' : 'gradeSection')}
                 sx={{
-                  color: currentView === 'gradeSection' ? '#800000' : '#800000',
-                  backgroundColor: currentView === 'gradeSection' ? '#FFEB3B' : 'white',
-                  border: '1px solid #800000',
+                  color: currentView === 'academic' ? 'black' : 'black',
+                  backgroundColor: currentView === 'academic' ? '#FFEB3B' : '#F8C400',
+                  border: '1px solid #F8C400',
                   fontWeight: 'bold',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                  fontSize: '11px', // Added font size here
                   height: '40px',
                   '&:hover': {
-                    backgroundColor: '#FFEB3B',
-                    color: '#800000',
+                    backgroundColor: '#FFDF16',
+
                   },
                 }}
               >
@@ -307,28 +312,29 @@ const ManageStudent = () => {
 
             {currentView === 'students' && (
               <Button
-                variant="outlined"
-                onClick={handleOpenForm}
-                sx={{
+              variant="outlined"
+              onClick={handleOpenForm}
+              sx={{
+                color: '#FFEB3B',
+                backgroundColor: '#800000',
+                border: '1px solid #800000',
+                borderRadius: '50px',
+                height: '40px',
+                fontWeight: 'bold',
+                fontSize: '11px', // Added font size here
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 2,
+                '&:hover': {
+                  backgroundColor: '#940000',
                   color: '#FFEB3B',
-                  backgroundColor: '#800000',
-                  border: '1px solid #800000',
-                  borderRadius: '50px',
-                  height: '40px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: 2,
-                  '&:hover': {
-                    backgroundColor: '#940000',
-                    color: '#FFEB3B',
-                  },
-                }}
-              >
-                <AddIcon sx={{ marginRight: 1 }} />
-                Add Student
-              </Button>
+                },
+              }}
+            >
+              <AddIcon sx={{ marginRight: 1 }} />
+              Add Student
+            </Button>
             )}
 
             {currentView === 'academic' && (
@@ -342,6 +348,7 @@ const ManageStudent = () => {
                   borderRadius: '50px',
                   height: '40px',
                   fontWeight: 'bold',
+                  fontSize: '11px', // Added font size here
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -368,6 +375,7 @@ const ManageStudent = () => {
                   borderRadius: '50px',
                   height: '40px',
                   fontWeight: 'bold',
+                  fontSize: '11px', // Added font size here
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -402,19 +410,19 @@ const ManageStudent = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                         ID Number
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                         Name
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                         GRADE & SECTION
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                         LIBRARY HOUR ASSOCIATED SUBJECT
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                         ACTION
                       </TableCell>
                     </TableRow>
@@ -454,14 +462,14 @@ const ManageStudent = () => {
                             <Button
                               variant="outlined"
                               sx={{
-                                color: '#800000',
-                                backgroundColor: '#F5B400',
+                                color: 'black',
+                                backgroundColor: '#FFDF16',
+                                fontSize: '11px',
                                 border: '1px solid #FFEB3B',
                                 marginRight: 1,
                                 fontWeight: 'bold',
                                 '&:hover': {
                                   backgroundColor: '#FFEB3B',
-                                  color: '#800000',
                                 },
                               }}
                               onClick={() => {
@@ -474,13 +482,14 @@ const ManageStudent = () => {
                             <Button
                               variant="outlined"
                               sx={{
-                                color: '#800000',
-                                backgroundColor: '#F5B400',
-                                border: '1px solid #FFEB3B',
+                                color: 'white',
+                                backgroundColor: '#8C383E',
+                                border: '1px solid #8C383E',
                                 fontWeight: 'bold',
+                                fontSize: '11px',
                                 '&:hover': {
-                                  backgroundColor: '#FFEB3B',
-                                  color: '#800000',
+                                  backgroundColor: '#8B0000',
+
                                 },
                               }}
                               onClick={() => {
