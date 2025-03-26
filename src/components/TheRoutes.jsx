@@ -29,7 +29,7 @@ import LibrarianManageNASStudent from "./Librarian/ManageNASStudent";
 import StudentAnalyticsAndReports from "./Student/StudentAnalytics";
 import ProtectedRoute from './ProtectedRoute';
 import NotificationsPage from './Student/NotificationsPage';
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, Navigate } from "react-router-dom";
 import LibraryRequirementsProgress from './Student/LibraryRequirementsProgress';
 import LibrarianLogin from "./Login/LibrarianLogin";
 import TeacherNotificationPage from "./Teacher/TeacherNotificationPage";
@@ -40,10 +40,13 @@ import ChangePassword from "./Login/ChangePassword";
 export default function TheRoutes() {
     return (
         <Routes>
+            {/* Default route - redirect to LoginHomepage */}
+            <Route path="/" element={<Navigate to="/LoginHomepage" replace />} />
+
             <Route path="/student/requirements" element={<ProtectedRoute><LibraryRequirementsProgress /></ProtectedRoute>} />
             <Route path="/Studentnotifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-            <Route path="/" element={<InputIDLogin />} />
-            <Route path="/Tap-Out" element={<InputIDLogout />} />
+            <Route path="/InputIn" element={<InputIDLogin />} />
+            <Route path="/InputOut" element={<InputIDLogout />} />
             <Route path="/LoginHomepage" element={<LogInHomepage />} />
             <Route path="/Login" element={<LoginProtection><LogIn /></LoginProtection>} />
             <Route path="/change-password" element={<ChangePassword />} />
@@ -119,12 +122,11 @@ export default function TheRoutes() {
                     <LibrarianManageNASStudent/>
                 </ProtectedRoute>
             } />
-
             <Route path="/librarian/notifications" element={
-                            <ProtectedRoute allowedRoles={['Librarian']}>
-                                <LibrarianNotificationPage/>
-                            </ProtectedRoute>
-                        } />
+                <ProtectedRoute allowedRoles={['Librarian']}>
+                    <LibrarianNotificationPage/>
+                </ProtectedRoute>
+            } />
             
             <Route path="*" element={<h1>Nothing Here..</h1>} />
         </Routes>
