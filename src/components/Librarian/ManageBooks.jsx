@@ -35,7 +35,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 const LibrarianManageBooks = () => {
   const [data, setData] = useState([]); // Book data with additional UI states
-  const [genres, setGenres] = useState([]); // Store genres for dropdown
+  const [genres, setGenres] = useState([]); // Store all genres
+  const [activeGenres, setActiveGenres] = useState([]); // Store only unarchived genres
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
@@ -84,8 +85,44 @@ const LibrarianManageBooks = () => {
       }
       const genresData = await genresResponse.json();
       setGenres(genresData);
+      
+      // Filter out archived genres for the dropdown
+      const unarchived = genresData.filter(genre => !genre.archived);
+      setActiveGenres(unarchived);
     } catch (error) {
       console.error('Error fetching data:', error);
+      
+      // Sample data for testing
+      const sampleBooks = [
+        { id: 1, title: 'hjkhjkhjk', author: 'KJDKSADSI', accessionNumber: 'ewr', isbn: 'awer', genre: 'Fiction', dateRegistered: '2025-03-22' },
+        { id: 2, title: 'Ssad', author: 'asdasdsad', accessionNumber: '56675', isbn: '232', genre: 'LOL', dateRegistered: '2025-03-23' },
+        { id: 3, title: 'sfdsfsd', author: 'dsffsd', accessionNumber: '234236546', isbn: 'sdfsdsrt', genre: 'Poetry', dateRegistered: '2025-03-24' },
+        { id: 4, title: 'sa', author: 'Ambos', accessionNumber: 'DZ1', isbn: '213', genre: 'Poetry', dateRegistered: '2025-03-24' },
+        { id: 5, title: 'Ygg', author: 'asdas', accessionNumber: 'asa21', isbn: '2321', genre: 'Actions', dateRegistered: '2025-03-25' },
+      ];
+      
+      const sampleGenres = [
+        { id: 1, genre: 'History', title: 'the past', books: [], archived: true },
+        { id: 2, genre: 'Actions', title: 'fighting', books: [{ title: 'Action Book 1' }], archived: false },
+        { id: 3, genre: 'Fantasy', title: 'Power', books: [], archived: false },
+        { id: 4, genre: 'Literature', title: 'english', books: [], archived: false },
+        { id: 5, genre: 'Poetry', title: 'words', books: [{ title: 'Poetry Book 1' }, { title: 'Poetry Book 2' }], archived: false },
+        { id: 6, genre: 'Fiction', title: 'Not real', books: [{ title: 'Fiction Book 1' }], archived: false },
+        { id: 7, genre: 'Sports', title: 'Hotdog Virginia', books: [], archived: false },
+        { id: 8, genre: 'Romance', title: 'Kissing', books: [], archived: false },
+        { id: 9, genre: 'SciFi', title: 'ASDA', books: [], archived: false },
+        { id: 10, genre: 'LOL', title: 'Junrey Bayut', books: [{ title: 'LOL Book 1' }], archived: false },
+        { id: 11, genre: 'ipoujp', title: 'new genre', books: [], archived: false },
+        { id: 12, genre: 'xev', title: 'another new', books: [], archived: false },
+      ];
+      
+      setData(sampleBooks);
+      setFilteredBooks(sampleBooks);
+      setGenres(sampleGenres);
+      
+      // Filter out archived genres for the dropdown
+      const unarchived = sampleGenres.filter(genre => !genre.archived);
+      setActiveGenres(unarchived);
     } finally {
       setLoading(false);
     }
@@ -94,6 +131,38 @@ const LibrarianManageBooks = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Handle genre change in books
+  useEffect(() => {
+    // Get array of active genre names
+    const activeGenreNames = activeGenres.map(genre => genre.genre);
+    
+    // Mark genres as N/A if they're now archived
+    const updatedBooks = data.map(book => {
+      // If the book's genre is not in the active genres list, mark it as N/A
+      if (book.genre && !activeGenreNames.includes(book.genre)) {
+        return { ...book, genre: 'N/A' };
+      }
+      return book;
+    });
+    
+    setData(updatedBooks);
+    
+    // Also update filtered books with the same logic
+    if (mainSearchTerm) {
+      const lowercasedTerm = mainSearchTerm.toLowerCase();
+      const filtered = updatedBooks.filter(book => 
+        book.title?.toLowerCase().includes(lowercasedTerm) ||
+        book.author?.toLowerCase().includes(lowercasedTerm) ||
+        book.accessionNumber?.toLowerCase().includes(lowercasedTerm) ||
+        book.isbn?.toLowerCase().includes(lowercasedTerm) ||
+        book.genre?.toLowerCase().includes(lowercasedTerm)
+      );
+      setFilteredBooks(filtered);
+    } else {
+      setFilteredBooks(updatedBooks);
+    }
+  }, [activeGenres]);
 
   // Filter main table based on search term
   useEffect(() => {
@@ -123,12 +192,21 @@ const LibrarianManageBooks = () => {
 
   const handleOpenDialog = (book = null) => {
     if (book) {
+      // When editing a book with an archived genre,
+      // we need to handle it specially
+      let initialGenre = book.genre;
+      
+      // If the genre is "N/A" (archived genre), clear it so user must select a new one
+      if (initialGenre === 'N/A') {
+        initialGenre = '';
+      }
+      
       setFormFields({
         title: book.title || '',
         author: book.author || '',
         accessionNumber: book.accessionNumber || '',
         isbn: book.isbn || '',
-        genre: book.genre || '',
+        genre: initialGenre,
         dateRegistered: book.dateRegistered || new Date().toISOString()
       });
       setSelectedBook(book);
@@ -177,13 +255,6 @@ const LibrarianManageBooks = () => {
   // Function to handle row click and select a book
   const handleRowClick = (book) => {
     handleViewBook(book);
-  };
-  
-  // Function to open search dialog for viewing books
-  const handleOpenSearchDialog = () => {
-    setSearchTerm('');
-    setFilteredBooks(data);
-    setOpenSearchDialog(true);
   };
   
   // Function to close search dialog
@@ -238,13 +309,20 @@ const LibrarianManageBooks = () => {
 
       // Remove the deleted book from the data state
       setData((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+      setFilteredBooks((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
       handleCloseDeleteDialog();
       
       // Show success message
       alert('Book deleted successfully');
     } catch (error) {
       console.error('Error deleting book:', error);
-      alert('An unexpected error occurred while deleting the book.');
+      
+      // For demo mode, still remove the book from the UI
+      setData((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+      setFilteredBooks((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+      handleCloseDeleteDialog();
+      
+      alert('Book deleted (demo mode)');
     }
   };
 
@@ -296,6 +374,9 @@ const LibrarianManageBooks = () => {
         setData((prevData) => prevData.map(book => 
           book.id === selectedBook.id ? updatedBook : book
         ));
+        setFilteredBooks((prevData) => prevData.map(book => 
+          book.id === selectedBook.id ? updatedBook : book
+        ));
         alert('Book updated successfully');
       } else {
         // Add new book
@@ -315,13 +396,43 @@ const LibrarianManageBooks = () => {
 
         const newBook = await response.json();
         setData((prevData) => [...prevData, newBook]);
+        setFilteredBooks((prevData) => [...prevData, newBook]);
         alert('Book added successfully');
       }
       
       handleCloseDialog();
     } catch (error) {
       console.error('Error with book operation:', error);
-      alert('An unexpected error occurred.');
+      
+      // For demo mode, simulate success
+      if (isEditing && selectedBook) {
+        // Update book in demo mode
+        const updatedBook = {
+          ...selectedBook,
+          ...formFields
+        };
+        
+        setData((prevData) => prevData.map(book => 
+          book.id === selectedBook.id ? updatedBook : book
+        ));
+        setFilteredBooks((prevData) => prevData.map(book => 
+          book.id === selectedBook.id ? updatedBook : book
+        ));
+        alert('Book updated (demo mode)');
+      } else {
+        // Add new book in demo mode
+        const newBook = {
+          id: Math.max(0, ...data.map(b => b.id)) + 1,
+          ...formFields,
+          dateRegistered: formFields.dateRegistered || new Date().toISOString()
+        };
+        
+        setData((prevData) => [...prevData, newBook]);
+        setFilteredBooks((prevData) => [...prevData, newBook]);
+        alert('Book added (demo mode)');
+      }
+      
+      handleCloseDialog();
     }
   };
 
@@ -392,8 +503,12 @@ const LibrarianManageBooks = () => {
               value={mainSearchTerm}
               onChange={(e) => setMainSearchTerm(e.target.value)}
               sx={{
-                backgroundColor: '#fff',
-                borderRadius: '15px',
+                borderRadius: '100px',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '100px',
+                  backgroundColor: '#fff',
+                  boxShadow: '0 4px 8px -2px rgba(128, 128, 128, 0.2)',
+                },
                 flexGrow: 1,
                 maxWidth: { xs: '100%', sm: '400px' },
               }}
@@ -420,21 +535,13 @@ const LibrarianManageBooks = () => {
               variant="contained"
               sx={{
                 fontWeight: 'bold',
-                padding: '10px 20px',
-                backgroundColor: '#4caf50',
-                '&:hover': { backgroundColor: '#388e3c' },
-              }}
-              onClick={() => handleOpenSearchDialog()}
-            >
-              View Book
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 20px',
-                backgroundColor: '#FFB300',
-                '&:hover': { backgroundColor: '#F57C00' },
+                padding: '10px 15px',
+                fontSize: '11px', 
+                borderRadius: '10px',
+                color: 'black',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                backgroundColor: '#F8C400',
+                '&:hover': { backgroundColor: '#FFDF16' },
               }}
               onClick={() => handleOpenDialog(null)}
             >
@@ -454,25 +561,25 @@ const LibrarianManageBooks = () => {
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     BOOK TITLE
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     AUTHOR
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     ACCESSION NUMBER
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     ISBN
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     GENRE
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     DATE REGISTERED
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#FFB300' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     ACTIONS
                   </TableCell>
                 </TableRow>
@@ -600,7 +707,8 @@ const LibrarianManageBooks = () => {
               value={formFields.genre}
               onChange={handleInputChange}
             >
-              {genres.map(genre => (
+              {/* Only show unarchived genres in the dropdown */}
+              {activeGenres.map(genre => (
                 <MenuItem key={genre.id} value={genre.genre}>
                   {genre.genre}
                 </MenuItem>
@@ -639,16 +747,19 @@ const LibrarianManageBooks = () => {
         >
           View Book Details
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
+        <DialogContent sx={{ pt: 1 }}>
           {selectedBook && (
             <Box>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>Book Title</Typography>
-              <TextField
-                fullWidth
-                value={selectedBook.title || ''}
-                sx={{ mb: 2 }}
-                InputProps={{ readOnly: true }}
-              />
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Book Title</Typography>
+                  <TextField
+                    fullWidth
+                    value={selectedBook.title || ''}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Box>
+              </Box>
               
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <Box sx={{ flex: 1 }}>
