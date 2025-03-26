@@ -118,8 +118,56 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
     setSearchQuery(event.target.value);
   };
 
-  // Apply search manually when user hits Enter or clicks the filter button
+  // Handler for Date From with mutual exclusivity
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Handler for Date To with mutual exclusivity
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear academic year if date is set
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Handler for Academic Year with mutual exclusivity
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear date range if academic year is set
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+    }
+    
+    setAcademicYear(value);
+  };
+
+  // Apply search and filters with validation
   const applyFilters = () => {
+    // Validate date range if both dates are provided
+    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+      toast.error('Date From must be before or equal to Date To');
+      return;
+    }
+    
     fetchActivityLogs();
   };
 
@@ -247,8 +295,18 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
           label="Date From"
           type="date"
           value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          sx={{ backgroundColor: '#fff', borderRadius: '15px', flexGrow: 1, maxWidth: '200px' }}
+          onChange={handleDateFromChange}
+          disabled={!!academicYear} // Disable if academicYear has a value
+          sx={{ 
+            backgroundColor: '#fff', 
+            borderRadius: '15px', 
+            flexGrow: 1, 
+            maxWidth: '200px',
+            '& .Mui-disabled': {
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              opacity: 0.7
+            }
+          }}
           InputLabelProps={{
             shrink: true,
           }}
@@ -258,20 +316,42 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
           label="Date To"
           type="date"
           value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          sx={{ backgroundColor: '#fff', borderRadius: '15px', flexGrow: 1, maxWidth: '200px' }}
+          onChange={handleDateToChange}
+          disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+          inputProps={{
+            min: dateFrom || undefined // Set minimum date to dateFrom
+          }}
+          sx={{ 
+            backgroundColor: '#fff', 
+            borderRadius: '15px', 
+            flexGrow: 1, 
+            maxWidth: '200px',
+            '& .Mui-disabled': {
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              opacity: 0.7
+            }
+          }}
           InputLabelProps={{
             shrink: true,
           }}
         />
 
-        <FormControl sx={{ backgroundColor: '#fff', borderRadius: '15px', minWidth: '200px' }}>
+        <FormControl sx={{ 
+          backgroundColor: '#fff', 
+          borderRadius: '15px', 
+          minWidth: '200px',
+          '& .Mui-disabled': {
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            opacity: 0.7
+          }
+        }}>
           <InputLabel>Academic Year</InputLabel>
           <Select
             value={academicYear}
-            onChange={(e) => setAcademicYear(e.target.value)}
+            onChange={handleAcademicYearChange}
             label="Academic Year"
             size="small"
+            disabled={!!dateFrom || !!dateTo} // Disable if either date filter has a value
           >
             <MenuItem value="">All Years</MenuItem>
             <MenuItem value="2023-2024">2023-2024</MenuItem>

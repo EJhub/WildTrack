@@ -55,8 +55,12 @@ const CreateStudentForm = ({ open, onClose }) => {
   const [gradeOptions, setGradeOptions] = useState([]);
   const [sectionOptions, setSectionOptions] = useState([]);
   const [academicYearOptions, setAcademicYearOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setIsLoading] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+
+  // Add validation functions
+  const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
+  const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
 
   const sortGradeLevels = (grades) => {
     const gradeOrder = {
@@ -78,7 +82,7 @@ const CreateStudentForm = ({ open, onClose }) => {
   useEffect(() => {
     if (!open) {
       resetForm();
-      setLoading(false);
+      setIsLoading(false);
       setErrors({});
       setShowPasswordRequirements(false);
     }
@@ -149,6 +153,57 @@ const CreateStudentForm = ({ open, onClose }) => {
     }
   }, [formData.password, formData.confirmPassword]);
 
+  // Validate name fields
+  useEffect(() => {
+    validateNameFields();
+  }, [formData.firstName, formData.middleName, formData.lastName]);
+
+  // Validate ID Number field
+  useEffect(() => {
+    validateIdNumber();
+  }, [formData.idNumber]);
+
+  // Validate name fields
+  const validateNameFields = () => {
+    const newErrors = { ...errors };
+    
+    // First name validation
+    if (formData.firstName && !isLettersOnly(formData.firstName)) {
+      newErrors.firstName = "First name should contain letters only";
+    } else {
+      delete newErrors.firstName;
+    }
+    
+    // Middle name validation (if provided)
+    if (formData.middleName && !isLettersOnly(formData.middleName)) {
+      newErrors.middleName = "Middle name should contain letters only";
+    } else {
+      delete newErrors.middleName;
+    }
+    
+    // Last name validation
+    if (formData.lastName && !isLettersOnly(formData.lastName)) {
+      newErrors.lastName = "Last name should contain letters only";
+    } else {
+      delete newErrors.lastName;
+    }
+    
+    setErrors(newErrors);
+  };
+
+  // Validate ID Number
+  const validateIdNumber = () => {
+    const newErrors = { ...errors };
+    
+    if (formData.idNumber && !isValidIdNumber(formData.idNumber)) {
+      newErrors.idNumber = "ID Number should contain only numbers and dashes";
+    } else {
+      delete newErrors.idNumber;
+    }
+    
+    setErrors(newErrors);
+  };
+
   // Validate if all required fields are filled and valid
   const validateForm = () => {
     const requiredFields = [
@@ -204,26 +259,33 @@ const CreateStudentForm = ({ open, onClose }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
+    // Validation for name fields (letters only)
+    if (['firstName', 'middleName', 'lastName'].includes(name)) {
+      // Allow only letters and spaces
+      if (value === '' || isLettersOnly(value)) {
+        setFormData(prevData => ({
+          ...prevData,
+          [name]: value,
+        }));
+      }
+      // Invalid input is ignored
+    }
+    // Validation for ID number (numbers and dashes only)
+    else if (name === 'idNumber') {
+      if (value === '' || isValidIdNumber(value)) {
+        setFormData(prevData => ({
+          ...prevData,
+          [name]: value,
+        }));
+      }
+    }
     // Special handling for grade change
-    if (name === 'grade') {
+    else if (name === 'grade') {
       setFormData(prevData => ({
         ...prevData,
         [name]: value,
         section: '' // Reset section when grade changes
       }));
-    } else if (name === 'idNumber') {
-      setFormData(prevData => ({
-        ...prevData,
-        [name]: value
-      }));
-      // Clear ID number error if it exists
-      if (errors.idNumber) {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.idNumber;
-          return newErrors;
-        });
-      }
     } else {
       setFormData(prevData => ({
         ...prevData,
@@ -305,8 +367,8 @@ const CreateStudentForm = ({ open, onClose }) => {
     }
 
     try {
-      setLoading(true);
-      const response = await axios.post("http://localhost:8080/api/users/register", {
+      setIsLoading(true);
+      const response = await axios.post("http://localhost:8080/api/students/register", {
         firstName: formData.firstName,
         lastName: formData.lastName,
         middleName: formData.middleName,
@@ -336,29 +398,43 @@ const CreateStudentForm = ({ open, onClose }) => {
       console.error("Error adding student:", error);
       // Handle specific error messages from the backend
       if (error.response && error.response.data && error.response.data.error) {
-        // If it's a password validation error
-        if (error.response.data.error.includes("Password")) {
-          setErrors(prev => ({ ...prev, password: error.response.data.error }));
+        const errorMessage = error.response.data.error;
+        
+        // Handle specific errors
+        if (errorMessage.includes("Password")) {
+          setErrors(prev => ({ ...prev, password: errorMessage }));
           setShowPasswordRequirements(true);
-          document.getElementById('password').focus();
-        } else if (error.response.data.error.includes("ID Number")) {
+          document.getElementById('password')?.focus();
+        } else if (errorMessage.includes("ID Number already exists")) {
           setErrors(prev => ({ ...prev, idNumber: "ID Number already exists" }));
-          document.getElementById('idNumber').focus();
+          document.getElementById('idNumber')?.focus();
+        } else if (errorMessage.includes("First name should contain")) {
+          setErrors(prev => ({ ...prev, firstName: errorMessage }));
+          document.getElementById('firstName')?.focus();
+        } else if (errorMessage.includes("Middle name should contain")) {
+          setErrors(prev => ({ ...prev, middleName: errorMessage }));
+          document.getElementById('middleName')?.focus();
+        } else if (errorMessage.includes("Last name should contain")) {
+          setErrors(prev => ({ ...prev, lastName: errorMessage }));
+          document.getElementById('lastName')?.focus();
+        } else if (errorMessage.includes("ID Number should contain")) {
+          setErrors(prev => ({ ...prev, idNumber: errorMessage }));
+          document.getElementById('idNumber')?.focus();
         } else {
           // Generic error handling
-          alert(error.response.data.error || "Failed to add student");
+          alert(errorMessage || "Failed to add student");
         }
       } else {
         alert("Failed to add student");
       }
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   // Handle success dialog close
   const handleSuccessDialogClose = () => {
     setSuccessDialogOpen(false);
-    setLoading(false);
+    setIsLoading(false);
   };
 
   return (
@@ -394,16 +470,21 @@ const CreateStudentForm = ({ open, onClose }) => {
                   fullWidth
                   required
                   variant="outlined"
+                  error={!!errors.firstName}
+                  helperText={errors.firstName}
                 />
               </Grid>
               <Grid item xs={4}>
                 <TextField
+                  id="middleName"
                   name="middleName"
                   label="Middle Name"
                   value={formData.middleName}
                   onChange={handleInputChange}
                   fullWidth
                   variant="outlined"
+                  error={!!errors.middleName}
+                  helperText={errors.middleName}
                 />
               </Grid>
               <Grid item xs={4}>
@@ -416,6 +497,8 @@ const CreateStudentForm = ({ open, onClose }) => {
                   fullWidth
                   required
                   variant="outlined"
+                  error={!!errors.lastName}
+                  helperText={errors.lastName}
                 />
               </Grid>
             </Grid>
@@ -430,6 +513,7 @@ const CreateStudentForm = ({ open, onClose }) => {
               required
               variant="outlined"
               sx={{ mt: 2 }}
+              error={!!errors.idNumber}
               helperText={errors.idNumber}
             />
 
@@ -447,6 +531,7 @@ const CreateStudentForm = ({ open, onClose }) => {
                   fullWidth
                   required
                   variant="outlined"
+                  error={!!errors.password}
                   helperText={errors.password}
                 />
                 {getPasswordFeedback()}
@@ -494,6 +579,7 @@ const CreateStudentForm = ({ open, onClose }) => {
                   fullWidth
                   required
                   variant="outlined"
+                  error={!!errors.confirmPassword}
                   helperText={errors.confirmPassword}
                 />
               </Grid>

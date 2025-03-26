@@ -29,14 +29,14 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
 
-const LibraryHoursCompletionRate = () => {
+const LibrarianLibraryHoursCompletionRate = () => {
   // Filter states
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('All Grades');
   const [section, setSection] = useState('');
-  const [dataView, setDataView] = useState('weekly');
+  const [dataView, setDataView] = useState('monthly'); // Changed from 'weekly' to 'monthly'
   
   // Dynamic Options States
   const [gradeLevels, setGradeLevels] = useState([]);
@@ -62,7 +62,7 @@ const LibraryHoursCompletionRate = () => {
     academicYear: '',
     gradeLevel: 'All Grades',
     dateRange: { from: '', to: '' },
-    dataView: 'weekly'
+    dataView: 'monthly' // Changed from 'weekly' to 'monthly'
   });
 
   // Define labels for days and months - include all 7 days of the week
@@ -266,7 +266,58 @@ const LibraryHoursCompletionRate = () => {
     }
   };
 
-  // Apply filters function
+  // Handler for Date From with mutual exclusivity
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Handler for Date To with mutual exclusivity
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear academic year if date is set
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Handler for Academic Year with mutual exclusivity
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear date range if academic year is set
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+      // Force dataView to monthly when academic year is selected
+      setDataView('monthly');
+    }
+    
+    setAcademicYear(value);
+  };
+
+  // Handler for Grade Level change
+  const handleGradeLevelChange = (e) => {
+    setGradeLevel(e.target.value);
+    // Clear section when grade changes
+    setSection('');
+  };
+
+  // Apply filters function with validation
   const handleApplyFilters = () => {
     // Validate date range if both dates are provided
     if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
@@ -304,7 +355,7 @@ const LibraryHoursCompletionRate = () => {
     setAcademicYear('');
     setGradeLevel('All Grades');
     setSection('');
-    setDataView('weekly');
+    setDataView('monthly'); // Changed from 'weekly' to 'monthly'
     
     // Clear applied filters
     setAppliedFilters({
@@ -312,7 +363,7 @@ const LibraryHoursCompletionRate = () => {
       academicYear: '',
       gradeLevel: 'All Grades',
       dateRange: { from: '', to: '' },
-      dataView: 'weekly'
+      dataView: 'monthly' // Changed from 'weekly' to 'monthly'
     });
     
     toast.info('Filters cleared');
@@ -581,16 +632,17 @@ const LibraryHoursCompletionRate = () => {
             type="date"
             size="small"
             value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              // Clear academic year if date is set
-              if (e.target.value) setAcademicYear('');
-            }}
+            onChange={handleDateFromChange}
+            disabled={!!academicYear} // Disable if academicYear has a value
             sx={{ 
               width: '150px',
               '& .MuiOutlinedInput-root': {
                 borderRadius: '4px',
                 height: '36px',
+              },
+              '& .Mui-disabled': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                opacity: 0.7
               }
             }}
             InputLabelProps={{ shrink: true }}
@@ -611,16 +663,20 @@ const LibraryHoursCompletionRate = () => {
             type="date"
             size="small"
             value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              // Clear academic year if date is set
-              if (e.target.value) setAcademicYear('');
+            onChange={handleDateToChange}
+            disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+            inputProps={{
+              min: dateFrom || undefined // Set minimum date to dateFrom
             }}
             sx={{ 
               width: '150px',
               '& .MuiOutlinedInput-root': {
                 borderRadius: '4px',
                 height: '36px',
+              },
+              '& .Mui-disabled': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                opacity: 0.7
               }
             }}
             InputLabelProps={{ shrink: true }}
@@ -641,17 +697,17 @@ const LibraryHoursCompletionRate = () => {
             <Select
               size="small"
               value={gradeLevel}
-              onChange={(e) => {
-                setGradeLevel(e.target.value);
-                // Clear section when grade changes
-                setSection('');
-              }}
+              onChange={handleGradeLevelChange}
               displayEmpty
               IconComponent={ExpandMoreIcon}
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
               disabled={gradeLevelsLoading}
             >
@@ -684,7 +740,11 @@ const LibraryHoursCompletionRate = () => {
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
               disabled={gradeLevel === 'All Grades' || sectionsLoading}
             >
@@ -711,22 +771,19 @@ const LibraryHoursCompletionRate = () => {
             <Select
               size="small"
               value={academicYear}
-              onChange={(e) => {
-                setAcademicYear(e.target.value);
-                // Clear date range if academic year is set
-                if (e.target.value) {
-                  setDateFrom('');
-                  setDateTo('');
-                }
-              }}
+              onChange={handleAcademicYearChange}
               displayEmpty
+              disabled={academicYearsLoading || !!dateFrom || !!dateTo} // Disable if loading or if either date has a value
               IconComponent={ExpandMoreIcon}
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
-              disabled={academicYearsLoading}
             >
               <MenuItem value="">Select Academic Year</MenuItem>
               {academicYearsLoading ? (
@@ -753,10 +810,15 @@ const LibraryHoursCompletionRate = () => {
               value={dataView}
               onChange={(e) => setDataView(e.target.value)}
               IconComponent={ExpandMoreIcon}
+              disabled={!!academicYear} // Disable if academic year is selected
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
             >
               <MenuItem value="weekly">Weekly</MenuItem>
@@ -1020,4 +1082,4 @@ const LibraryHoursCompletionRate = () => {
   );
 };
 
-export default LibraryHoursCompletionRate;
+export default LibrarianLibraryHoursCompletionRate;

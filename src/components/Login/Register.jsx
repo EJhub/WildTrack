@@ -39,6 +39,10 @@ function Register() {
   
   const navigate = useNavigate();
 
+  // Validation functions
+  const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
+  const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
+
   // Sort function for grade levels
   const sortGradeLevels = (grades) => {
     const gradeOrder = {
@@ -114,8 +118,28 @@ function Register() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
+    // Validation for name fields (letters only)
+    if (['firstName', 'middleName', 'lastName'].includes(name)) {
+      // Allow only letters (and prevent invalid characters)
+      if (value === '' || isLettersOnly(value)) {
+        setFormData(prevData => ({
+          ...prevData,
+          [name]: value,
+        }));
+      }
+      // Invalid input is ignored
+    }
+    // Validation for ID number (numbers and dashes only)
+    else if (name === 'idNumber') {
+      if (value === '' || isValidIdNumber(value)) {
+        setFormData(prevData => ({
+          ...prevData,
+          [name]: value,
+        }));
+      }
+    }
     // Special handling for grade change
-    if (name === 'grade') {
+    else if (name === 'grade') {
       setFormData(prevData => ({
         ...prevData,
         [name]: value,
@@ -159,6 +183,11 @@ function Register() {
         ? "black" 
         : inputName === 'password' && formData.password !== '' && !isPasswordValid() 
           ? "#dc3545" 
+          : (inputName === 'firstName' || inputName === 'middleName' || inputName === 'lastName') 
+            && formData[inputName] !== '' && !isLettersOnly(formData[inputName])
+            ? "#dc3545"
+          : inputName === 'idNumber' && formData.idNumber !== '' && !isValidIdNumber(formData.idNumber)
+            ? "#dc3545"
           : "#ccc"
     }`,
     borderRadius: "5px",
@@ -187,6 +216,20 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate names and ID number
+    if (!isLettersOnly(formData.firstName) || !isLettersOnly(formData.lastName) || 
+        (formData.middleName && !isLettersOnly(formData.middleName))) {
+      setMessage("Names should contain letters only.");
+      setIsSuccess(false);
+      return;
+    }
+
+    if (!isValidIdNumber(formData.idNumber)) {
+      setMessage("ID Number should contain only numbers and dashes.");
+      setIsSuccess(false);
+      return;
+    }
 
     // Final validation before submission
     if (formData.password !== formData.confirmPassword) {
@@ -292,6 +335,13 @@ function Register() {
                 required
               />
             </div>
+            
+            {/* Name validation error message */}
+            {((formData.firstName && !isLettersOnly(formData.firstName)) || 
+              (formData.middleName && !isLettersOnly(formData.middleName)) || 
+              (formData.lastName && !isLettersOnly(formData.lastName))) && (
+              <p style={styles.errorText}>Names should contain letters only</p>
+            )}
 
             <div style={styles.inputGroup}>
               <input
@@ -305,6 +355,9 @@ function Register() {
                 onBlur={() => handleBlur("idNumber")}
                 required
               />
+              {formData.idNumber && !isValidIdNumber(formData.idNumber) && (
+                <p style={styles.errorText}>ID Number should contain only numbers and dashes</p>
+              )}
             </div>
 
             <div style={styles.rowInputGroup}>
@@ -582,6 +635,7 @@ const styles = {
     fontSize: "12px",
     margin: "5px 0 0 0",
     textAlign: "left",
+    width: "100%"
   }
 };
 

@@ -35,7 +35,7 @@ const AccessionUsageFrequency = () => {
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('All Grades');
   const [section, setSection] = useState('');
-  const [dataView, setDataView] = useState('weekly');
+  const [dataView, setDataView] = useState('monthly');
   
   // Dynamic Options States
   const [gradeLevels, setGradeLevels] = useState([]);
@@ -60,7 +60,7 @@ const AccessionUsageFrequency = () => {
     academicYear: '',
     gradeLevel: 'All Grades',
     dateRange: { from: '', to: '' },
-    dataView: 'weekly'
+    dataView: 'monthly'
   });
 
   // Chart container ref for export functions
@@ -336,7 +336,51 @@ const AccessionUsageFrequency = () => {
     }
   };
 
-  // Apply filters function
+  // Updated handler for Date From with mutual exclusivity
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Updated handler for Date To with mutual exclusivity
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear academic year if date is set
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Updated handler for Academic Year with mutual exclusivity
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear date range if academic year is set
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+      // Force dataView to monthly when academic year is selected
+      setDataView('monthly');
+    }
+    
+    setAcademicYear(value);
+  };
+
+  // Apply filters function with validation
   const handleApplyFilters = () => {
     // Validate date range if both dates are provided
     if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
@@ -374,7 +418,7 @@ const AccessionUsageFrequency = () => {
     setAcademicYear('');
     setGradeLevel('All Grades');
     setSection('');
-    setDataView('weekly');
+    setDataView('monthly');
     
     // Clear applied filters
     setAppliedFilters({
@@ -382,7 +426,7 @@ const AccessionUsageFrequency = () => {
       academicYear: '',
       gradeLevel: 'All Grades',
       dateRange: { from: '', to: '' },
-      dataView: 'weekly'
+      dataView: 'monthly'
     });
     
     toast.info('Filters cleared');
@@ -396,18 +440,9 @@ const AccessionUsageFrequency = () => {
 
   // Process the data for the chart
   useEffect(() => {
-    if (!accessionFrequencyData || accessionFrequencyData.length === 0) {
-      setProcessedData([]);
-      setBookTitles([]);
-      return;
-    }
-
     try {
       // Get current labels based on timeframe
       const labels = appliedFilters.dataView === 'weekly' ? weeklyLabels : monthlyLabels;
-      
-      // Process filtered library hours to group by book titles and days/months
-      const bookUsageByDay = {};
       
       // If academic year is selected, adjust month display for academic year
       let processedLabels = labels;
@@ -428,56 +463,85 @@ const AccessionUsageFrequency = () => {
         }
       }
 
-      accessionFrequencyData.forEach((record) => {
-        const recordDate = new Date(record.timeIn);
-        
-        let dayOrMonth;
-        if (appliedFilters.dataView === 'weekly') {
-          dayOrMonth = recordDate.toLocaleString('en-US', { weekday: 'long' });
-        } else {
-          // For monthly view
-          const month = recordDate.toLocaleString('en-US', { month: 'long' });
+      // Process library hours data if we have it
+      const bookUsageByDay = {};
+      
+      if (accessionFrequencyData && accessionFrequencyData.length > 0) {
+        accessionFrequencyData.forEach((record) => {
+          const recordDate = new Date(record.timeIn);
           
-          // Add year information if academic year is selected
-          if (appliedFilters.academicYear) {
-            const year = recordDate.getFullYear();
-            dayOrMonth = `${month} ${year}`;
+          let dayOrMonth;
+          if (appliedFilters.dataView === 'weekly') {
+            dayOrMonth = recordDate.toLocaleString('en-US', { weekday: 'long' });
           } else {
-            dayOrMonth = month;
+            // For monthly view
+            const month = recordDate.toLocaleString('en-US', { month: 'long' });
+            
+            // Add year information if academic year is selected
+            if (appliedFilters.academicYear) {
+              const year = recordDate.getFullYear();
+              dayOrMonth = `${month} ${year}`;
+            } else {
+              dayOrMonth = month;
+            }
           }
-        }
 
-        if (!bookUsageByDay[record.bookTitle]) {
-          bookUsageByDay[record.bookTitle] = Array(processedLabels.length).fill(0);
-        }
+          if (!bookUsageByDay[record.bookTitle]) {
+            bookUsageByDay[record.bookTitle] = Array(processedLabels.length).fill(0);
+          }
 
-        const index = processedLabels.indexOf(dayOrMonth);
-        if (index !== -1) {
-          bookUsageByDay[record.bookTitle][index] += 1;
-        }
-      });
-
-      // Remove book titles with all zero values
-      const filteredBookUsage = Object.entries(bookUsageByDay).filter(([_, data]) =>
-        data.some((value) => value > 0)
-      );
-
-      // Extract book titles
-      const titles = filteredBookUsage.map(([title]) => title);
-      setBookTitles(titles);
-
-      // Format data for recharts (needs to be restructured)
-      const formattedData = processedLabels.map((label, index) => {
-        const dataPoint = { name: label };
-        
-        filteredBookUsage.forEach(([bookTitle, data]) => {
-          dataPoint[bookTitle] = data[index];
+          const index = processedLabels.indexOf(dayOrMonth);
+          if (index !== -1) {
+            bookUsageByDay[record.bookTitle][index] += 1;
+          }
         });
         
-        return dataPoint;
-      });
-      
-      setProcessedData(formattedData);
+        // Remove book titles with all zero values
+        const filteredBookUsage = Object.entries(bookUsageByDay).filter(([_, data]) =>
+          data.some((value) => value > 0)
+        );
+
+        if (filteredBookUsage.length > 0) {
+          // Extract book titles
+          const titles = filteredBookUsage.map(([title]) => title);
+          setBookTitles(titles);
+          
+          // Format data for recharts
+          const formattedData = processedLabels.map((label, index) => {
+            const dataPoint = { name: label };
+            
+            filteredBookUsage.forEach(([bookTitle, data]) => {
+              dataPoint[bookTitle] = data[index];
+            });
+            
+            return dataPoint;
+          });
+          
+          setProcessedData(formattedData);
+        } else {
+          // No book usage data found, show empty chart with labels
+          setBookTitles(['No Books Used']);
+          
+          // Create empty data points for each time label
+          const emptyData = processedLabels.map(label => ({
+            name: label,
+            'No Books Used': 0
+          }));
+          
+          setProcessedData(emptyData);
+        }
+      } else {
+        // No data at all, still create empty chart with labels
+        setBookTitles(['No Books Used']);
+        
+        // Create empty data points for each time label
+        const emptyData = processedLabels.map(label => ({
+          name: label,
+          'No Books Used': 0
+        }));
+        
+        setProcessedData(emptyData);
+      }
     } catch (err) {
       console.error('Error processing accession frequency data:', err);
       setError('Failed to process accession usage data.');
@@ -628,22 +692,23 @@ const AccessionUsageFrequency = () => {
             type="date"
             size="small"
             value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              // Clear academic year if date is set
-              if (e.target.value) setAcademicYear('');
-            }}
+            onChange={handleDateFromChange}
+            disabled={!!academicYear} // Disable if academicYear has a value
             sx={{ 
               width: '150px',
               '& .MuiOutlinedInput-root': {
                 borderRadius: '4px',
                 height: '36px',
+              },
+              '& .Mui-disabled': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                opacity: 0.7
               }
             }}
             InputLabelProps={{ shrink: true }}
             InputProps={{
               endAdornment: (
-                 <InputAdornment position="end" />
+                <InputAdornment position="end" />
               ),
             }}
           />
@@ -658,16 +723,20 @@ const AccessionUsageFrequency = () => {
             type="date"
             size="small"
             value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              // Clear academic year if date is set
-              if (e.target.value) setAcademicYear('');
+            onChange={handleDateToChange}
+            disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+            inputProps={{
+              min: dateFrom || undefined // Set minimum date to dateFrom
             }}
             sx={{ 
               width: '150px',
               '& .MuiOutlinedInput-root': {
                 borderRadius: '4px',
                 height: '36px',
+              },
+              '& .Mui-disabled': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                opacity: 0.7
               }
             }}
             InputLabelProps={{ shrink: true }}
@@ -698,7 +767,11 @@ const AccessionUsageFrequency = () => {
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
               disabled={gradeLevelsLoading}
             >
@@ -731,7 +804,11 @@ const AccessionUsageFrequency = () => {
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
               disabled={gradeLevel === 'All Grades' || sectionsLoading}
             >
@@ -758,22 +835,19 @@ const AccessionUsageFrequency = () => {
             <Select
               size="small"
               value={academicYear}
-              onChange={(e) => {
-                setAcademicYear(e.target.value);
-                // Clear date range if academic year is set
-                if (e.target.value) {
-                  setDateFrom('');
-                  setDateTo('');
-                }
-              }}
+              onChange={handleAcademicYearChange}
               displayEmpty
+              disabled={academicYearsLoading || !!dateFrom || !!dateTo} // Disable if loading or if either date has a value
               IconComponent={ExpandMoreIcon}
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
-              disabled={academicYearsLoading}
             >
               <MenuItem value="">Select Academic Year</MenuItem>
               {academicYearsLoading ? (
@@ -800,10 +874,15 @@ const AccessionUsageFrequency = () => {
               value={dataView}
               onChange={(e) => setDataView(e.target.value)}
               IconComponent={ExpandMoreIcon}
+              disabled={!!academicYear} // Disable if academic year is selected
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
             >
               <MenuItem value="weekly">Weekly</MenuItem>
@@ -925,10 +1004,6 @@ const AccessionUsageFrequency = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
             <Typography color="error">{error}</Typography>
           </Box>
-        ) : processedData.length === 0 || bookTitles.length === 0 ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-            <Typography>No accession usage data available</Typography>
-          </Box>
         ) : (
           <Box sx={{ position: 'relative', height: 400 }} id="accession-usage-chart" ref={chartRef}>
             <ResponsiveContainer width="100%" height={350}>
@@ -969,12 +1044,35 @@ const AccessionUsageFrequency = () => {
                   tickLine={{ stroke: '#000000' }}
                 />
                 <RechartsTooltip 
-                  formatter={(value, name) => [`${value} uses`, name]}
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    padding: '10px'
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      // Filter out zero values
+                      const nonZeroItems = payload.filter(entry => entry.value > 0);
+                      
+                      // If nothing to display after filtering, return null
+                      if (nonZeroItems.length === 0) return null;
+                      
+                      return (
+                        <div style={{ 
+                          backgroundColor: '#fff', 
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          padding: '10px'
+                        }}>
+                          <p style={{ margin: '0 0 5px', fontWeight: 'bold' }}>{label}</p>
+                          {nonZeroItems.map((entry, index) => (
+                            <p key={index} style={{ 
+                              color: entry.color,
+                              margin: '5px 0',
+                              fontSize: '12px'
+                            }}>
+                              {entry.name} : {entry.value} uses
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
                   }}
                 />
                 <Legend 

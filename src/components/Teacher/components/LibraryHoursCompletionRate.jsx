@@ -36,13 +36,17 @@ ChartJS.register(
   Legend
 );
 
-const LibraryHoursCompletionRate = () => {
+const TeacherLibraryHoursCompletionRate = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
   const [section, setSection] = useState('');
-  const [dataView, setDataView] = useState('Weekly');
+  const [dataView, setDataView] = useState('Monthly');
+  // Add temporary data view state that will only be applied when filters are applied
+  const [tempDataView, setTempDataView] = useState('Monthly');
+  // Store previous data view before academic year selection
+  const [previousDataView, setPreviousDataView] = useState('Monthly');
   
   // Loading state
   const [loading, setLoading] = useState(false);
@@ -77,7 +81,8 @@ const LibraryHoursCompletionRate = () => {
   const [appliedFilters, setAppliedFilters] = useState({
     section: '',
     academicYear: '',
-    dateRange: { from: '', to: '' }
+    dateRange: { from: '', to: '' },
+    dataView: 'Monthly' // Add default dataView to the state
   });
   
   // Chart options state
@@ -119,6 +124,66 @@ const LibraryHoursCompletionRate = () => {
       },
     },
   });
+  
+  // Date From change handler with mutual exclusivity logic
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Date To change handler with mutual exclusivity logic
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Academic Year change handler with mutual exclusivity logic
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting academic year, clear date filters
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+      
+      // Store the current tempDataView before forcing Monthly
+      setPreviousDataView(tempDataView);
+      
+      // Only update temporary view, not the actual view
+      setTempDataView('Monthly');
+    } else if (previousDataView && !value) {
+      // When clearing academic year, restore previous data view
+      setTempDataView(previousDataView);
+    }
+    
+    // Set the academic year value
+    setAcademicYear(value);
+  };
+  
+  // Effect to update tempDataView when dataView changes via Apply Filters
+  // But don't update if academic year is set (to prevent unwanted changes)
+  useEffect(() => {
+    if (!academicYear) {
+      setTempDataView(dataView);
+    }
+  }, [dataView, academicYear]);
   
   // Fetch teacher info
   useEffect(() => {
@@ -201,98 +266,8 @@ const LibraryHoursCompletionRate = () => {
     fetchSections();
   }, [gradeLevel, teacherSection]);
   
-  // Function to fetch completion rate data
-  const fetchCompletionRateData = useCallback(async (params = {}) => {
-    try {
-      setLoading(true);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Authentication token not found. Please log in again.');
-        setLoading(false);
-        return;
-      }
-      
-      // Prepare query parameters
-      const queryParams = new URLSearchParams();
-      
-      // IMPORTANT: Always include teacher's subject - fixed from previous version
-      if (teacherSubject) {
-        queryParams.append('subject', teacherSubject);
-      }
-      
-      // Add filter parameters
-      if (params.gradeLevel || teacherGradeLevel) {
-        queryParams.append('gradeLevel', params.gradeLevel || teacherGradeLevel);
-      }
-      
-      if (params.section) {
-        queryParams.append('section', params.section);
-      }
-      
-      if (params.academicYear) {
-        queryParams.append('academicYear', params.academicYear);
-      }
-      
-      // Add date range parameters - FIXED: Now correctly adding these to the query
-      if (params.dateFrom) {
-        queryParams.append('dateFrom', params.dateFrom);
-      }
-      
-      if (params.dateTo) {
-        queryParams.append('dateTo', params.dateTo);
-      }
-      
-      // Add the data view parameter
-      queryParams.append('timeframe', dataView.toLowerCase());
-      
-      console.log('Fetching completion rate with params:', queryParams.toString());
-      
-      // Make API call to fetch completion rate data
-      const url = `http://localhost:8080/api/statistics/completion-rate?${queryParams.toString()}`;
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Process the data for the chart
-      processChartData(response.data);
-      
-      // Build notification message based on applied filters
-      let filterMsg = [];
-      if (params.section) filterMsg.push(`Section ${params.section}`);
-      if (params.academicYear) filterMsg.push(`AY: ${params.academicYear}`);
-      if (params.dateFrom && params.dateTo) filterMsg.push(`Date: ${params.dateFrom} to ${params.dateTo}`);
-      else if (params.dateFrom) filterMsg.push(`From: ${params.dateFrom}`);
-      else if (params.dateTo) filterMsg.push(`To: ${params.dateTo}`);
-      
-      const grade = params.gradeLevel || teacherGradeLevel || gradeLevel;
-      const subject = teacherSubject ? ` (${teacherSubject})` : '';
-      
-      if (filterMsg.length > 0) {
-        toast.info(`Viewing completion rate for ${grade}${subject} - ${filterMsg.join(', ')}`);
-      }
-    } catch (err) {
-      console.error('Error fetching completion rate data:', err);
-      toast.error('Failed to fetch completion rate data');
-      
-      // Set empty chart data on error
-      setChartData({
-        labels: [],
-        datasets: [{
-          label: 'Completion Rate',
-          data: [],
-          backgroundColor: '#FFD700',
-          borderColor: '#000',
-          borderWidth: 1,
-        }]
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [dataView, gradeLevel, teacherGradeLevel, teacherSubject]);
-
   // Process data for the chart
-  const processChartData = (data) => {
+  const processChartData = (data, forceAcademicYear = null, forceDataView = null) => {
     if (!data || data.length === 0) {
       setChartData({
         labels: [],
@@ -307,11 +282,15 @@ const LibraryHoursCompletionRate = () => {
       return;
     }
     
+    // Use forced data view if provided, otherwise fall back to component state
+    const effectiveDataView = forceDataView || dataView;
+    console.log('Processing chart data with view:', effectiveDataView);
+    
     // Map to store month data from API response
     const dataMap = new Map();
     data.forEach(item => {
       // Handle both weekly and monthly data
-      if (dataView === 'Weekly') {
+      if (effectiveDataView === 'Weekly' && !forceAcademicYear) {
         dataMap.set(item.day, item.rate);
       } else {
         // Extract month and potentially year if present
@@ -323,32 +302,33 @@ const LibraryHoursCompletionRate = () => {
     let labels = [];
     let values = [];
     
-    if (dataView === 'Weekly') {
-      // Process daily data
-      // Weekly view - days of the week (Monday to Sunday)
+    // Priority for academic year over data view
+    const currentAcademicYear = forceAcademicYear || appliedFilters.academicYear || academicYear;
+    const isAcademicYearFilter = currentAcademicYear && currentAcademicYear.length > 0;
+    
+    if (effectiveDataView === 'Weekly' && !isAcademicYearFilter) {
+      // Process daily data - days of the week (Monday to Sunday)
       labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       values = labels.map(day => dataMap.has(day) ? dataMap.get(day) : 0);
+      
+      console.log('Using weekly data format with days:', labels);
     } else {
-      // For monthly view, check if academic year filter is applied
-      const isAcademicYearFilter = appliedFilters.academicYear && appliedFilters.academicYear.length > 0;
-      
-      // Define month abbreviations and order
-      const monthAbbreviations = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-      
+      // For Monthly view or when academic year is set
       if (isAcademicYearFilter) {
-        // Academic year order (July to June)
         // Extract years from academic year (e.g., "2024-2025")
-        const years = appliedFilters.academicYear.split('-');
+        const years = currentAcademicYear.split('-');
         const firstYear = years[0];
         const secondYear = years[1];
         
-        // Create ordered month labels for academic year (July of first year to June of second year)
+        // Always create ordered month labels for academic year (July of first year to June of second year)
         const academicYearLabels = [
           `JUL ${firstYear}`, `AUG ${firstYear}`, `SEP ${firstYear}`, 
           `OCT ${firstYear}`, `NOV ${firstYear}`, `DEC ${firstYear}`,
           `JAN ${secondYear}`, `FEB ${secondYear}`, `MAR ${secondYear}`, 
           `APR ${secondYear}`, `MAY ${secondYear}`, `JUN ${secondYear}`
         ];
+        
+        console.log('Using academic year order:', academicYearLabels);
         
         // Use academic year ordered labels
         labels = academicYearLabels;
@@ -395,10 +375,11 @@ const LibraryHoursCompletionRate = () => {
     
     if (appliedFilters.dateRange.from && appliedFilters.dateRange.to) {
       dateRangeInfo = ` (${appliedFilters.dateRange.from} to ${appliedFilters.dateRange.to})`;
-    } else if (appliedFilters.academicYear) {
-      dateRangeInfo = ` (AY: ${appliedFilters.academicYear})`;
+    } else if (currentAcademicYear) {
+      dateRangeInfo = ` (AY: ${currentAcademicYear})`;
     }
     
+    // Set the chart data with the processed values
     setChartData({
       labels,
       datasets: [{
@@ -410,6 +391,117 @@ const LibraryHoursCompletionRate = () => {
       }]
     });
   };
+  
+  // Function to fetch completion rate data
+  const fetchCompletionRateData = useCallback(async (params = {}) => {
+    try {
+      setLoading(true);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Authentication token not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      
+      // Prepare query parameters
+      const queryParams = new URLSearchParams();
+      
+      // IMPORTANT: Always include teacher's subject
+      if (teacherSubject) {
+        queryParams.append('subject', teacherSubject);
+      }
+      
+      // Add filter parameters
+      if (params.gradeLevel || teacherGradeLevel) {
+        queryParams.append('gradeLevel', params.gradeLevel || teacherGradeLevel);
+      }
+      
+      if (params.section) {
+        queryParams.append('section', params.section);
+      }
+      
+      // CRITICAL FIX: Prioritize parameters in the following order:
+      // 1. If academic year is selected AND forceMonthlyView is true, force 'monthly'
+      // 2. If specific dataView parameter passed, use that
+      // 3. Fall back to component state
+      if (params.academicYear) {
+        queryParams.append('academicYear', params.academicYear);
+        
+        // Force monthly view only when explicitly told to (on filter apply)
+        if (params.forceMonthlyView === true) {
+          queryParams.append('timeframe', 'monthly');
+          console.log('Forcing monthly view for academic year data');
+        } else {
+          // Otherwise use the specified or current data view
+          queryParams.append('timeframe', params.dataView ? params.dataView.toLowerCase() : dataView.toLowerCase());
+          console.log('Using passed data view with academic year:', params.dataView || dataView);
+        }
+      } else if (params.dataView) {
+        // Use explicitly passed dataView (fixes the timing issue)
+        queryParams.append('timeframe', params.dataView.toLowerCase());
+        console.log('Using passed data view:', params.dataView.toLowerCase());
+      } else {
+        // Fallback to state if no explicit view is provided
+        queryParams.append('timeframe', dataView.toLowerCase());
+        console.log('Using current state data view:', dataView.toLowerCase());
+      }
+      
+      // Add date range parameters
+      if (params.dateFrom) {
+        queryParams.append('dateFrom', params.dateFrom);
+      }
+      
+      if (params.dateTo) {
+        queryParams.append('dateTo', params.dateTo);
+      }
+      
+      console.log('Fetching completion rate with params:', queryParams.toString());
+      
+      // Make API call to fetch completion rate data
+      const url = `http://localhost:8080/api/statistics/completion-rate?${queryParams.toString()}`;
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Process the data for the chart - pass the effective dataView explicitly
+      const effectiveView = (params.academicYear && params.forceMonthlyView) ? 'Monthly' : params.dataView || dataView;
+      processChartData(response.data, params.academicYear, effectiveView);
+      
+      // Build notification message based on applied filters
+      let filterMsg = [];
+      if (params.section) filterMsg.push(`Section ${params.section}`);
+      if (params.academicYear) filterMsg.push(`AY: ${params.academicYear}`);
+      if (params.dateFrom && params.dateTo) filterMsg.push(`Date: ${params.dateFrom} to ${params.dateTo}`);
+      else if (params.dateFrom) filterMsg.push(`From: ${params.dateFrom}`);
+      else if (params.dateTo) filterMsg.push(`To: ${params.dateTo}`);
+      if (params.dataView && !params.forceMonthlyView) filterMsg.push(`View: ${params.dataView}`);
+      
+      const grade = params.gradeLevel || teacherGradeLevel || gradeLevel;
+      const subject = teacherSubject ? ` (${teacherSubject})` : '';
+      
+      if (filterMsg.length > 0) {
+        toast.info(`Viewing completion rate for ${grade}${subject} - ${filterMsg.join(', ')}`);
+      }
+    } catch (err) {
+      console.error('Error fetching completion rate data:', err);
+      toast.error('Failed to fetch completion rate data');
+      
+      // Set empty chart data on error
+      setChartData({
+        labels: [],
+        datasets: [{
+          label: 'Completion Rate',
+          data: [],
+          backgroundColor: '#FFD700',
+          borderColor: '#000',
+          borderWidth: 1,
+        }]
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [dataView, gradeLevel, teacherGradeLevel, teacherSubject]);
   
   // Helper to get month index from abbreviation
   const getMonthIndexFromAbbr = (abbr) => {
@@ -443,7 +535,7 @@ const LibraryHoursCompletionRate = () => {
     }
   }, [teacherGradeLevel, teacherSection, teacherSubject, fetchCompletionRateData]);
 
-  // Update chart title when filters change
+  // Update chart title and scales when filters or dataView changes
   useEffect(() => {
     // Update chart options to reflect section filter and teacher subject
     const grade = gradeLevel || teacherGradeLevel || 'all grades';
@@ -458,10 +550,13 @@ const LibraryHoursCompletionRate = () => {
     
     // Determine X-axis label based on data view and filters
     let xAxisTitle = '';
-    if (dataView === 'Weekly') {
+    const currentAcademicYear = appliedFilters.academicYear;
+    const hasAcademicYear = currentAcademicYear && currentAcademicYear.length > 0;
+    
+    if (appliedFilters.dataView === 'Weekly' && !hasAcademicYear) {
       xAxisTitle = 'Days of the Week (Monday to Sunday)';
-    } else if (appliedFilters.academicYear) {
-      xAxisTitle = `Months of the Academic Year (${appliedFilters.academicYear})`;
+    } else if (hasAcademicYear) {
+      xAxisTitle = `Months of the Academic Year (${currentAcademicYear})`;
     } else {
       xAxisTitle = 'Months of the Year';
     }
@@ -488,7 +583,7 @@ const LibraryHoursCompletionRate = () => {
         }
       }
     }));
-  }, [appliedFilters, gradeLevel, teacherGradeLevel, teacherSubject, dataView]);
+  }, [appliedFilters, gradeLevel, teacherGradeLevel, teacherSubject]);
 
   // Handle filter button click
   const handleFilterClick = () => {
@@ -498,39 +593,63 @@ const LibraryHoursCompletionRate = () => {
       return;
     }
     
-    // Update applied filters state
+    // Force monthly view if academic year is selected
+    let viewToUse = tempDataView;
+    if (academicYear) {
+      viewToUse = 'Monthly';
+      setDataView('Monthly');
+    } else {
+      setDataView(tempDataView);
+    }
+    
+    // Update applied filters state first
     setAppliedFilters({
       section: section,
       academicYear: academicYear,
-      dateRange: { from: dateFrom, to: dateTo }
+      dateRange: { from: dateFrom, to: dateTo },
+      dataView: viewToUse // Add dataView to applied filters
     });
     
-    // Apply the filters to the data
+    // Apply the filters to the data with explicit dataView parameter
     fetchCompletionRateData({
       gradeLevel,
       section,
       academicYear,
       dateFrom,
-      dateTo
+      dateTo,
+      dataView: viewToUse, // Pass the selected view directly to avoid timing issues
+      forceMonthlyView: !!academicYear // Force monthly view only when applying filters with academic year
     });
   };
   
   // Clear filters
   const handleClearFilters = () => {
-    setSection(teacherSection || '');  // Reset to teacher's section if assigned
+    // Restore previous view if we had academic year selected
+    const viewToRestore = academicYear ? previousDataView : tempDataView;
+    
+    // Reset to teacher's section if assigned
+    setSection(teacherSection || '');
     setDateFrom('');
     setDateTo('');
     setAcademicYear('');
+    
+    // Restore previous data view
+    setTempDataView(viewToRestore);
+    setDataView(viewToRestore);
+    
+    // Update applied filters state
     setAppliedFilters({
       section: teacherSection || '',
       academicYear: '',
-      dateRange: { from: '', to: '' }
+      dateRange: { from: '', to: '' },
+      dataView: viewToRestore
     });
     
-    // Refresh data with cleared filters
+    // Refresh data with cleared filters and restored data view
     fetchCompletionRateData({
       gradeLevel,
-      section: teacherSection || ''  // Keep teacher's section if assigned
+      section: teacherSection || '',  // Keep teacher's section if assigned
+      dataView: viewToRestore // Use the restored view
     });
     
     toast.info('Filters cleared');
@@ -558,12 +677,16 @@ const LibraryHoursCompletionRate = () => {
               variant="outlined"
               size="small"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={handleDateFromChange}
+              disabled={!!academicYear} // Disable if academicYear has a value
               InputLabelProps={{ shrink: true }}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
-                width: '180px'
+                width: '180px',
+                "& .Mui-disabled": {
+                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                }
               }}
             />
           </Box>
@@ -575,12 +698,19 @@ const LibraryHoursCompletionRate = () => {
               variant="outlined"
               size="small"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={handleDateToChange}
+              disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+              inputProps={{
+                min: dateFrom || undefined // Set minimum date to dateFrom
+              }}
               InputLabelProps={{ shrink: true }}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
-                width: '180px'
+                width: '180px',
+                "& .Mui-disabled": {
+                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                }
               }}
             />
           </Box>
@@ -591,15 +721,15 @@ const LibraryHoursCompletionRate = () => {
               <Select
                 size="small"
                 value={academicYear}
-                onChange={(e) => {
-                  setAcademicYear(e.target.value);
-                  // Clear date range if academic year is selected
-                  if (e.target.value) {
-                    setDateFrom('');
-                    setDateTo('');
+                onChange={handleAcademicYearChange}
+                disabled={!!dateFrom || !!dateTo} // Disable if either date has a value
+                sx={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '15px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
                   }
                 }}
-                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                 displayEmpty
               >
                 <MenuItem value="">Select Academic Year</MenuItem>
@@ -686,20 +816,30 @@ const LibraryHoursCompletionRate = () => {
             </FormControl>
           </Box>
           
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography sx={{ marginRight: 1 }}>Data View:</Typography>
-            <FormControl sx={{ width: '180px' }}>
-              <Select
-                size="small"
-                value={dataView}
-                onChange={(e) => setDataView(e.target.value)}
-                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
-                displayEmpty
-              >
-                <MenuItem value="Weekly">Weekly (Monday to Sunday)</MenuItem>
-                <MenuItem value="Monthly">Monthly (January to December)</MenuItem>
-              </Select>
-            </FormControl>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography sx={{ marginRight: 1 }}>Data View:</Typography>
+              <FormControl sx={{ width: '180px' }}>
+                <Select
+                  size="small"
+                  value={tempDataView}
+                  onChange={(e) => setTempDataView(e.target.value)}
+                  sx={{ 
+                    backgroundColor: '#fff', 
+                    borderRadius: '15px',
+                    "& .Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    }
+                  }}
+                  displayEmpty
+                  disabled={!!academicYear} // Disable if academic year is selected
+                >
+                  <MenuItem value="Weekly">Weekly</MenuItem>
+                  <MenuItem value="Monthly">Monthly</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
           </Box>
         </Box>
       </Box>
@@ -766,6 +906,18 @@ const LibraryHoursCompletionRate = () => {
                 sx={{ borderColor: '#FFD700', color: '#000' }}
               />
             )}
+            {appliedFilters.dataView && (
+              <Chip 
+                label={`View: ${appliedFilters.dataView}${appliedFilters.academicYear ? ' (fixed)' : ''}`}
+                size="small" 
+                variant="outlined"
+                sx={{ 
+                  borderColor: '#FFD700', 
+                  color: '#000',
+                  backgroundColor: appliedFilters.academicYear ? 'rgba(255, 215, 0, 0.1)' : 'transparent'
+                }}
+              />
+            )}
           </Box>
         </Box>
       )}
@@ -801,7 +953,9 @@ const LibraryHoursCompletionRate = () => {
         </Box>
         
         <Typography variant="body1" sx={{ textAlign: 'center', marginBottom: 2 }}>
-          {dataView === 'Weekly' ? 'Weekly (Monday to Sunday)' : 'Monthly (January to December)'} View for {teacherGradeLevel || gradeLevel || 'All Grades'} {appliedFilters.section ? `- Section ${appliedFilters.section}` : ''}
+          {appliedFilters.academicYear ? `Academic Year ${appliedFilters.academicYear} (July to June)` : 
+           appliedFilters.dataView === 'Weekly' ? 'Weekly (Monday to Sunday)' : 
+           'Monthly (January to December)'} View for {teacherGradeLevel || gradeLevel || 'All Grades'} {appliedFilters.section ? `- Section ${appliedFilters.section}` : ''}
         </Typography>
         
         <Box sx={{ height: '350px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -847,4 +1001,4 @@ const LibraryHoursCompletionRate = () => {
   );
 };
 
-export default LibraryHoursCompletionRate;
+export default TeacherLibraryHoursCompletionRate;

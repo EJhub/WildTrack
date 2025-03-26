@@ -467,6 +467,48 @@ const TeacherDashboard = () => {
     setPage(0);
   };
 
+  // Date From change handler with mutual exclusivity logic
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Date To change handler with mutual exclusivity logic
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Academic Year change handler with mutual exclusivity logic
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting academic year, clear date filters
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+    }
+    
+    setAcademicYear(value);
+  };
+
   // Updated applyFilters function - called when filter button is clicked
   const applyFilters = async () => {
     try {
@@ -771,8 +813,14 @@ const TeacherDashboard = () => {
                   size="small"
                   fullWidth
                   value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
+                  onChange={handleDateFromChange}
+                  disabled={!!academicYear} // Disable if academicYear has a value
                   InputLabelProps={{ shrink: true }}
+                  sx={{
+                    "& .Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    }
+                  }}
                 />
               </Grid>
               
@@ -784,8 +832,17 @@ const TeacherDashboard = () => {
                   size="small"
                   fullWidth
                   value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
+                  onChange={handleDateToChange}
+                  disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+                  inputProps={{
+                    min: dateFrom || undefined // Set minimum date to dateFrom
+                  }}
                   InputLabelProps={{ shrink: true }}
+                  sx={{
+                    "& .Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    }
+                  }}
                 />
               </Grid>
               
@@ -797,7 +854,13 @@ const TeacherDashboard = () => {
                   size="small"
                   fullWidth
                   value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
+                  onChange={handleAcademicYearChange}
+                  disabled={!!dateFrom || !!dateTo} // Disable if either date has a value
+                  sx={{
+                    "& .Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    }
+                  }}
                 >
                   <MenuItem value="">Select Academic Year</MenuItem>
                   <MenuItem value="2024-2025">2024-2025</MenuItem>

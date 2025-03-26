@@ -21,6 +21,11 @@ import TablePagination from '@mui/material/TablePagination';
 import { AuthContext } from '../AuthContext';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
+// Import icons for sort indicators
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 
 const StudentRecords = () => {
   const [students, setStudents] = useState([]);
@@ -38,6 +43,10 @@ const StudentRecords = () => {
   // Pagination states
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  
+  // Add sort state
+  const [orderBy, setOrderBy] = useState('name'); // Default sort by name
+  const [order, setOrder] = useState('asc'); // Default sort direction
   
   // Get current user from AuthContext
   const { user } = useContext(AuthContext);
@@ -114,7 +123,11 @@ const StudentRecords = () => {
         }));
 
         setStudents(formattedStudents);
-        setFilteredStudents(formattedStudents);
+        
+        // Apply default sorting to the initial data
+        const sortedData = getSortedData(formattedStudents);
+        setFilteredStudents(sortedData);
+        
         setError(null);
       } catch (err) {
         console.error('Error fetching students:', err);
@@ -127,17 +140,92 @@ const StudentRecords = () => {
     fetchStudents();
   }, [teacherSubject, teacherGradeLevel, quarter]);
 
-  // Search functionality
+  // Effect to reapply sorting when order or orderBy changes
+  useEffect(() => {
+    if (filteredStudents.length > 0) {
+      const sortedData = getSortedData(filteredStudents);
+      setFilteredStudents(sortedData);
+    }
+  }, [order, orderBy]);
+
+  // Function to handle sort requests
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // SortIndicator component for visual feedback
+  const SortIndicator = ({ column }) => {
+    if (orderBy !== column) {
+      return <UnfoldMoreIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5, opacity: 0.5 }} />;
+    }
+    return order === 'asc' 
+      ? <ArrowUpwardIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5 }} />
+      : <ArrowDownwardIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5 }} />;
+  };
+
+  // Sorting function
+  const getSortedData = (data) => {
+    if (!orderBy) return data;
+    
+    return [...data].sort((a, b) => {
+      // Handle different data types appropriately
+      
+      // Handle null values
+      if (a[orderBy] === null && b[orderBy] === null) return 0;
+      if (a[orderBy] === null) return order === 'asc' ? -1 : 1;
+      if (b[orderBy] === null) return order === 'asc' ? 1 : -1;
+      
+      // For string values (most columns)
+      if (['idNumber', 'name', 'gradeSection', 'subject', 'quarter'].includes(orderBy)) {
+        const aValue = String(a[orderBy]).toLowerCase();
+        const bValue = String(b[orderBy]).toLowerCase();
+        
+        return order === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      // Special handling for progress column
+      if (orderBy === 'progress') {
+        // Define a priority order for progress statuses
+        const progressPriority = {
+          'Not started': 1,
+          'In-progress': 2,
+          'Completed': 3
+        };
+        
+        const aValue = progressPriority[a.progress] || 0;
+        const bValue = progressPriority[b.progress] || 0;
+        
+        return order === 'asc'
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+      
+      // Default comparison for any other columns
+      return order === 'asc'
+        ? (a[orderBy] < b[orderBy] ? -1 : 1)
+        : (b[orderBy] < a[orderBy] ? -1 : 1);
+    });
+  };
+
+  // Search functionality with sorting preserved
   const handleSearch = (event) => {
     const value = event.target.value.toLowerCase();
     setSearch(value);
-    setFilteredStudents(
-      students.filter(
-        (student) =>
-          student.name.toLowerCase().includes(value) || 
-          student.idNumber.toLowerCase().includes(value)
-      )
+    
+    const filtered = students.filter(
+      (student) =>
+        student.name.toLowerCase().includes(value) || 
+        student.idNumber.toLowerCase().includes(value)
     );
+    
+    // Apply current sort to search results
+    const sortedData = getSortedData(filtered);
+    setFilteredStudents(sortedData);
+    
     setPage(0); // Reset to first page when searching
   };
 
@@ -151,7 +239,49 @@ const StudentRecords = () => {
     setPage(0);
   };
 
-  // Filter functionality
+  // Date From change handler with mutual exclusivity logic
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Date To change handler with mutual exclusivity logic
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Academic Year change handler with mutual exclusivity logic
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting academic year, clear date filters
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+    }
+    
+    setAcademicYear(value);
+  };
+
+  // Filter functionality with sorting preserved
   const handleFilter = () => {
     // Apply quarter and date filters
     const filtered = students.filter((student) => {
@@ -161,18 +291,26 @@ const StudentRecords = () => {
       const matchesAcademicYear = academicYear ? student.academicYear === academicYear : true;
       return matchesQuarter && matchesDateFrom && matchesDateTo && matchesAcademicYear;
     });
-    setFilteredStudents(filtered);
+    
+    // Apply current sort to filtered results
+    const sortedData = getSortedData(filtered);
+    setFilteredStudents(sortedData);
+    
     setPage(0); // Reset to first page when filtering
   };
 
-  // Reset filters
+  // Reset filters but maintain sorting
   const handleResetFilters = () => {
     setQuarter('');
     setDateFrom('');
     setDateTo('');
     setAcademicYear('');
     setSearch('');
-    setFilteredStudents(students);
+    
+    // Apply current sort to all data
+    const sortedData = getSortedData(students);
+    setFilteredStudents(sortedData);
+    
     setPage(0); // Reset to first page when resetting filters
   };
 
@@ -181,6 +319,17 @@ const StudentRecords = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  // Common style for sortable table headers
+  const sortableHeaderStyle = {
+    fontWeight: "bold", 
+    backgroundColor: "#8C383E", 
+    color: "#fff",
+    cursor: "pointer",
+    '&:hover': {
+      backgroundColor: "#9C484E" // Lighter shade on hover
+    }
+  };
 
   return (
     <>
@@ -197,7 +346,6 @@ const StudentRecords = () => {
           sx={{
             padding: '32px 32px 64px 32px', // Increased bottom padding
             flexGrow: 1,
-
             overflow: 'auto', // Enable scrolling for main content
             height: '100%', // Fill available height
             display: 'flex',
@@ -273,11 +421,15 @@ const StudentRecords = () => {
                 size="small"
                 label="Date From"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={handleDateFromChange}
+                disabled={!!academicYear} // Disable if academicYear has a value
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   backgroundColor: '#fff',
                   borderRadius: '15px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
                 }}
               />
               
@@ -287,11 +439,18 @@ const StudentRecords = () => {
                 size="small"
                 label="Date To"
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={handleDateToChange}
+                disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+                inputProps={{
+                  min: dateFrom || undefined // Set minimum date to dateFrom
+                }}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   backgroundColor: '#fff',
                   borderRadius: '15px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
                 }}
               />
 
@@ -324,11 +483,15 @@ const StudentRecords = () => {
                 variant="outlined"
                 size="small"
                 value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
+                onChange={handleAcademicYearChange}
+                disabled={!!dateFrom || !!dateTo} // Disable if either date has a value
                 sx={{
                   backgroundColor: '#fff',
                   borderRadius: '15px',
                   minWidth: '150px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
                 }}
               >
                 <MenuItem value="">Select Academic Year</MenuItem>
@@ -391,12 +554,66 @@ const StudentRecords = () => {
               <Table sx={{ flexGrow: 1 }}> {/* Removed stickyHeader */}
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>ID Number</TableCell>
-                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Grade & Section</TableCell>
-                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Subject</TableCell>
-                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Quarter</TableCell>
-                    <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Progress</TableCell>
+                    <TableCell 
+                      onClick={() => handleRequestSort('idNumber')}
+                      sx={sortableHeaderStyle}
+                    >
+                      <Tooltip title="Sort by ID number">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          ID Number <SortIndicator column="idNumber" />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleRequestSort('name')}
+                      sx={sortableHeaderStyle}
+                    >
+                      <Tooltip title="Sort by name">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          Name <SortIndicator column="name" />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleRequestSort('gradeSection')}
+                      sx={sortableHeaderStyle}
+                    >
+                      <Tooltip title="Sort by grade & section">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          Grade & Section <SortIndicator column="gradeSection" />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleRequestSort('subject')}
+                      sx={sortableHeaderStyle}
+                    >
+                      <Tooltip title="Sort by subject">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          Subject <SortIndicator column="subject" />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleRequestSort('quarter')}
+                      sx={sortableHeaderStyle}
+                    >
+                      <Tooltip title="Sort by quarter">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          Quarter <SortIndicator column="quarter" />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleRequestSort('progress')}
+                      sx={sortableHeaderStyle}
+                    >
+                      <Tooltip title="Sort by progress">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          Progress <SortIndicator column="progress" />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

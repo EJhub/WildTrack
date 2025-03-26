@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import {
   Box,
   Typography,
@@ -18,7 +18,6 @@ import {
   TableCell,
   useTheme,
   useMediaQuery,
-  Button,
   Snackbar,
   Alert
 } from "@mui/material";
@@ -31,169 +30,201 @@ import { AuthContext } from "../AuthContext";
 import DoneIcon from "@mui/icons-material/Done";
 import WarningIcon from "@mui/icons-material/Warning";
 import ScheduleIcon from "@mui/icons-material/Schedule";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+// No Socket.io import needed
 
 const LibraryRequirementsProgress = () => {
   const [requirements, setRequirements] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [lastCompletedItem, setLastCompletedItem] = useState(null);
+  const [lastRequirementHash, setLastRequirementHash] = useState("");
   const { user } = useContext(AuthContext);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const pollingIntervalRef = useRef(null);
 
   // Store previously completed requirements to detect new completions
   const [previouslyCompleted, setPreviouslyCompleted] = useState([]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const idNumber = user?.idNumber || localStorage.getItem("idNumber");
-
-      if (!token || !idNumber) {
-        toast.error("Unauthorized access. Please log in.");
-        return;
-      }
-
-      // Fetch requirements progress
-      const progressResponse = await axios.get(
-        `http://localhost:8080/api/library-progress/${idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Fetch progress summary
-      const summaryResponse = await axios.get(
-        `http://localhost:8080/api/library-progress/summary/${idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Get completed requirements
-      const currentCompleted = progressResponse.data
-        .filter(req => req.isCompleted)
-        .map(req => req.id);
-      
-      // Check for newly completed requirements
-      if (previouslyCompleted.length > 0) {
-        const newlyCompleted = currentCompleted.filter(
-          id => !previouslyCompleted.includes(id)
-        );
-        
-        if (newlyCompleted.length > 0) {
-          // Find details of newly completed requirements
-          const newCompletionDetails = progressResponse.data.filter(
-            req => newlyCompleted.includes(req.id)
-          );
-          
-          if (newCompletionDetails.length > 0) {
-            setShowCelebration(true);
-            setLastCompletedItem(newCompletionDetails[0]);
-          }
-        }
-      }
-      
-      // Update previously completed list
-      setPreviouslyCompleted(currentCompleted);
-      setRequirements(progressResponse.data);
-      setSummary(summaryResponse.data);
-    } catch (error) {
-      console.error("Error fetching requirements:", error);
-      toast.error("Failed to fetch library requirements progress.");
-    } finally {
-      setLoading(false);
-    }
+  
+  // Utility function to create a simple hash of requirements array
+  // This helps us detect changes efficiently
+  const createRequirementsHash = (reqs) => {
+    if (!reqs || reqs.length === 0) return "";
+    return reqs.map(r => `${r.id}-${r.subject}-${r.isCompleted}`).join('|');
   };
 
-  // Function to force refresh requirements
-  const refreshRequirements = async () => {
+  // Function to check for requirement updates
+  const checkForUpdates = async () => {
     try {
-      setRefreshing(true);
       const token = localStorage.getItem("token");
       const idNumber = user?.idNumber || localStorage.getItem("idNumber");
 
       if (!token || !idNumber) {
-        toast.error("Unauthorized access. Please log in.");
         return;
       }
 
-      // Store the current count of requirements before refresh
-      const previousRequirementCount = requirements.length;
+      // Initialize requirements if empty - this will call the refresh endpoint
+      if (requirements.length === 0) {
+        await initializeRequirements(idNumber, token);
+        return;
+      }
 
-      // Call the force refresh endpoint
-      const response = await axios.post(
-        `http://localhost:8080/api/library-progress/refresh/${idNumber}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      // Check for new requirements (including when all existing ones are completed)
+      const progressResponse = await axios.get(
+        `http://localhost:8080/api/library-progress/check-new-requirements/${idNumber}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Set the refreshed requirements
-      if (response.data.requirements) {
-        setRequirements(response.data.requirements);
+      const newRequirements = progressResponse.data;
+      const newRequirementsHash = createRequirementsHash(newRequirements);
+      
+      // Only update if there's an actual change
+      if (newRequirementsHash !== lastRequirementHash) {
+        // Get completed requirements for celebration checks
+        const currentCompleted = newRequirements
+          .filter(req => req.isCompleted)
+          .map(req => req.id);
         
-        // Also refresh the summary data
-        const summaryResponse = await axios.get(
-          `http://localhost:8080/api/library-progress/summary/${idNumber}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        // Check for newly completed requirements
+        if (previouslyCompleted.length > 0) {
+          const newlyCompleted = currentCompleted.filter(
+            id => !previouslyCompleted.includes(id)
+          );
+          
+          if (newlyCompleted.length > 0) {
+            // Find details of newly completed requirements
+            const newCompletionDetails = newRequirements.filter(
+              req => newlyCompleted.includes(req.id)
+            );
+            
+            if (newCompletionDetails.length > 0) {
+              setShowCelebration(true);
+              setLastCompletedItem(newCompletionDetails[0]);
+            }
           }
+        }
+        
+        // Check for newly added requirements
+        if (newRequirements.length > requirements.length) {
+          // Get the difference
+          const newIds = newRequirements.map(r => r.id);
+          const oldIds = requirements.map(r => r.id);
+          const addedRequirements = newRequirements.filter(r => !oldIds.includes(r.id));
+          
+          if (addedRequirements.length > 0) {
+            // Notify for new requirements
+            toast.info(`${addedRequirements.length} new requirement${addedRequirements.length > 1 ? 's' : ''} have been added`, {
+              position: "bottom-right",
+              autoClose: 3000
+            });
+          }
+        }
+        
+        // Update the state with new data
+        setPreviouslyCompleted(currentCompleted);
+        setRequirements(newRequirements);
+        setLastRequirementHash(newRequirementsHash);
+        
+        // Use the auto-init endpoint to ensure requirements are initialized and get summary
+        const summaryResponse = await axios.get(
+          `http://localhost:8080/api/library-progress/summary-with-init/${idNumber}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         
         setSummary(summaryResponse.data);
-        
-        // Show appropriate message based on whether new requirements were added
-        if (response.data.requirements.length > previousRequirementCount) {
-          const newCount = response.data.requirements.length - previousRequirementCount;
-          toast.success(`${newCount} new requirement${newCount > 1 ? 's' : ''} added to your list.`);
-        } else {
-          if (previousRequirementCount === 0 && response.data.requirements.length === 0) {
-            toast.info("No library requirements are currently set for your grade level.");
-          } else {
-            toast.info("No new requirements found for your grade level.");
-          }
-        }
       }
     } catch (error) {
-      console.error("Error refreshing requirements:", error);
-      toast.error("Failed to refresh requirements.");
-    } finally {
-      setRefreshing(false);
+      console.error("Error checking for updates:", error);
+      // Don't show toast errors for background checks
     }
   };
 
-  // Initial load and refresh every 60 seconds
+  // Function to initialize requirements if none exist
+  const initializeRequirements = async (idNumber, token) => {
+    try {
+      // First check for new requirements
+      const requirementsResponse = await axios.get(
+        `http://localhost:8080/api/library-progress/check-new-requirements/${idNumber}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // If we got requirements back, use them
+      if (requirementsResponse.data && requirementsResponse.data.length > 0) {
+        setRequirements(requirementsResponse.data);
+        setLastRequirementHash(createRequirementsHash(requirementsResponse.data));
+      } else {
+        // Otherwise call the refresh endpoint to force initialization
+        const response = await axios.post(
+          `http://localhost:8080/api/library-progress/refresh/${idNumber}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+  
+        if (response.data.requirements) {
+          setRequirements(response.data.requirements);
+          setLastRequirementHash(createRequirementsHash(response.data.requirements));
+        }
+      }
+      
+      // Get summary data
+      const summaryResponse = await axios.get(
+        `http://localhost:8080/api/library-progress/summary-with-init/${idNumber}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setSummary(summaryResponse.data);
+    } catch (error) {
+      console.error("Error initializing requirements:", error);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
-    fetchData();
+    const loadInitialData = async () => {
+      setLoading(true);
+      await checkForUpdates();
+      setLoading(false);
+    };
     
-    // Set up auto-refresh interval
-    const interval = setInterval(() => {
-      fetchData();
-    }, 60000); // Refresh every minute
+    loadInitialData();
     
-    return () => clearInterval(interval);
+    // Set up polling interval - check every 5 seconds for changes
+    pollingIntervalRef.current = setInterval(() => {
+      checkForUpdates();
+    }, 5000);
+    
+    // Clean up on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [user]);
+  
+  // Effect to update polling when user reference changes
+  useEffect(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    
+    pollingIntervalRef.current = setInterval(() => {
+      checkForUpdates();
+    }, 5000);
+    
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, [user]);
 
   const handleCelebrationClose = () => {
     setShowCelebration(false);
   };
 
-  // Updated to remove "Pending Approval" status
+  // Status chip component
   const getStatusChip = (status) => {
     switch (status) {
       case "Completed":
@@ -293,22 +324,22 @@ const LibraryRequirementsProgress = () => {
         sx={{ 
           display: "flex", 
           height: "100vh",
-          overflow: "hidden" // Prevent outer document scrolling
+          overflow: "hidden"
         }}
       >
         <SideBar />
         <Box
           sx={{
-            padding: "32px 32px 200px 32px", // Significantly increased bottom padding to 200px
+            padding: "32px 32px 200px 32px",
             flexGrow: 1,
             backgroundImage: "url('/studentbackground.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            overflow: "auto", // Enable scrolling for main content
-            height: "100%", // Ensure content area fills available height
+            overflow: "auto",
+            height: "100%",
             display: "flex",
             flexDirection: "column",
-            '&::-webkit-scrollbar': { // Show scrollbar
+            '&::-webkit-scrollbar': {
               width: '8px',
               background: 'rgba(0,0,0,0.1)',
             },
@@ -318,7 +349,7 @@ const LibraryRequirementsProgress = () => {
             }
           }}
         >
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+          <Box sx={{ mb: 3 }}>
             <Typography
               variant="h4"
               sx={{
@@ -329,19 +360,17 @@ const LibraryRequirementsProgress = () => {
               Library Hours Requirements
             </Typography>
             
-            <Button 
-              startIcon={<RefreshIcon />}
-              onClick={refreshRequirements}
-              variant="contained"
-              disabled={refreshing}
-              sx={{
-                backgroundColor: "#FFD700",
-                color: "#000",
-                "&:hover": { backgroundColor: "#FFC107" },
+            {/* Small indicator that updates are automatic */}
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: "rgba(255, 215, 0, 0.8)",
+                display: "block",
+                mt: 0.5
               }}
             >
-              {refreshing ? "Checking..." : requirements.length === 0 ? "Initialize Requirements" : "Check for New Requirements"}
-            </Button>
+              Updates automatically as new requirements are approved
+            </Typography>
           </Box>
 
           {requirements.length === 0 ? (
@@ -358,23 +387,9 @@ const LibraryRequirementsProgress = () => {
               </Typography>
               <Typography variant="body1" align="center" sx={{ mt: 2 }}>
                 {user?.grade 
-                  ? "Click the button below to initialize library requirements for your current grade level." 
+                  ? "When requirements are assigned to your grade level, they will automatically appear here." 
                   : "No grade level assigned. Please contact your administrator."}
               </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={refreshRequirements}
-                  disabled={refreshing || !user?.grade}
-                  sx={{
-                    backgroundColor: "#FFD700",
-                    color: "#000",
-                    "&:hover": { backgroundColor: "#FFC107" },
-                  }}
-                >
-                  {refreshing ? "Initializing..." : "Initialize Requirements"}
-                </Button>
-              </Box>
             </Card>
           ) : isMobile ? (
             // Mobile view
@@ -471,8 +486,8 @@ const LibraryRequirementsProgress = () => {
               sx={{
                 borderRadius: "15px",
                 boxShadow: 3,
-                overflow: "visible", // Change from hidden to visible
-                marginBottom: 4, // Add bottom margin
+                overflow: "visible",
+                marginBottom: 4,
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
               }}
             >
@@ -619,16 +634,16 @@ const LibraryRequirementsProgress = () => {
           {summary && (
             <Card sx={{ 
               mt: 4, 
-              mb: 8, // Significant bottom margin
+              mb: 8,
               backgroundColor: 'rgba(255, 255, 255, 0.9)', 
               borderRadius: '15px', 
-              boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.15)', // Stronger shadow
+              boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.15)',
               position: 'relative', 
               zIndex: 1,
-              minHeight: 160, // Ensure minimum height
-              border: '2px solid #FFC107', // Add border for visibility
+              minHeight: 160,
+              border: '2px solid #FFC107',
             }}>
-              <CardContent sx={{ p: 3 }}> {/* Increased padding */}
+              <CardContent sx={{ p: 3 }}>
                 <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
                   Overall Reading Progress
                 </Typography>
@@ -636,20 +651,20 @@ const LibraryRequirementsProgress = () => {
                   display: 'flex', 
                   alignItems: 'center', 
                   mb: 2,
-                  mt: 3, // More space above progress bar
+                  mt: 3,
                 }}>
                   <Box sx={{ 
                     flexGrow: 1, 
                     mr: 2,
-                    height: 20, // Taller progress bar
-                    bgcolor: 'rgba(0,0,0,0.05)', // Background for the progress track
+                    height: 20,
+                    bgcolor: 'rgba(0,0,0,0.05)',
                     borderRadius: 5,
                   }}>
                     <LinearProgress 
                       variant="determinate" 
                       value={summary.overallPercentage}
                       sx={{
-                        height: 20, // Taller height
+                        height: 20,
                         borderRadius: 5,
                         '& .MuiLinearProgress-bar': {
                           backgroundColor: '#FFD700',

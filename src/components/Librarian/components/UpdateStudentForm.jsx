@@ -24,6 +24,10 @@ import axios from 'axios';
 import ConfirmUpdateDialog from './ConfirmUpdateDialog';
 
 const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
+  // Add validation functions
+  const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
+  const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
+
   const [userData, setUserData] = useState({
     firstName: '',
     lastName: '',
@@ -33,6 +37,14 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
     section: '',
     role: 'Student',
     academicYear: '',
+  });
+  
+  // Add validation errors state
+  const [errors, setErrors] = useState({
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    idNumber: ''
   });
   
   // State for reset password
@@ -126,13 +138,86 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
     }
   }, [user, open]);
 
+  // Validate name fields
+  useEffect(() => {
+    validateNameFields();
+  }, [userData.firstName, userData.middleName, userData.lastName]);
+
+  // Validate ID Number field
+  useEffect(() => {
+    validateIdNumber();
+  }, [userData.idNumber]);
+
+  // Validate name fields
+  const validateNameFields = () => {
+    const newErrors = { ...errors };
+    
+    // First name validation
+    if (userData.firstName && !isLettersOnly(userData.firstName)) {
+      newErrors.firstName = "First name should contain letters only";
+    } else {
+      newErrors.firstName = '';
+    }
+    
+    // Middle name validation (if provided)
+    if (userData.middleName && !isLettersOnly(userData.middleName)) {
+      newErrors.middleName = "Middle name should contain letters only";
+    } else {
+      newErrors.middleName = '';
+    }
+    
+    // Last name validation
+    if (userData.lastName && !isLettersOnly(userData.lastName)) {
+      newErrors.lastName = "Last name should contain letters only";
+    } else {
+      newErrors.lastName = '';
+    }
+    
+    setErrors(newErrors);
+    return !newErrors.firstName && !newErrors.middleName && !newErrors.lastName;
+  };
+
+  // Validate ID Number
+  const validateIdNumber = () => {
+    const newErrors = { ...errors };
+    
+    if (userData.idNumber && !isValidIdNumber(userData.idNumber)) {
+      newErrors.idNumber = "ID Number should contain only numbers and dashes";
+    } else {
+      newErrors.idNumber = '';
+    }
+    
+    setErrors(newErrors);
+    return !newErrors.idNumber;
+  };
+
   if (!open) return null;
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     
+    // Validation for name fields (letters only)
+    if (['firstName', 'middleName', 'lastName'].includes(name)) {
+      // Allow only letters and spaces
+      if (value === '' || isLettersOnly(value)) {
+        setUserData(prevData => ({
+          ...prevData,
+          [name]: value,
+        }));
+      }
+      // Invalid input is ignored
+    }
+    // Validation for ID number (numbers and dashes only)
+    else if (name === 'idNumber') {
+      if (value === '' || isValidIdNumber(value)) {
+        setUserData(prevData => ({
+          ...prevData,
+          [name]: value,
+        }));
+      }
+    }
     // Special handling for grade change
-    if (name === 'grade') {
+    else if (name === 'grade') {
       setUserData(prevData => ({
         ...prevData,
         [name]: value,
@@ -205,9 +290,44 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
     });
   };
 
+  // Validate form before submission
+  const validateForm = () => {
+    // Validate name fields
+    const namesValid = validateNameFields();
+    
+    // Validate ID number
+    const idNumberValid = validateIdNumber();
+    
+    // Check if any required fields are empty
+    const requiredFields = [
+      'firstName',
+      'lastName',
+      'idNumber',
+      'grade',
+      'section',
+      'academicYear'
+    ];
+    
+    const allFieldsFilled = requiredFields.every(field => 
+      userData[field] && userData[field].trim() !== ''
+    );
+    
+    return namesValid && idNumberValid && allFieldsFilled;
+  };
+
   // Initial submit handler that triggers confirmation dialog
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
+    
+    // Validate form
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: 'Please correct all errors before submitting.',
+        severity: 'error'
+      });
+      return;
+    }
     
     // Hide the form and show the confirmation dialog
     setFormVisible(false);
@@ -311,6 +431,8 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
                   variant="outlined"
                   fullWidth
                   required
+                  error={!!errors.firstName}
+                  helperText={errors.firstName}
                 />
               </Grid>
               <Grid item xs={4}>
@@ -321,6 +443,8 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
                   onChange={handleInputChange}
                   variant="outlined"
                   fullWidth
+                  error={!!errors.middleName}
+                  helperText={errors.middleName}
                 />
               </Grid>
               <Grid item xs={4}>
@@ -332,6 +456,8 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
                   variant="outlined"
                   fullWidth
                   required
+                  error={!!errors.lastName}
+                  helperText={errors.lastName}
                 />
               </Grid>
             </Grid>
@@ -344,6 +470,8 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
               variant="outlined"
               fullWidth
               required
+              error={!!errors.idNumber}
+              helperText={errors.idNumber}
             />
 
             <Grid container spacing={2}>

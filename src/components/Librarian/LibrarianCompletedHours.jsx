@@ -22,6 +22,11 @@ import CircularProgress from '@mui/material/CircularProgress';
 import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Tooltip from '@mui/material/Tooltip';
+// Import sort icons
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 
 const LibrarianCompletedHours = () => {
   const [dateFrom, setDateFrom] = useState('');
@@ -36,6 +41,10 @@ const LibrarianCompletedHours = () => {
   const [filteredQuarter, setFilteredQuarter] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
   const [subject, setSubject] = useState('');
+  
+  // Add sort state
+  const [orderBy, setOrderBy] = useState('name'); // Default sort by date completed
+  const [order, setOrder] = useState('asc'); // Default sort direction (newest first)
   
   // Available grade levels and subjects for filtering
   const gradeOptions = [
@@ -59,6 +68,76 @@ const LibrarianCompletedHours = () => {
       setLoading(false);
     }
   }, [user]);
+
+  // Effect to apply sorting when order or orderBy changes
+  useEffect(() => {
+    if (completedRecords.length > 0) {
+      applySortAndFilter();
+    }
+  }, [order, orderBy]);
+
+  // SortIndicator component for visual feedback
+  const SortIndicator = ({ column }) => {
+    if (orderBy !== column) {
+      return <UnfoldMoreIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5, opacity: 0.5 }} />;
+    }
+    return order === 'asc' 
+      ? <ArrowUpwardIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5 }} />
+      : <ArrowDownwardIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5 }} />;
+  };
+
+  // Function to handle sort requests
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // Function to sort data
+  const getSortedData = (data) => {
+    if (!orderBy || !data.length) return data;
+    
+    return [...data].sort((a, b) => {
+      // Handle null values
+      if (a[orderBy] === null && b[orderBy] === null) return 0;
+      if (a[orderBy] === null) return order === 'asc' ? -1 : 1;
+      if (b[orderBy] === null) return order === 'asc' ? 1 : -1;
+      
+      // Special case for date sorting
+      if (orderBy === 'dateCompleted') {
+        const aDate = new Date(a[orderBy]);
+        const bDate = new Date(b[orderBy]);
+        return order === 'asc' 
+          ? aDate - bDate 
+          : bDate - aDate;
+      }
+      
+      // For string values (most other columns)
+      const aValue = String(a[orderBy]).toLowerCase();
+      const bValue = String(b[orderBy]).toLowerCase();
+      
+      return order === 'asc'
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    });
+  };
+
+  // Function to apply sorting and filtering
+  const applySortAndFilter = () => {
+    // Apply search filter first
+    const filtered = completedRecords.filter((record) => {
+      const searchLower = search.toLowerCase();
+      return (
+        record.name?.toLowerCase().includes(searchLower) ||
+        record.idNumber?.includes(search) ||
+        record.gradeLevel?.toLowerCase().includes(searchLower) ||
+        record.subject?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    // Then apply sorting
+    return getSortedData(filtered);
+  };
 
   // Function to fetch all completed library hours
   const fetchCompletedLibraryHours = async (params = {}) => {
@@ -112,6 +191,7 @@ const LibrarianCompletedHours = () => {
       );
       
       setCompletedRecords(response.data);
+      setPage(0); // Reset to first page when loading new data
     } catch (err) {
       console.error('Error fetching completed library hours:', err);
       setError('Failed to fetch completed library hours. Please try again later.');
@@ -134,8 +214,56 @@ const LibrarianCompletedHours = () => {
     setPage(0); // Reset to first page when searching
   };
 
-  // Apply filters
+  // Updated handler for Date From - implement mutual exclusivity with academicYear
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Updated handler for Date To - implement mutual exclusivity with academicYear
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear academic year if date is set
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Updated handler for Academic Year - implement mutual exclusivity with date filters
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear date range if academic year is set
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+    }
+    
+    setAcademicYear(value);
+  };
+
+  // Apply filters with date validation
   const handleApplyFilters = () => {
+    // Validate date range if both dates are provided
+    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+      toast.error('Date From must be before or equal to Date To');
+      return;
+    }
+    
     const filterParams = {
       dateFrom,
       dateTo,
@@ -151,7 +279,6 @@ const LibrarianCompletedHours = () => {
     });
     
     fetchCompletedLibraryHours(filterParams);
-    setPage(0); // Reset to first page when filtering
   };
 
   // Reset filters
@@ -164,19 +291,10 @@ const LibrarianCompletedHours = () => {
     setSubject('');
     
     fetchCompletedLibraryHours();
-    setPage(0); // Reset to first page when resetting filters
   };
 
-  // Filter locally by search term (for client-side filtering)
-  const filteredRecords = completedRecords.filter((record) => {
-    const searchLower = search.toLowerCase();
-    return (
-      record.name?.toLowerCase().includes(searchLower) ||
-      record.idNumber?.includes(search) ||
-      record.gradeLevel?.toLowerCase().includes(searchLower) ||
-      record.subject?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Get filtered and sorted records
+  const filteredAndSortedRecords = applySortAndFilter();
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -188,14 +306,26 @@ const LibrarianCompletedHours = () => {
   };
   
   // Get current page records
-  const paginatedRecords = filteredRecords.slice(
+  const paginatedRecords = filteredAndSortedRecords.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
 
   // Calculate statistics
-  const totalRecords = filteredRecords.length;
-  const uniqueStudents = new Set(filteredRecords.map(record => record.idNumber)).size;
+  const totalRecords = filteredAndSortedRecords.length;
+  const uniqueStudents = new Set(filteredAndSortedRecords.map(record => record.idNumber)).size;
+
+  // Style for sortable headers
+  const sortableHeaderStyle = {
+    color: '#000', 
+    fontWeight: 'bold', 
+    backgroundColor: '#FFD700',
+    p: 2,
+    cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: '#E6C200' // Darker shade on hover
+    }
+  };
 
   return (
     <>
@@ -273,7 +403,14 @@ const LibrarianCompletedHours = () => {
 
           {/* Filter Section */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', p: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              border: '1px solid #ccc', 
+              p: 1,
+              opacity: academicYear ? 0.6 : 1,
+              bgcolor: academicYear ? 'rgba(0, 0, 0, 0.05)' : 'transparent'
+            }}>
               <Typography sx={{ mr: 1, fontSize: '14px' }}>Date From</Typography>
               <TextField
                 type="date"
@@ -281,7 +418,8 @@ const LibrarianCompletedHours = () => {
                 variant="outlined"
                 size="small"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={handleDateFromChange}
+                disabled={!!academicYear} // Disable if academicYear has a value
                 sx={{ width: '140px' }}
                 InputProps={{
                   sx: { 
@@ -295,7 +433,14 @@ const LibrarianCompletedHours = () => {
               />
             </Box>
             
-            <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', p: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              border: '1px solid #ccc', 
+              p: 1,
+              opacity: (academicYear || !dateFrom) ? 0.6 : 1,
+              bgcolor: (academicYear || !dateFrom) ? 'rgba(0, 0, 0, 0.05)' : 'transparent'
+            }}>
               <Typography sx={{ mr: 1, fontSize: '14px' }}>Date To</Typography>
               <TextField
                 type="date"
@@ -303,7 +448,11 @@ const LibrarianCompletedHours = () => {
                 variant="outlined"
                 size="small"
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={handleDateToChange}
+                disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+                inputProps={{
+                  min: dateFrom || undefined // Set minimum date to dateFrom
+                }}
                 sx={{ width: '140px' }}
                 InputProps={{
                   sx: { 
@@ -399,13 +548,16 @@ const LibrarianCompletedHours = () => {
               variant="outlined"
               size="small"
               value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
+              onChange={handleAcademicYearChange}
+              disabled={!!dateFrom || !!dateTo} // Disable if either date has a value
               sx={{ 
                 width: '180px',
                 '& .MuiOutlinedInput-root': {
                   border: '1px solid #ccc',
                   borderRadius: 0
-                }
+                },
+                opacity: (dateFrom || dateTo) ? 0.6 : 1,
+                bgcolor: (dateFrom || dateTo) ? 'rgba(0, 0, 0, 0.05)' : 'transparent'
               }}
               SelectProps={{
                 displayEmpty: true,
@@ -475,64 +627,64 @@ const LibrarianCompletedHours = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell 
-                      sx={{ 
-                        color: '#000', 
-                        fontWeight: 'bold', 
-                        backgroundColor: '#FFD700',
-                        p: 2
-                      }}
+                      onClick={() => handleRequestSort('idNumber')}
+                      sx={sortableHeaderStyle}
                     >
-                      ID NUMBER
+                      <Tooltip title="Sort by ID number">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          ID NUMBER <SortIndicator column="idNumber" />
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                     <TableCell 
-                      sx={{ 
-                        color: '#000', 
-                        fontWeight: 'bold', 
-                        backgroundColor: '#FFD700',
-                        p: 2
-                      }}
+                      onClick={() => handleRequestSort('name')}
+                      sx={sortableHeaderStyle}
                     >
-                      NAME
+                      <Tooltip title="Sort by name">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          NAME <SortIndicator column="name" />
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                     <TableCell 
-                      sx={{ 
-                        color: '#000', 
-                        fontWeight: 'bold', 
-                        backgroundColor: '#FFD700',
-                        p: 2
-                      }}
+                      onClick={() => handleRequestSort('gradeLevel')}
+                      sx={sortableHeaderStyle}
                     >
-                      GRADE LEVEL
+                      <Tooltip title="Sort by grade level">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          GRADE LEVEL <SortIndicator column="gradeLevel" />
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                     <TableCell 
-                      sx={{ 
-                        color: '#000', 
-                        fontWeight: 'bold', 
-                        backgroundColor: '#FFD700',
-                        p: 2
-                      }}
+                      onClick={() => handleRequestSort('subject')}
+                      sx={sortableHeaderStyle}
                     >
-                      SUBJECT
+                      <Tooltip title="Sort by subject">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          SUBJECT <SortIndicator column="subject" />
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                     <TableCell 
-                      sx={{ 
-                        color: '#000', 
-                        fontWeight: 'bold', 
-                        backgroundColor: '#FFD700',
-                        p: 2
-                      }}
+                      onClick={() => handleRequestSort('quarter')}
+                      sx={sortableHeaderStyle}
                     >
-                      QUARTER
+                      <Tooltip title="Sort by quarter">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          QUARTER <SortIndicator column="quarter" />
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                     <TableCell 
-                      sx={{ 
-                        color: '#000', 
-                        fontWeight: 'bold', 
-                        backgroundColor: '#FFD700',
-                        p: 2
-                      }}
+                      onClick={() => handleRequestSort('dateCompleted')}
+                      sx={sortableHeaderStyle}
                     >
-                      DATE COMPLETED
+                      <Tooltip title="Sort by date completed">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          DATE COMPLETED <SortIndicator column="dateCompleted" />
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -583,7 +735,7 @@ const LibrarianCompletedHours = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 15, 25, 50]}
               component="div"
-              count={filteredRecords.length}
+              count={filteredAndSortedRecords.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
