@@ -7,7 +7,13 @@ function LogInHomepage() {
   const navigate = useNavigate();
 
   const handleNavigation = (role) => {
-    navigate("/register", { state: { role } }); // Pass the role as state to Register
+    // Handle different redirections based on role
+    if (role === "Librarian") {
+      navigate("/librarian/Login");
+    } else {
+      // Both Student and Teacher go to /Login
+      navigate("/Login", { state: { role } }); // Still pass role as state
+    }
   };
 
   return (
@@ -112,6 +118,45 @@ function LogInHomepage() {
               </Box>
             </Grid>
           </Grid>
+          
+          {/* Added Quick Access buttons for InputIn and InputOut */}
+          <Box sx={{ marginTop: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Quick Access
+            </Typography>
+            <Grid container spacing={2} justifyContent="center">
+              <Grid item>
+                <Box
+                  sx={{
+                    backgroundColor: "#ff9800", // Orange
+                    padding: 1,
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => navigate("/InputIn")}
+                >
+                  <Typography variant="button" color="white">
+                    Check In
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item>
+                <Box
+                  sx={{
+                    backgroundColor: "#9c27b0", // Purple
+                    padding: 1,
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => navigate("/InputOut")}
+                >
+                  <Typography variant="button" color="white">
+                    Check Out
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
         </Box>
       </Box>
     </>
