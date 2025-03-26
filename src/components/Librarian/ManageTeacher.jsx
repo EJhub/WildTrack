@@ -246,16 +246,14 @@ const LibrarianManageTeacher = () => {
                     variant={currentView === "Activity Log" ? "contained" : "outlined"}
                     onClick={() => setCurrentView("Activity Log")}
                     sx={{
-                      color: currentView === 'academic' ? 'black' : 'black',
-                      backgroundColor: currentView === 'academic' ? '#FFEB3B' : '#F8C400',
-                      border: '1px solid #F8C400',
+                      color: currentView === 'Activity Log' ? '#800000' : '#800000',
+                      backgroundColor: currentView === 'Activity Log' ? '#FFEB3B' : 'white',
+                      border: '1px solid #800000',
                       fontWeight: 'bold',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                      fontSize: '11px', // Added font size here
                       height: '40px',
                       '&:hover': {
-                        backgroundColor: '#FFDF16',
-    
+                        backgroundColor: '#FFEB3B',
+                        color: '#800000',
                       },
                     }}
                   >
@@ -266,16 +264,14 @@ const LibrarianManageTeacher = () => {
                     variant={currentView === "Teachers" ? "contained" : "outlined"}
                     onClick={() => setCurrentView("Teachers")}
                     sx={{
-                      color: currentView === 'academic' ? 'black' : 'black',
-                      backgroundColor: currentView === 'academic' ? '#FFEB3B' : '#F8C400',
-                      border: '1px solid #F8C400',
+                      color: currentView === 'Teachers' ? '#800000' : '#800000',
+                      backgroundColor: currentView === 'Teachers' ? '#FFEB3B' : 'white',
+                      border: '1px solid #800000',
                       fontWeight: 'bold',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                      fontSize: '11px', // Added font size here
                       height: '40px',
                       '&:hover': {
-                        backgroundColor: '#FFDF16',
-    
+                        backgroundColor: '#FFEB3B',
+                        color: '#800000',
                       },
                     }}
                   >
@@ -298,11 +294,11 @@ const LibrarianManageTeacher = () => {
                       borderRadius: '50px',
                       height: '40px',
                       fontWeight: 'bold',
-                      fontSize: '11px', // Added font size here
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       boxShadow: 2,
+                      padding: '0 20px',
                       '&:hover': {
                         backgroundColor: '#940000',
                         color: '#FFEB3B',
@@ -331,22 +327,22 @@ const LibrarianManageTeacher = () => {
                 <Table stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
                         ID NUMBER
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
                         NAME
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
                         GRADE LEVEL HANDLED
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
                         SECTION HANDLED
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
                         SUBJECT HANDLED
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
                         ACTION
                       </TableCell>
                     </TableRow>
@@ -377,15 +373,15 @@ const LibrarianManageTeacher = () => {
                             <Button
                               variant="outlined"
                               onClick={() => handleOpenUpdateForm(teacher)}
-                              sx={{
-                                color: 'black',
-                                backgroundColor: '#FFDF16',
-                                fontSize: '11px',
+                              sx={{ 
+                                color: '#800000',
+                                backgroundColor: '#F5B400',
                                 border: '1px solid #FFEB3B',
                                 marginRight: 1,
                                 fontWeight: 'bold',
                                 '&:hover': {
                                   backgroundColor: '#FFEB3B',
+                                  color: '#800000',
                                 },
                               }}
                             >
@@ -394,12 +390,15 @@ const LibrarianManageTeacher = () => {
                             <Button
                               variant="outlined"
                               onClick={() => handleOpenDeleteModal(teacher)}
-                              sx={{
-                                backgroundColor: status === 'active' ? '#8C383E' : '#8C383E',
-                                color: 'white',
-                                fontSize: '11px',
-                                '&:hover': { 
-                                  backgroundColor: status === 'active' ? '#8B0000' : '#8B0000'
+                              sx={{ 
+                                color: '#fff',
+                                backgroundColor: '#8C383E',
+                                border: '1px solid #FFEB3B',
+                                marginRight: 1,
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                  backgroundColor: '#8B0000',
+                                  color: '#800000',
                                 },
                               }}
                             >
