@@ -57,43 +57,68 @@ const ManageStudent = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Get token from localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+        
         // First fetch all students
-        const response = await fetch('http://localhost:8080/api/students/all');
+        const response = await fetch('http://localhost:8080/api/students/all', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch students');
         }
         const studentsResult = await response.json();
         
-        // Get unique grade levels
-        const uniqueGrades = [...new Set(studentsResult.map(student => student.grade))];
-        
-        // Create a map to store library hour subjects by grade
-        const libraryHoursByGrade = {};
-        
-        // Fetch library hours for each grade level
-        for (const grade of uniqueGrades) {
+        // For each student, fetch their actual library requirements rather than grade-level potential subjects
+        const enhancedStudents = await Promise.all(studentsResult.map(async student => {
           try {
-            const libraryResponse = await fetch(`http://localhost:8080/api/set-library-hours/approved/${grade}`);
-            if (libraryResponse.ok) {
-              const libraryHours = await libraryResponse.json();
-              libraryHoursByGrade[grade] = libraryHours;
+            // Check if this student has initialized requirements
+            const progressResponse = await fetch(
+              `http://localhost:8080/api/library-progress/${student.idNumber}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            
+            if (progressResponse.ok) {
+              const progressData = await progressResponse.json();
+              
+              // Only display subjects if the student has requirements and they're not empty
+              if (progressData && progressData.length > 0) {
+                // Extract only the subjects that have actual requirements
+                // Group by subject to remove duplicates
+                const actualSubjects = [...new Set(progressData.map(req => req.subject))];
+                
+                if (actualSubjects.length > 0) {
+                  return {
+                    ...student,
+                    subject: actualSubjects.join(', ')
+                  };
+                }
+              }
             }
+            
+            // No requirements found or API error
+            return {
+              ...student,
+              subject: "No library hours assigned"
+            };
+            
           } catch (error) {
-            console.error(`Error fetching library hours for grade ${grade}:`, error);
+            console.error(`Error checking library requirements for student ${student.idNumber}:`, error);
+            return {
+              ...student,
+              subject: "No library hours assigned"
+            };
           }
-        }
-        
-        // Assign library hour subjects to students
-        const enhancedStudents = studentsResult.map(student => {
-          const gradeLibraryHours = libraryHoursByGrade[student.grade] || [];
-          // Get subjects for this grade and deduplicate them
-          const subjects = [...new Set(gradeLibraryHours.map(hour => hour.subject).filter(Boolean))];
-          
-          return {
-            ...student,
-            subject: subjects.length > 0 ? subjects.join(', ') : "No library hours assigned"
-          };
-        });
+        }));
         
         setData(enhancedStudents);
         
@@ -136,8 +161,12 @@ const ManageStudent = () => {
 
   const handleDeleteConfirmation = async () => {
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(`http://localhost:8080/api/students/${studentToDelete.id}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (!response.ok) {
         throw new Error('Failed to delete student');

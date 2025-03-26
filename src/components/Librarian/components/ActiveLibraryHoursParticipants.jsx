@@ -36,7 +36,7 @@ const LibraryHoursParticipants = () => {
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('All Grades');
   const [section, setSection] = useState('');
-  const [dataView, setDataView] = useState('weekly');
+  const [dataView, setDataView] = useState('monthly'); // Changed from 'weekly' to 'monthly'
   
   // Dynamic Options States
   const [gradeLevels, setGradeLevels] = useState([]);
@@ -60,7 +60,7 @@ const LibraryHoursParticipants = () => {
     academicYear: '',
     gradeLevel: 'All Grades',
     dateRange: { from: '', to: '' },
-    dataView: 'weekly'
+    dataView: 'monthly' // Changed from 'weekly' to 'monthly'
   });
 
   // Chart container ref for export functions
@@ -267,7 +267,51 @@ const LibraryHoursParticipants = () => {
     }
   };
 
-  // Apply filters function
+  // Updated handler for Date From with mutual exclusivity
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Updated handler for Date To with mutual exclusivity
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear academic year if date is set
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Updated handler for Academic Year with mutual exclusivity
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // Clear date range if academic year is set
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+      // Force dataView to monthly when academic year is selected
+      setDataView('monthly');
+    }
+    
+    setAcademicYear(value);
+  };
+
+  // Apply filters function with improved validation
   const handleApplyFilters = () => {
     // Validate date range if both dates are provided
     if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
@@ -305,7 +349,7 @@ const LibraryHoursParticipants = () => {
     setAcademicYear('');
     setGradeLevel('All Grades');
     setSection('');
-    setDataView('weekly');
+    setDataView('monthly'); // Changed from 'weekly' to 'monthly'
     
     // Clear applied filters
     setAppliedFilters({
@@ -313,7 +357,7 @@ const LibraryHoursParticipants = () => {
       academicYear: '',
       gradeLevel: 'All Grades',
       dateRange: { from: '', to: '' },
-      dataView: 'weekly'
+      dataView: 'monthly' // Changed from 'weekly' to 'monthly'
     });
     
     toast.info('Filters cleared');
@@ -591,16 +635,17 @@ const LibraryHoursParticipants = () => {
             type="date"
             size="small"
             value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              // Clear academic year if date is set
-              if (e.target.value) setAcademicYear('');
-            }}
+            onChange={handleDateFromChange}
+            disabled={!!academicYear} // Disable if academicYear has a value
             sx={{ 
               width: '150px',
               '& .MuiOutlinedInput-root': {
                 borderRadius: '4px',
                 height: '36px',
+              },
+              '& .Mui-disabled': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                opacity: 0.7
               }
             }}
             InputLabelProps={{ shrink: true }}
@@ -621,16 +666,20 @@ const LibraryHoursParticipants = () => {
             type="date"
             size="small"
             value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              // Clear academic year if date is set
-              if (e.target.value) setAcademicYear('');
+            onChange={handleDateToChange}
+            disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+            inputProps={{
+              min: dateFrom || undefined // Set minimum date to dateFrom
             }}
             sx={{ 
               width: '150px',
               '& .MuiOutlinedInput-root': {
                 borderRadius: '4px',
                 height: '36px',
+              },
+              '& .Mui-disabled': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                opacity: 0.7
               }
             }}
             InputLabelProps={{ shrink: true }}
@@ -661,7 +710,11 @@ const LibraryHoursParticipants = () => {
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
               disabled={gradeLevelsLoading}
             >
@@ -694,7 +747,11 @@ const LibraryHoursParticipants = () => {
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
               disabled={gradeLevel === 'All Grades' || sectionsLoading}
             >
@@ -721,22 +778,19 @@ const LibraryHoursParticipants = () => {
             <Select
               size="small"
               value={academicYear}
-              onChange={(e) => {
-                setAcademicYear(e.target.value);
-                // Clear date range if academic year is set
-                if (e.target.value) {
-                  setDateFrom('');
-                  setDateTo('');
-                }
-              }}
+              onChange={handleAcademicYearChange}
               displayEmpty
+              disabled={academicYearsLoading || !!dateFrom || !!dateTo} // Disable if loading or if either date has a value
               IconComponent={ExpandMoreIcon}
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
-              disabled={academicYearsLoading}
             >
               <MenuItem value="">Select Academic Year</MenuItem>
               {academicYearsLoading ? (
@@ -763,10 +817,15 @@ const LibraryHoursParticipants = () => {
               value={dataView}
               onChange={(e) => setDataView(e.target.value)}
               IconComponent={ExpandMoreIcon}
+              disabled={!!academicYear} // Disable if academic year is selected
               sx={{ 
                 height: '36px',
                 borderRadius: '4px',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                '& .Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  opacity: 0.7
+                }
               }}
             >
               <MenuItem value="weekly">Weekly</MenuItem>

@@ -1,4 +1,3 @@
-// Modified CreateTeacherForm.js with subject dropdown
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -28,6 +27,10 @@ import axios from 'axios';
 import SuccessDialog from './SuccessDialog'; // Import the success dialog component
 
 const CreateTeacherForm = ({ open, onClose }) => {
+  // Add validation functions
+  const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
+  const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
+
   const [formData, setFormData] = useState({
     firstName: '',
     middleName: '',
@@ -62,6 +65,14 @@ const CreateTeacherForm = ({ open, onClose }) => {
   const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [idNumberExists, setIdNumberExists] = useState(false);
 
+  // Add validation errors for name fields and ID Number
+  const [nameErrors, setNameErrors] = useState({
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    idNumber: ''
+  });
+
   // Add state to store teacher name for success message
   const [teacherName, setTeacherName] = useState({ firstName: '', lastName: '' });
   const [loading, setLoading] = useState(false);
@@ -84,13 +95,19 @@ const CreateTeacherForm = ({ open, onClose }) => {
       setShowPasswordRequirements(false);
       setPasswordsMatch(true);
       setIdNumberExists(false);
+      setNameErrors({
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        idNumber: ''
+      });
     }
   }, [open]);
 
   // Validate form whenever form data changes
   useEffect(() => {
     validateForm();
-  }, [formData, isPasswordValid, passwordsMatch, idNumberExists]);
+  }, [formData, isPasswordValid, passwordsMatch, idNumberExists, nameErrors]);
 
   // Fetch grade options when modal opens
   useEffect(() => {
@@ -150,6 +167,61 @@ const CreateTeacherForm = ({ open, onClose }) => {
     }
   }, [formData.password, formData.confirmPassword]);
 
+  // Validate name fields
+  useEffect(() => {
+    validateNameFields();
+  }, [formData.firstName, formData.middleName, formData.lastName]);
+
+  // Validate ID number field
+  useEffect(() => {
+    validateIdNumber();
+  }, [formData.idNumber]);
+
+  // Validate name fields
+  const validateNameFields = () => {
+    const errors = { ...nameErrors };
+    
+    // First name validation
+    if (formData.firstName && !isLettersOnly(formData.firstName)) {
+      errors.firstName = "First name should contain letters only";
+    } else {
+      errors.firstName = '';
+    }
+    
+    // Middle name validation (if provided)
+    if (formData.middleName && !isLettersOnly(formData.middleName)) {
+      errors.middleName = "Middle name should contain letters only";
+    } else {
+      errors.middleName = '';
+    }
+    
+    // Last name validation
+    if (formData.lastName && !isLettersOnly(formData.lastName)) {
+      errors.lastName = "Last name should contain letters only";
+    } else {
+      errors.lastName = '';
+    }
+    
+    setNameErrors(errors);
+    return !errors.firstName && !errors.middleName && !errors.lastName;
+  };
+
+  // Validate ID Number
+  const validateIdNumber = () => {
+    let error = '';
+    
+    if (formData.idNumber && !isValidIdNumber(formData.idNumber)) {
+      error = "ID Number should contain only numbers and dashes";
+    }
+    
+    setNameErrors(prev => ({
+      ...prev,
+      idNumber: error
+    }));
+    
+    return !error;
+  };
+
   // Validate if all required fields are filled and valid
   const validateForm = () => {
     const requiredFields = [
@@ -164,7 +236,9 @@ const CreateTeacherForm = ({ open, onClose }) => {
     ];
     
     const allFieldsFilled = requiredFields.every(field => formData[field] && formData[field].trim() !== '');
-    const isValid = allFieldsFilled && isPasswordValid && passwordsMatch && !idNumberExists;
+    const namesValid = validateNameFields();
+    const idNumberValid = validateIdNumber() && !idNumberExists;
+    const isValid = allFieldsFilled && isPasswordValid && passwordsMatch && namesValid && idNumberValid;
     
     setFormValid(isValid);
     return isValid;
@@ -188,19 +262,35 @@ const CreateTeacherForm = ({ open, onClose }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    if (name === 'grade') {
+    // Validation for name fields (letters only)
+    if (['firstName', 'middleName', 'lastName'].includes(name)) {
+      // Allow only letters and spaces
+      if (value === '' || isLettersOnly(value)) {
+        setFormData(prevData => ({
+          ...prevData,
+          [name]: value
+        }));
+      }
+      // Invalid input is ignored
+    }
+    // Validation for ID number (numbers and dashes only)
+    else if (name === 'idNumber') {
+      if (value === '' || isValidIdNumber(value)) {
+        setFormData(prevData => ({
+          ...prevData,
+          [name]: value
+        }));
+        // Reset ID number exists error when user changes the ID
+        setIdNumberExists(false);
+      }
+    }
+    // Special handling for grade change
+    else if (name === 'grade') {
       setFormData(prevData => ({
         ...prevData,
         [name]: value,
         section: ''
       }));
-    } else if (name === 'idNumber') {
-      setFormData(prevData => ({
-        ...prevData,
-        [name]: value
-      }));
-      // Reset ID number exists error when user changes the ID
-      setIdNumberExists(false);
     } else {
       setFormData(prevData => ({
         ...prevData,
@@ -239,6 +329,12 @@ const CreateTeacherForm = ({ open, onClose }) => {
     setPasswordsMatch(true);
     setIdNumberExists(false);
     setFormValid(false);
+    setNameErrors({
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      idNumber: ''
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -255,7 +351,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
       const dataToSubmit = { ...formData };
       delete dataToSubmit.confirmPassword;
       
-      const response = await axios.post('http://localhost:8080/api/users/register', dataToSubmit);
+      const response = await axios.post('http://localhost:8080/api/teachers/register', dataToSubmit);
       if (response.status === 200) {
         // Store the teacher name before resetting the form
         setTeacherName({
@@ -281,12 +377,29 @@ const CreateTeacherForm = ({ open, onClose }) => {
         // Handle ID Number already exists error
         if (errorMsg.includes("ID Number already exists")) {
           setIdNumberExists(true);
-          document.getElementById('idNumber').focus();
+          document.getElementById('idNumber')?.focus();
         } 
+        // Handle name validation errors
+        else if (errorMsg.includes("First name should contain")) {
+          setNameErrors(prev => ({...prev, firstName: errorMsg}));
+          document.getElementById('firstName')?.focus();
+        }
+        else if (errorMsg.includes("Middle name should contain")) {
+          setNameErrors(prev => ({...prev, middleName: errorMsg}));
+          document.getElementById('middleName')?.focus();
+        }
+        else if (errorMsg.includes("Last name should contain")) {
+          setNameErrors(prev => ({...prev, lastName: errorMsg}));
+          document.getElementById('lastName')?.focus();
+        }
+        else if (errorMsg.includes("ID Number should contain")) {
+          setNameErrors(prev => ({...prev, idNumber: errorMsg}));
+          document.getElementById('idNumber')?.focus();
+        }
         // Handle password validation error
         else if (errorMsg.includes("Password")) {
           setShowPasswordRequirements(true);
-          document.getElementById('password').focus();
+          document.getElementById('password')?.focus();
           setSnackbar({
             open: true,
             message: errorMsg,
@@ -384,32 +497,41 @@ const CreateTeacherForm = ({ open, onClose }) => {
                 <TextField
                   label="First Name"
                   name="firstName"
+                  id="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
                   variant="outlined"
                   fullWidth
                   required
+                  error={!!nameErrors.firstName}
+                  helperText={nameErrors.firstName}
                 />
               </Grid>
               <Grid item xs={4}>
                 <TextField
                   label="Middle Name"
                   name="middleName"
+                  id="middleName"
                   value={formData.middleName}
                   onChange={handleInputChange}
                   variant="outlined"
                   fullWidth
+                  error={!!nameErrors.middleName}
+                  helperText={nameErrors.middleName}
                 />
               </Grid>
               <Grid item xs={4}>
                 <TextField
                   label="Last Name"
                   name="lastName"
+                  id="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
                   variant="outlined"
                   fullWidth
                   required
+                  error={!!nameErrors.lastName}
+                  helperText={nameErrors.lastName}
                 />
               </Grid>
             </Grid>
@@ -424,7 +546,8 @@ const CreateTeacherForm = ({ open, onClose }) => {
               fullWidth
               required
               sx={{ mt: 2 }}
-              helperText={idNumberExists ? "ID Number already exists" : null}
+              error={idNumberExists || !!nameErrors.idNumber}
+              helperText={idNumberExists ? "ID Number already exists" : nameErrors.idNumber}
             />
 
             <Grid container spacing={2} sx={{ mt: 0 }}>
@@ -489,6 +612,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
                   fullWidth
                   required
                   sx={{ mt: 2 }}
+                  error={!passwordsMatch && formData.confirmPassword !== ''}
                   helperText={!passwordsMatch && formData.confirmPassword !== '' ? "Passwords do not match" : null}
                 />
               </Grid>
@@ -504,7 +628,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
               sx={{ mt: 2 }}
             />
 
-            {/* Modified Subject field - changed from text input to dropdown */}
+            {/* Subject field */}
             <TextField
               name="subject"
               label="Subject"

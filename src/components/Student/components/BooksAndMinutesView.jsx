@@ -163,7 +163,33 @@ const BooksAndMinutesView = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    
+    // Create a new filter state based on which filter is being changed
+    let newFilters;
+    
+    if (name === 'academicYear' && value) {
+      // If selecting academic year, clear date filters
+      newFilters = { dateFrom: "", dateTo: "", academicYear: value };
+    } else if (name === 'dateFrom' && value) {
+      // If changing dateFrom
+      // Clear academic year
+      // And ensure dateTo is not earlier than dateFrom
+      const dateTo = filters.dateTo;
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        newFilters = { ...filters, academicYear: "", dateFrom: value, dateTo: "" };
+      } else {
+        newFilters = { ...filters, academicYear: "", dateFrom: value };
+      }
+    } else if (name === 'dateTo' && value) {
+      // If changing dateTo, just clear academic year
+      newFilters = { ...filters, academicYear: "", dateTo: value };
+    } else {
+      // If clearing a filter, just update that specific field
+      newFilters = { ...filters, [name]: value };
+    }
+    
+    setFilters(newFilters);
   };
 
   const applyFilters = async () => {
@@ -337,10 +363,14 @@ const BooksAndMinutesView = () => {
           value={filters.dateFrom}
           onChange={handleFilterChange}
           size="small"
+          disabled={!!filters.academicYear} // Disable if academicYear has a value
           sx={{
             backgroundColor: 'white',
             borderRadius: '15px',
             width: '200px',
+            "& .Mui-disabled": {
+              backgroundColor: "rgba(0, 0, 0, 0.05)",
+            }
           }}
           InputLabelProps={{ shrink: true }}
         />
@@ -352,10 +382,17 @@ const BooksAndMinutesView = () => {
           value={filters.dateTo}
           onChange={handleFilterChange}
           size="small"
+          disabled={!!filters.academicYear || !filters.dateFrom} // Disable if academicYear has a value or dateFrom is empty
+          inputProps={{
+            min: filters.dateFrom || undefined // Set minimum date to dateFrom
+          }}
           sx={{
             backgroundColor: 'white',
             borderRadius: '15px',
             width: '200px',
+            "& .Mui-disabled": {
+              backgroundColor: "rgba(0, 0, 0, 0.05)",
+            }
           }}
           InputLabelProps={{ shrink: true }}
         />
@@ -367,10 +404,14 @@ const BooksAndMinutesView = () => {
           value={filters.academicYear}
           onChange={handleFilterChange}
           size="small"
+          disabled={!!filters.dateFrom || !!filters.dateTo} // Disable if either date has a value
           sx={{
             backgroundColor: 'white',
             borderRadius: '15px',
             width: '150px',
+            "& .Mui-disabled": {
+              backgroundColor: "rgba(0, 0, 0, 0.05)",
+            }
           }}
         >
           <MenuItem value="">All Years</MenuItem>

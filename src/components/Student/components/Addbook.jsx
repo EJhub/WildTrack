@@ -1,9 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
@@ -16,11 +14,43 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
+import Rating from "@mui/material/Rating";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import InfoIcon from "@mui/icons-material/Info";
+import Tooltip from "@mui/material/Tooltip";
+import axios from "axios";
 
 const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   const [searchQuery, setSearchQuery] = useState(""); // For search input
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null); // Added state for selected book
+  const [rating, setRating] = useState(0); // Added state for rating
+  
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+  const [dateRead, setDateRead] = useState(today); // Initialize with today's date
+  
+  const [academicYear, setAcademicYear] = useState(""); // Added state for academic year
+  const [academicYearOptions, setAcademicYearOptions] = useState([]); // Added for academic year options
+
+  // Fetch academic years when component mounts
+  useEffect(() => {
+    const fetchAcademicYears = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/academic-years/all');
+        const formattedYears = response.data.map(year => `${year.startYear}-${year.endYear}`);
+        setAcademicYearOptions(formattedYears);
+      } catch (error) {
+        console.error('Error fetching academic years:', error);
+      }
+    };
+
+    fetchAcademicYears();
+  }, []);
 
   // Get books to display based on the search query
   const getFilteredBooks = () => {
@@ -40,13 +70,50 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
     setSuccess(null);
   };
 
-  const handleBookSubmit = (book) => {
+  const handleBookSelection = (book) => {
+    setSelectedBook(book);
+    setError(null);
+  };
+
+  const handleBookSubmit = () => {
     setError(null);
     setSuccess(null);
 
+    // Validate inputs
+    if (!selectedBook) {
+      setError("Please select a book.");
+      return;
+    }
+
+    if (rating === 0) {
+      setError("Please provide a rating for the book.");
+      return;
+    }
+
+    if (!academicYear) {
+      setError("Please select an academic year.");
+      return;
+    }
+
     try {
-      handleSubmit(book); // Pass the selected book to the parent component
-      setSuccess(`Book "${book.title}" added successfully!`);
+      // Pass the selected book and additional information to the parent component
+      handleSubmit({
+        ...selectedBook,
+        rating,
+        dateRead, // This will be today's date
+        academicYear
+      });
+      
+      setSuccess(`Book "${selectedBook.title}" added successfully!`);
+      
+      // Reset form after successful submission
+      setTimeout(() => {
+        setSelectedBook(null);
+        setRating(0);
+        setDateRead(today);
+        setAcademicYear("");
+        handleClose();
+      }, 1500);
     } catch (err) {
       console.error("Error adding book:", err);
       setError("Failed to submit book details. Please try again.");
@@ -182,14 +249,21 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           {/* Scrollable Table Body */}
           <Box
             sx={{
-              maxHeight: "290px", // Set max height for the table body
+              maxHeight: "190px", // Reduced height to make room for additional fields
               overflowY: "auto", // Enable vertical scrolling
             }}
           >
             <Table>
               <TableBody>
                 {filteredBooks.map((book) => (
-                  <TableRow key={book.accessionNumber}>
+                  <TableRow 
+                    key={book.accessionNumber}
+                    onClick={() => handleBookSelection(book)}
+                    sx={{
+                      cursor: "pointer",
+                      backgroundColor: selectedBook?.id === book.id ? "rgba(255, 215, 0, 0.3)" : "inherit",
+                    }}
+                  >
                     <TableCell sx={{ textAlign: "center", width: "30%" }}>
                       {book.title}
                     </TableCell>
@@ -205,16 +279,16 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                     <TableCell sx={{ textAlign: "center", width: "10%" }}>
                       <Button
                         variant="contained"
-                        onClick={() => handleBookSubmit(book)}
+                        onClick={() => handleBookSelection(book)}
                         sx={{
-                          backgroundColor: "#FFDF16",
+                          backgroundColor: selectedBook?.id === book.id ? "#FFC107" : "#FFDF16",
                           color: "#000",
                           "&:hover": {
                             backgroundColor: "#FFC107",
                           },
                         }}
                       >
-                        Submit
+                        Select
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -230,6 +304,74 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
             </Table>
           </Box>
         </TableContainer>
+
+        {/* Additional fields for BookLog - Only show if a book is selected */}
+        {selectedBook && (
+          <Box sx={{ marginTop: 3, textAlign: "center" }}>
+            <Typography sx={{ fontWeight: "bold", color: "#000", marginBottom: 2 }}>
+              Book Log Details for "{selectedBook.title}"
+            </Typography>
+            
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 2 }}>
+              <Typography sx={{ color: "#000", marginRight: 2 }}>
+                Rating:
+              </Typography>
+              <Rating
+                name="book-rating"
+                value={rating}
+                onChange={(e, newValue) => setRating(newValue)}
+                precision={1}
+                size="large"
+              />
+            </Box>
+            
+            <Box sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
+              <Box sx={{ position: "relative", width: "100%" }}>
+                <TextField
+                  label="Date Read"
+                  type="date"
+                  value={dateRead}
+                  disabled // Make the field disabled/read-only
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    backgroundColor: "#f5f5f5", // Lighter background to indicate disabled
+                    borderRadius: "10px",
+                  }}
+                />
+                <Tooltip title="Date is automatically set to today" placement="top">
+                  <InfoIcon 
+                    sx={{ 
+                      position: "absolute", 
+                      right: "10px", 
+                      top: "50%", 
+                      transform: "translateY(-50%)",
+                      color: "#666" 
+                    }} 
+                  />
+                </Tooltip>
+              </Box>
+              
+              <FormControl fullWidth sx={{ backgroundColor: "#fff", borderRadius: "10px" }}>
+                <InputLabel id="academic-year-label">Academic Year</InputLabel>
+                <Select
+                  labelId="academic-year-label"
+                  id="academic-year-select"
+                  value={academicYear}
+                  label="Academic Year"
+                  onChange={(e) => setAcademicYear(e.target.value)}
+                >
+                  <MenuItem value="">Select Academic Year</MenuItem>
+                  {academicYearOptions.map((year, index) => (
+                    <MenuItem key={index} value={year}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
+        )}
 
         {error && (
           <Typography sx={{ color: "red", marginTop: 2, textAlign: "center" }}>
@@ -265,6 +407,24 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         >
           CANCEL
         </Button>
+        
+        {selectedBook && (
+          <Button
+            onClick={handleBookSubmit}
+            variant="contained"
+            sx={{
+              borderRadius: "10px",
+              width: "120px",
+              backgroundColor: "#A44444",
+              color: "#fff",
+              "&:hover": {
+                backgroundColor: "#BB5252",
+              },
+            }}
+          >
+            SUBMIT
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

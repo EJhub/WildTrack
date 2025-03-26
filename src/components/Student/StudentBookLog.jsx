@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
-import AddBookLog from "./components/AddbookLog"; // Import AddBookLog modal
+import AddBookLog from "./components/AddbookLog";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Table from "@mui/material/Table";
@@ -21,48 +21,60 @@ import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import TablePagination from "@mui/material/TablePagination";
 import CircularProgress from "@mui/material/CircularProgress";
-import { AuthContext } from "../AuthContext"; // Import AuthContext
+import { AuthContext } from "../AuthContext";
+// Import icons for sort indicators
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 
 const BookLog = () => {
-  const [bookLogs, setBookLogs] = useState([]); // Stores book logs for the user
-  const [filteredLogs, setFilteredLogs] = useState([]); // Stores filtered logs
+  const [bookLogs, setBookLogs] = useState([]);
+  const [filteredLogs, setFilteredLogs] = useState([]);
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
     academicYear: "",
   });
   const [academicYearOptions, setAcademicYearOptions] = useState([]);
-  const [searchQuery, setSearchQuery] = useState(""); // Separate state for search query
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [addBookLogOpen, setAddBookLogOpen] = useState(false);
-  const [registeredBooks, setRegisteredBooks] = useState([]); // List of books
+  const [registeredBooks, setRegisteredBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Add sort state
+  const [sortConfig, setSortConfig] = useState({
+    key: 'dateRead', // Default to sort by date
+    direction: 'asc'  // Default to ascending order
+  });
 
-  // Use AuthContext to access user information
   const { user, isAuthenticated, loading: authLoading } = useContext(AuthContext);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    // Only fetch data once authentication is complete
     if (!authLoading) {
       fetchInitialData();
     }
   }, [authLoading, user]);
 
-  // Fetch initial data - academic years, book logs, and registered books
+  // New useEffect to apply default sorting when data is loaded
+  useEffect(() => {
+    if (bookLogs.length > 0) {
+      applyFiltersAndSort();
+    }
+  }, [bookLogs, sortConfig]);
+
   const fetchInitialData = async () => {
     try {
       setLoading(true);
       
-      // Check if user is authenticated
       if (!isAuthenticated || !user || !user.idNumber) {
         alert("Unauthorized access. Please log in.");
         setLoading(false);
         return;
       }
 
-      // Fetch academic years
       try {
         const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', {
           headers: {
@@ -73,20 +85,15 @@ const BookLog = () => {
         setAcademicYearOptions(formattedAcademicYears);
       } catch (error) {
         console.error('Error fetching academic years:', error);
-        // Don't show error toast for this - non-critical
       }
       
-      // Fetch book logs
       await fetchBookLogs();
-
-      // Fetch registered books
       await fetchRegisteredBooks();
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch Book Logs Function
   const fetchBookLogs = async () => {
     try {
       if (!user || !user.idNumber) {
@@ -104,7 +111,7 @@ const BookLog = () => {
       );
 
       setBookLogs(response.data);
-      setFilteredLogs(response.data);
+      // Don't set filtered logs here, will be done by applyFiltersAndSort
     } catch (error) {
       console.error(
         "Error fetching book logs:",
@@ -125,22 +132,75 @@ const BookLog = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      [name]: value,
-    }));
+    
+    let newFilters;
+    
+    if (name === 'academicYear' && value) {
+      newFilters = { dateFrom: "", dateTo: "", academicYear: value };
+    } else if (name === 'dateFrom' && value) {
+      const dateTo = filters.dateTo;
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        newFilters = { ...filters, academicYear: "", dateFrom: value, dateTo: "" };
+      } else {
+        newFilters = { ...filters, academicYear: "", dateFrom: value };
+      }
+    } else if (name === 'dateTo' && value) {
+      newFilters = { ...filters, academicYear: "", dateTo: value };
+    } else {
+      newFilters = { ...filters, [name]: value };
+    }
+    
+    setFilters(newFilters);
   };
 
-  // Updated applyFilters function with improved academic year handling
-  const applyFilters = () => {
+  // New sort handler function
+  const handleSort = (key) => {
+    // Toggle sort direction if same column is clicked again
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Helper function to sort data based on sortConfig
+  const getSortedData = (data) => {
+    if (!sortConfig.key) return data;
+    
+    return [...data].sort((a, b) => {
+      // Handle different data types
+      if (sortConfig.key === 'dateRead') {
+        // Date comparison
+        const dateA = new Date(a[sortConfig.key]);
+        const dateB = new Date(b[sortConfig.key]);
+        return sortConfig.direction === 'asc' 
+          ? dateA - dateB 
+          : dateB - dateA;
+      } else if (sortConfig.key === 'rating') {
+        // Number comparison for ratings
+        return sortConfig.direction === 'asc' 
+          ? a[sortConfig.key] - b[sortConfig.key] 
+          : b[sortConfig.key] - a[sortConfig.key];
+      } else {
+        // String comparison (title, author, accessionNumber)
+        const valueA = (a[sortConfig.key] || '').toLowerCase();
+        const valueB = (b[sortConfig.key] || '').toLowerCase();
+        return sortConfig.direction === 'asc'
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      }
+    });
+  };
+
+  // Modified to include sorting
+  const applyFiltersAndSort = () => {
     const { dateFrom, dateTo, academicYear } = filters;
     
     let filtered = bookLogs;
 
-    // Apply date filters with improved handling
     if (dateFrom) {
       const fromDate = new Date(dateFrom);
-      fromDate.setHours(0, 0, 0, 0); // Start of day
+      fromDate.setHours(0, 0, 0, 0);
       filtered = filtered.filter(log => {
         const logDate = new Date(log.dateRead);
         return logDate >= fromDate;
@@ -149,16 +209,14 @@ const BookLog = () => {
 
     if (dateTo) {
       const toDate = new Date(dateTo);
-      toDate.setHours(23, 59, 59, 999); // End of day
+      toDate.setHours(23, 59, 59, 999);
       filtered = filtered.filter(log => {
         const logDate = new Date(log.dateRead);
         return logDate <= toDate;
       });
     }
 
-    // Updated academic year filtering logic to handle year ranges
     if (academicYear && academicYear !== "") {
-      // Parse the academic year range (e.g., "2025-2026")
       const years = academicYear.split("-");
       if (years.length === 2) {
         const startYear = parseInt(years[0]);
@@ -168,30 +226,34 @@ const BookLog = () => {
           const logDate = new Date(log.dateRead);
           const logYear = logDate.getFullYear();
           
-          // Include if log's year matches either start or end year of the academic year
           return (logYear === startYear || logYear === endYear);
         });
       } else {
-        // Fallback to exact string matching if format is not as expected
         filtered = filtered.filter(log => log.academicYear === academicYear);
       }
     }
 
-    // Apply search filter if there's an active search query
     if (searchQuery) {
       filtered = filtered.filter(
         (log) =>
-          log.title?.toLowerCase().includes(searchQuery) ||
-          log.author?.toLowerCase().includes(searchQuery) ||
+          log.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          log.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           new Date(log.dateRead).toLocaleDateString().includes(searchQuery)
       );
     }
 
-    setFilteredLogs(filtered);
+    // Apply sorting after filtering
+    const sortedData = getSortedData(filtered);
+    
+    setFilteredLogs(sortedData);
     setPage(0);
   };
 
-  // Reset filters function
+  // Update apply filters to use the combined function
+  const applyFilters = () => {
+    applyFiltersAndSort();
+  };
+
   const resetFilters = () => {
     setFilters({
       dateFrom: "",
@@ -199,31 +261,33 @@ const BookLog = () => {
       academicYear: "",
     });
     
-    // Reset to original data without filters
-    // but maintain search if present
     if (searchQuery) {
       handleSearchChange({ target: { value: searchQuery } });
     } else {
-      setFilteredLogs(bookLogs);
+      // Apply just the sorting to the unfiltered data
+      const sortedData = getSortedData(bookLogs);
+      setFilteredLogs(sortedData);
     }
     setPage(0);
   };
 
-  // Search function that immediately filters results
   const handleSearchChange = (e) => {
     const query = e.target.value.toLowerCase();
     setSearchQuery(query);
 
-    // Filter the book logs based on the search query
-    const filtered = bookLogs.filter(
+    // Apply search and maintain current sorting
+    let filtered = bookLogs.filter(
       (log) =>
         log.title?.toLowerCase().includes(query) ||
         log.author?.toLowerCase().includes(query) ||
         new Date(log.dateRead).toLocaleDateString().includes(query)
     );
     
+    // Apply sorting to search results
+    filtered = getSortedData(filtered);
+    
     setFilteredLogs(filtered);
-    setPage(0); // Reset to first page
+    setPage(0);
   };
 
   const handleChangePage = (event, newPage) => {
@@ -239,6 +303,16 @@ const BookLog = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  // Component to render sort indicator
+  const SortIndicator = ({ column }) => {
+    if (sortConfig.key !== column) {
+      return <UnfoldMoreIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5, opacity: 0.5 }} />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUpwardIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5 }} />
+      : <ArrowDownwardIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5 }} />;
+  };
 
   const renderStars = (rating) => {
     const fullStars = Math.floor(rating);
@@ -266,7 +340,7 @@ const BookLog = () => {
         return;
       }
 
-      const encodedIdNumber = encodeURIComponent(user.idNumber); // Encode special characters
+      const encodedIdNumber = encodeURIComponent(user.idNumber);
   
       const response = await axios.put(
         `http://localhost:8080/api/booklog/${bookLog.id}/add-to-booklog/${encodedIdNumber}`,
@@ -282,10 +356,9 @@ const BookLog = () => {
         }
       );
   
-      console.log("Response:", response); // Log the entire response
       if (response.status === 200) {
-        alert(response.data.message); // Success message
-        fetchBookLogs(); // Refresh the book logs
+        alert(response.data.message);
+        await fetchBookLogs(); // Will trigger sort via useEffect
       } else {
         console.error("Unexpected status:", response.status, response.data);
         alert("Unexpected error occurred.");
@@ -296,7 +369,6 @@ const BookLog = () => {
     }
   };
 
-  // Show loading indicator while auth or data is loading
   if (authLoading || loading) {
     return (
       <>
@@ -327,22 +399,22 @@ const BookLog = () => {
         sx={{ 
           display: "flex", 
           height: "100vh",
-          overflow: "hidden" // Prevent outer document scrolling
+          overflow: "hidden"
         }}
       >
         <SideBar />
         <Box
           sx={{
-            padding: "32px 32px 64px 32px", // Increased bottom padding
+            padding: "32px 32px 64px 32px",
             flexGrow: 1,
             backgroundImage: 'url("/studentbackground.png")',
             backgroundSize: "cover",
             backgroundPosition: "center",
-            overflow: "auto", // Enable scrolling for main content
-            height: "100%", // Fill available height
+            overflow: "auto",
+            height: "100%",
             display: "flex",
             flexDirection: "column",
-            '&::-webkit-scrollbar': { // Style scrollbar
+            '&::-webkit-scrollbar': {
               width: '8px',
               background: 'rgba(0,0,0,0.1)',
             },
@@ -374,7 +446,6 @@ const BookLog = () => {
             </Typography>
           </Box>
 
-          {/* Search Bar */}
           <Box
             sx={{
               display: "flex",
@@ -404,7 +475,6 @@ const BookLog = () => {
             />
           </Box>
 
-          {/* Filters and Add Book Button */}
           <Box
             sx={{
               display: "flex",
@@ -424,9 +494,13 @@ const BookLog = () => {
                 value={filters.dateFrom}
                 onChange={handleFilterChange}
                 InputLabelProps={{ shrink: true }}
+                disabled={!!filters.academicYear}
                 sx={{
                   backgroundColor: "#fff",
                   borderRadius: "15px",
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
                 }}
               />
               <TextField
@@ -437,9 +511,16 @@ const BookLog = () => {
                 value={filters.dateTo}
                 onChange={handleFilterChange}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: filters.dateFrom || undefined
+                }}
+                disabled={!!filters.academicYear || !filters.dateFrom}
                 sx={{
                   backgroundColor: "#fff",
                   borderRadius: "15px",
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
                 }}
               />
               <Select
@@ -448,10 +529,14 @@ const BookLog = () => {
                 onChange={handleFilterChange}
                 displayEmpty
                 size="small"
+                disabled={!!filters.dateFrom || !!filters.dateTo}
                 sx={{
                   backgroundColor: "#fff",
                   borderRadius: "15px",
                   minWidth: "150px",
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
                 }}
               >
                 <MenuItem value="">Select Academic Year</MenuItem>
@@ -505,23 +590,88 @@ const BookLog = () => {
             sx={{
               borderRadius: '15px',
               boxShadow: 3,
-              overflow: 'visible', // Changed from 'auto' to 'visible'
+              overflow: 'visible',
               marginTop: 3,
-              marginBottom: 5, // Added bottom margin
+              marginBottom: 5,
               backgroundColor: "rgba(255, 255, 255, 0.8)",
               flexGrow: 1,
               display: 'flex',
               flexDirection: 'column',
             }}
           >
-            <Table sx={{ flexGrow: 1 }}> {/* Removed stickyHeader */}
+            <Table sx={{ flexGrow: 1 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Book Title</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Author</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Accession Number</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Date Read</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", backgroundColor: "#8C383E", color: "#fff" }}>Rating</TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('title')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer", // Show cursor pointer on hover
+                      '&:hover': {
+                        backgroundColor: "#9C484E" // Lighter shade on hover
+                      }
+                    }}
+                  >
+                    Book Title <SortIndicator column="title" />
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('author')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer",
+                      '&:hover': {
+                        backgroundColor: "#9C484E"
+                      }
+                    }}
+                  >
+                    Author <SortIndicator column="author" />
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('accessionNumber')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer",
+                      '&:hover': {
+                        backgroundColor: "#9C484E"
+                      }
+                    }}
+                  >
+                    Accession Number <SortIndicator column="accessionNumber" />
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('dateRead')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer",
+                      '&:hover': {
+                        backgroundColor: "#9C484E"
+                      }
+                    }}
+                  >
+                    Date Read <SortIndicator column="dateRead" />
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('rating')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer",
+                      '&:hover': {
+                        backgroundColor: "#9C484E"
+                      }
+                    }}
+                  >
+                    Rating <SortIndicator column="rating" />
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -555,20 +705,19 @@ const BookLog = () => {
               onRowsPerPageChange={handleChangeRowsPerPage}
               sx={{
                 paddingTop: 2,
-                paddingBottom: 2, // Added bottom padding
+                paddingBottom: 2,
                 backgroundColor: "transparent",
                 fontWeight: "bold",
                 display: "flex",
                 justifyContent: "center",
                 width: "100%",
-                position: "relative", // Ensure visibility
+                position: "relative",
               }}
             />
           </TableContainer>
         </Box>
       </Box>
 
-      {/* AddBookLog Modal */}
       <AddBookLog
         open={addBookLogOpen}
         handleClose={handleAddBookLogClose}

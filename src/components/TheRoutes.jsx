@@ -26,7 +26,7 @@ import LibrarianManageBooks from "./Librarian/ManageBooks";
 import LibrarianManageStudent from "./Librarian/ManageStudent";
 import LibrarianManageGenre from "./Librarian/ManageGenre";
 import LibrarianManageNASStudent from "./Librarian/ManageNASStudent";
-import StudentAnalyticsAndReports from "./Student/StudentAnalyticsAndReports";
+import StudentAnalyticsAndReports from "./Student/StudentAnalytics";
 import ProtectedRoute from './ProtectedRoute';
 import NotificationsPage from './Student/NotificationsPage';
 import { Routes, Route, Link } from "react-router-dom";

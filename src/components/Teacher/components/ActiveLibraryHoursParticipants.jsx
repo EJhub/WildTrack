@@ -43,6 +43,7 @@ const ActiveLibraryHoursParticipants = () => {
   const [gradeLevel, setGradeLevel] = useState('');
   const [section, setSection] = useState('');
   const [dataView, setDataView] = useState('Monthly'); // Default to Monthly for better academic year view
+  const [tempDataView, setTempDataView] = useState('Monthly'); // Temporary data view that only applies when filters are applied
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: []
@@ -144,8 +145,17 @@ const ActiveLibraryHoursParticipants = () => {
       if (params.academicYear) {
         queryParams.append('academicYear', params.academicYear);
         
-        // Log that we're using academicYear filter
-        console.log(`Using academic year filter: ${params.academicYear}`);
+        // Force monthly view for academic year
+        queryParams.append('timeframe', 'monthly');
+        console.log(`Using academic year filter: ${params.academicYear} with monthly view`);
+      } else if (params.dataView) {
+        // Use explicitly passed dataView when it's provided
+        queryParams.append('timeframe', params.dataView.toLowerCase());
+        console.log(`Using specified data view: ${params.dataView.toLowerCase()}`);
+      } else {
+        // Fall back to the component state dataView
+        queryParams.append('timeframe', dataView.toLowerCase());
+        console.log(`Using default data view: ${dataView.toLowerCase()}`);
       }
       
       // Add date range parameters - these will override academic year if provided
@@ -156,9 +166,6 @@ const ActiveLibraryHoursParticipants = () => {
       if (params.dateTo) {
         queryParams.append('dateTo', params.dateTo);
       }
-      
-      // Add the data view parameter
-      queryParams.append('timeframe', dataView.toLowerCase());
       
       // Make API call to fetch participants data
       const url = `http://localhost:8080/api/statistics/active-participants?${queryParams.toString()}`;
@@ -178,6 +185,7 @@ const ActiveLibraryHoursParticipants = () => {
       if (params.dateFrom && params.dateTo) filterMsg.push(`Date: ${params.dateFrom} to ${params.dateTo}`);
       else if (params.dateFrom) filterMsg.push(`From: ${params.dateFrom}`);
       else if (params.dateTo) filterMsg.push(`To: ${params.dateTo}`);
+      if (params.dataView && !params.academicYear) filterMsg.push(`View: ${params.dataView}`);
       
       if (filterMsg.length > 0) {
         toast.info(`Viewing data for ${teacherGradeLevel || gradeLevel} - ${filterMsg.join(', ')}`);
@@ -297,29 +305,84 @@ const ActiveLibraryHoursParticipants = () => {
     }
   }, [teacherGradeLevel, teacherSubject, fetchParticipantsData]);
 
+  // Date From change handler with mutual exclusivity logic
+  const handleDateFromChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setAcademicYear('');
+    }
+    
+    setDateFrom(value);
+  };
+
+  // Date To change handler with mutual exclusivity logic
+  const handleDateToChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting a date, clear academic year
+    if (value) {
+      setAcademicYear('');
+    }
+    
+    setDateTo(value);
+  };
+
+  // Academic Year change handler with mutual exclusivity logic
+  const handleAcademicYearChange = (e) => {
+    const value = e.target.value;
+    
+    // If selecting academic year, clear date filters and force Monthly view
+    if (value) {
+      setDateFrom('');
+      setDateTo('');
+      setTempDataView('Monthly'); // Set temporary data view to Monthly
+    }
+    
+    setAcademicYear(value);
+  };
+
   // Track currently applied filters
   const [appliedFilters, setAppliedFilters] = useState({
     section: '',
     academicYear: '',
-    dateRange: { from: '', to: '' }
+    dateRange: { from: '', to: '' },
+    dataView: 'Monthly' // Default data view in applied filters
   });
   
   // Handle filter button click
   const handleFilterClick = () => {
-    // Update applied filters state
+    // Force Monthly view if academic year is selected
+    let viewToUse = tempDataView;
+    if (academicYear) {
+      viewToUse = 'Monthly';
+    }
+    
+    // Update applied filters state including dataView
     setAppliedFilters({
       section: section,
       academicYear: academicYear,
-      dateRange: { from: dateFrom, to: dateTo }
+      dateRange: { from: dateFrom, to: dateTo },
+      dataView: viewToUse
     });
     
-    // Apply the filters to the data
+    // Apply the dataView to the actual state
+    setDataView(viewToUse);
+    
+    // Apply the filters to the data with explicit dataView parameter
     fetchParticipantsData({
       gradeLevel,
       section,
       academicYear,
       dateFrom,
-      dateTo
+      dateTo,
+      dataView: viewToUse // Pass the view explicitly
     });
   };
 
@@ -329,15 +392,20 @@ const ActiveLibraryHoursParticipants = () => {
     setDateFrom('');
     setDateTo('');
     setAcademicYear('');
+    setTempDataView('Monthly');
+    setDataView('Monthly');
+    
     setAppliedFilters({
       section: '',
       academicYear: '',
-      dateRange: { from: '', to: '' }
+      dateRange: { from: '', to: '' },
+      dataView: 'Monthly'
     });
     
-    // Refresh data with cleared filters
+    // Refresh data with cleared filters and Monthly view
     fetchParticipantsData({
-      gradeLevel
+      gradeLevel,
+      dataView: 'Monthly'
     });
     
     toast.info('Filters cleared');
@@ -360,6 +428,11 @@ const ActiveLibraryHoursParticipants = () => {
         }
       }
     }));
+  }, [dataView]);
+  
+  // Effect to update tempDataView when dataView changes via Apply Filters
+  useEffect(() => {
+    setTempDataView(dataView);
   }, [dataView]);
   
   // Update chart title and data when filters change
@@ -459,12 +532,16 @@ const ActiveLibraryHoursParticipants = () => {
               variant="outlined"
               size="small"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={handleDateFromChange}
+              disabled={!!academicYear} // Disable if academicYear has a value
               InputLabelProps={{ shrink: true }}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
-                width: '180px'
+                width: '180px',
+                "& .Mui-disabled": {
+                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                }
               }}
             />
           </Box>
@@ -476,12 +553,19 @@ const ActiveLibraryHoursParticipants = () => {
               variant="outlined"
               size="small"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={handleDateToChange}
+              disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+              inputProps={{
+                min: dateFrom || undefined // Set minimum date to dateFrom
+              }}
               InputLabelProps={{ shrink: true }}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
-                width: '180px'
+                width: '180px',
+                "& .Mui-disabled": {
+                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                }
               }}
             />
           </Box>
@@ -492,8 +576,15 @@ const ActiveLibraryHoursParticipants = () => {
               <Select
                 size="small"
                 value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
-                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                onChange={handleAcademicYearChange}
+                disabled={!!dateFrom || !!dateTo} // Disable if either date has a value
+                sx={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '15px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
+                }}
                 displayEmpty
               >
                 <MenuItem value="">Select Academic Year</MenuItem>
@@ -586,9 +677,16 @@ const ActiveLibraryHoursParticipants = () => {
             <FormControl sx={{ width: '180px' }}>
               <Select
                 size="small"
-                value={dataView}
-                onChange={(e) => setDataView(e.target.value)}
-                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                value={tempDataView}
+                onChange={(e) => setTempDataView(e.target.value)}
+                disabled={!!academicYear} // Disable if academic year is selected
+                sx={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '15px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
+                }}
               >
                 <MenuItem value="Weekly">Weekly</MenuItem>
                 <MenuItem value="Monthly">Monthly</MenuItem>
@@ -598,8 +696,10 @@ const ActiveLibraryHoursParticipants = () => {
         </Box>
       </Box>
       
-      {/* Active Filters Display */}
-      {(appliedFilters.section || appliedFilters.academicYear || appliedFilters.dateRange.from || appliedFilters.dateRange.to) && (
+      {/* Active Filters and Context */}
+      {(appliedFilters.section || appliedFilters.academicYear || 
+        appliedFilters.dateRange.from || appliedFilters.dateRange.to || 
+        teacherGradeLevel || teacherSubject) && (
         <Box sx={{ 
           mt: 1, 
           mb: 2, 
@@ -608,8 +708,26 @@ const ActiveLibraryHoursParticipants = () => {
           borderRadius: '15px',
           border: '1px solid rgba(255, 215, 0, 0.3)' 
         }}>
-          <Typography variant="subtitle2" fontWeight="bold">Active Filters:</Typography>
+          <Typography variant="subtitle2" fontWeight="bold">Active Filters and Context:</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+            {teacherGradeLevel && (
+              <Chip 
+                label={`Grade: ${teacherGradeLevel}`} 
+                size="small" 
+                color="secondary" 
+                variant="filled"
+                sx={{ backgroundColor: '#8C383E', color: 'white' }}
+              />
+            )}
+            {teacherSubject && (
+              <Chip 
+                label={`Teacher Subject: ${teacherSubject}`} 
+                size="small" 
+                color="secondary" 
+                variant="filled"
+                sx={{ backgroundColor: '#8C383E', color: 'white' }}
+              />
+            )}
             {appliedFilters.section && (
               <Chip 
                 label={`Section: ${appliedFilters.section}`} 
@@ -640,6 +758,18 @@ const ActiveLibraryHoursParticipants = () => {
                 size="small" 
                 variant="outlined"
                 sx={{ borderColor: '#FFD700', color: '#000' }}
+              />
+            )}
+            {appliedFilters.dataView && (
+              <Chip 
+                label={`View: ${appliedFilters.dataView}${appliedFilters.academicYear ? ' (fixed)' : ''}`} 
+                size="small" 
+                variant="outlined"
+                sx={{ 
+                  borderColor: '#FFD700', 
+                  color: '#000',
+                  backgroundColor: appliedFilters.academicYear ? 'rgba(255, 215, 0, 0.1)' : 'transparent'
+                }}
               />
             )}
           </Box>

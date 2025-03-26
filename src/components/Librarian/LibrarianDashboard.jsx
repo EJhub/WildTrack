@@ -216,16 +216,33 @@ const LibrarianDashboard = () => {
     setSelectedSection(event.target.value);
   };
 
+  // Updated handler for Date From
   const handleDateFromChange = (event) => {
-    setDateFrom(event.target.value);
-    // Clear academic year if date is set
-    if (event.target.value) setSelectedAcademicYear('');
+    const value = event.target.value;
+    
+    // If selecting a date, clear academic year
+    // And ensure dateTo is not earlier than dateFrom
+    if (value) {
+      if (dateTo && new Date(value) > new Date(dateTo)) {
+        // If dateFrom is later than dateTo, reset dateTo
+        setDateTo('');
+      }
+      setSelectedAcademicYear('');
+    }
+    
+    setDateFrom(value);
   };
 
+  // Updated handler for Date To
   const handleDateToChange = (event) => {
-    setDateTo(event.target.value);
+    const value = event.target.value;
+    
     // Clear academic year if date is set
-    if (event.target.value) setSelectedAcademicYear('');
+    if (value) {
+      setSelectedAcademicYear('');
+    }
+    
+    setDateTo(value);
   };
 
   const handleGradeLevelChange = (event) => {
@@ -234,20 +251,24 @@ const LibrarianDashboard = () => {
     setSelectedSection('');
   };
 
+  // Updated handler for Academic Year
   const handleAcademicYearChange = (event) => {
-    setSelectedAcademicYear(event.target.value);
+    const value = event.target.value;
+    
     // Clear date range if academic year is set
-    if (event.target.value) {
+    if (value) {
       setDateFrom('');
       setDateTo('');
     }
+    
+    setSelectedAcademicYear(value);
   };
   
   const handleRejectionReasonChange = (event) => {
     setRejectionReason(event.target.value);
   };
   
-  // Apply filters to fetch updated data
+  // Updated Apply Filters function with date validation
   const handleApplyFilters = () => {
     // Validate date range if both dates are provided
     if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
@@ -707,7 +728,14 @@ const LibrarianDashboard = () => {
                   value={dateFrom}
                   onChange={handleDateFromChange}
                   InputLabelProps={{ shrink: true }}
-                  sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                  disabled={!!selectedAcademicYear} // Disable if academicYear has a value
+                  sx={{ 
+                    backgroundColor: '#fff', 
+                    borderRadius: '15px',
+                    "& .Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    }
+                  }}
                 />
               </Grid>
               
@@ -721,7 +749,17 @@ const LibrarianDashboard = () => {
                   value={dateTo}
                   onChange={handleDateToChange}
                   InputLabelProps={{ shrink: true }}
-                  sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                  disabled={!!selectedAcademicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+                  inputProps={{
+                    min: dateFrom || undefined // Set minimum date to dateFrom
+                  }}
+                  sx={{ 
+                    backgroundColor: '#fff', 
+                    borderRadius: '15px',
+                    "& .Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    }
+                  }}
                 />
               </Grid>
               
@@ -734,7 +772,13 @@ const LibrarianDashboard = () => {
                     onChange={handleGradeLevelChange}
                     displayEmpty
                     disabled={gradeLevelsLoading}
-                    sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                    sx={{ 
+                      backgroundColor: '#fff', 
+                      borderRadius: '15px',
+                      "& .Mui-disabled": {
+                        backgroundColor: "rgba(0, 0, 0, 0.05)",
+                      }
+                    }}
                   >
                     <MenuItem value="">All Grades</MenuItem>
                     {gradeLevelsLoading ? (
@@ -759,7 +803,13 @@ const LibrarianDashboard = () => {
                     onChange={handleSectionChange}
                     displayEmpty
                     disabled={!selectedGradeLevel || sectionsLoading}
-                    sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                    sx={{ 
+                      backgroundColor: '#fff', 
+                      borderRadius: '15px',
+                      "& .Mui-disabled": {
+                        backgroundColor: "rgba(0, 0, 0, 0.05)",
+                      }
+                    }}
                   >
                     <MenuItem value="">All Sections</MenuItem>
                     {sectionsLoading ? (
@@ -783,8 +833,14 @@ const LibrarianDashboard = () => {
                     value={selectedAcademicYear}
                     onChange={handleAcademicYearChange}
                     displayEmpty
-                    disabled={academicYearsLoading}
-                    sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                    disabled={academicYearsLoading || !!dateFrom || !!dateTo} // Disable if loading or if either date has a value
+                    sx={{ 
+                      backgroundColor: '#fff', 
+                      borderRadius: '15px',
+                      "& .Mui-disabled": {
+                        backgroundColor: "rgba(0, 0, 0, 0.05)",
+                      }
+                    }}
                   >
                     <MenuItem value="">All Years</MenuItem>
                     {academicYearsLoading ? (

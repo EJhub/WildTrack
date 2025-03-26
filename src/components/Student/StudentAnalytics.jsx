@@ -44,7 +44,7 @@ const StudentAnalyticsAndReports = () => {
               color: '#FFD700',
             }}
           >
-            Analytics and Reports
+            Analytics
           </Typography>
 
           {/* View Selection Buttons */}
