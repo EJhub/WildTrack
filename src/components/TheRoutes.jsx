@@ -40,14 +40,12 @@ import ChangePassword from "./Login/ChangePassword";
 export default function TheRoutes() {
     return (
         <Routes>
-            {/* Default route - redirect to LoginHomepage */}
-            <Route path="/" element={<Navigate to="/LoginHomepage" replace />} />
 
             <Route path="/student/requirements" element={<ProtectedRoute><LibraryRequirementsProgress /></ProtectedRoute>} />
             <Route path="/Studentnotifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-            <Route path="/InputIn" element={<InputIDLogin />} />
+            <Route path="/" element={<LogInHomepage />} />
             <Route path="/InputOut" element={<InputIDLogout />} />
-            <Route path="/LoginHomepage" element={<LogInHomepage />} />
+            <Route path="/InputIn" element={<InputIDLogin />} />
             <Route path="/Login" element={<LoginProtection><LogIn /></LoginProtection>} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/Register" element={<LoginProtection><Register /></LoginProtection>} />
