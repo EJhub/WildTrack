@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import {
@@ -25,17 +25,43 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 
+// Force prevent ALL form submissions globally
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => {
+    // Prevent the default form submission behavior completely
+    const originalSubmit = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function() {
+      console.log('Form submission prevented by override');
+      return false;
+    };
+    
+    // Intercept Enter key at the top level
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }, true);
+    
+    // Disable all forms on the page
+    document.querySelectorAll('form').forEach(form => {
+      form.setAttribute('onsubmit', 'return false;');
+    });
+  });
+}
+
 const LibrarianManageRecords = () => {
   const [data, setData] = useState([]);
+  const [originalData, setOriginalData] = useState([]); // Store original unfiltered data
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
-  const [grade, setGrade] = useState('');
+  const [searchText, setSearchText] = useState('');
 
   // New states for update functionality
   const [currentRecord, setCurrentRecord] = useState(null);
@@ -45,6 +71,80 @@ const LibrarianManageRecords = () => {
   // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  // Main prevent function to stop all default behaviors
+  const preventDefaultAndStop = useCallback((e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, []);
+
+  // Enhanced prevent function for Enter key
+  const preventSubmitOnEnter = useCallback((e) => {
+    if (e && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Enter submission prevented in field');
+      return false;
+    }
+  }, []);
+
+  // NEW: Global event handlers setup
+  useEffect(() => {
+    // Stop all form submissions globally
+    const handleFormSubmit = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Form submission prevented by global handler');
+      return false;
+    };
+
+    // Prevent enter key submission in text fields
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        const target = e.target;
+        const isTextField = 
+          target.tagName === 'INPUT' && 
+          (target.type === 'text' || target.type === 'date' || target.type === 'number');
+        
+        if (isTextField) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Enter key submission prevented in text field');
+          return false;
+        }
+      }
+    };
+
+    // NEW: Handle clicks on buttons that might refresh
+    const handleButtonClick = (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+        
+        // Only prevent default for buttons inside forms or with type="submit"
+        if (button.closest('form') || button.type === 'submit') {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Button click prevented from submitting');
+          return false;
+        }
+      }
+    };
+
+    // Apply the global handlers
+    document.addEventListener('submit', handleFormSubmit, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('click', handleButtonClick, true);
+
+    // Cleanup on component unmount
+    return () => {
+      document.removeEventListener('submit', handleFormSubmit, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('click', handleButtonClick, true);
+    };
+  }, []);
 
   // Fetch data
   useEffect(() => {
@@ -56,6 +156,7 @@ const LibrarianManageRecords = () => {
         }
         const result = await response.json();
         setData(result);
+        setOriginalData(result); // Store original data for filtering
       } catch (error) {
         console.error('Error fetching library hours summary:', error);
       } finally {
@@ -67,163 +168,399 @@ const LibrarianManageRecords = () => {
 
   // Handle page change
   const handleChangePage = (event, newPage) => {
+    preventDefaultAndStop(event);
     setPage(newPage);
   };
 
   // Handle rows per page change
   const handleChangeRowsPerPage = (event) => {
+    preventDefaultAndStop(event);
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0); // Reset page to 0 when rows per page changes
   };
 
-  // Handle Update action
-  const handleUpdate = (record) => {
-    setCurrentRecord(record);
+  // Handle Update action - improved to prevent refresh
+  const handleUpdate = useCallback((record, event) => {
+    preventDefaultAndStop(event);
+    setCurrentRecord({...record}); // Create a copy to avoid direct mutation
     setOpen(true);
-  };
+  }, [preventDefaultAndStop]);
 
   // Convert time to 24-hour format
-  const convertTo24HourTime = (time) => {
-    const [hours, minutes] = time.split(':');
-    const isPM = time.toLowerCase().includes('pm');
+  const convertTo24HourTime = useCallback((time) => {
+    if (!time) return "00:00:00";
+    
+    const [timeStr, ampm] = time.includes(' ') ? time.split(' ') : [time, ''];
+    const [hours, minutes] = timeStr.split(':');
+    const isPM = ampm.toLowerCase() === 'pm' || time.toLowerCase().includes('pm');
+    
     let formattedHours = parseInt(hours, 10);
+    
     if (isPM && formattedHours < 12) formattedHours += 12;
     if (!isPM && formattedHours === 12) formattedHours = 0;
-    return `${String(formattedHours).padStart(2, '0')}:${minutes.trim()}:00`;
-  };
+    
+    return `${String(formattedHours).padStart(2, '0')}:${minutes ? minutes.trim() : '00'}:00`;
+  }, []);
 
-  // Handle Update Submit
-  const handleUpdateSubmit = async () => {
-    try {
-      // Validate input
-      if (!currentRecord.latestLibraryHourDate || 
-          !currentRecord.latestTimeIn || 
-          !currentRecord.latestTimeOut) {
-        setError('Please fill in all required fields');
-        return;
-      }
+  // Handle Search with improved event handling
+  const handleSearch = useCallback((e) => {
+    preventDefaultAndStop(e);
+    setSearchText(e.target.value);
+  }, [preventDefaultAndStop]);
 
-      const updatedData = {
-        idNumber: currentRecord.idNumber,
-        latestLibraryHourDate: new Date(currentRecord.latestLibraryHourDate)
-          .toISOString()
-          .split('T')[0], // Format date to yyyy-MM-dd
-        latestTimeIn: convertTo24HourTime(currentRecord.latestTimeIn), // Convert to HH:mm:ss
-        latestTimeOut: convertTo24HourTime(currentRecord.latestTimeOut), // Convert to HH:mm:ss
-        totalMinutes: currentRecord.totalMinutes,
-      };
-
-      const response = await fetch('http://localhost:8080/api/library-hours/update-summary', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update the record');
-      }
-
-      const result = await response.json();
-      console.log('Record updated successfully:', result);
-
-      // Update local state to reflect changes
-      setData((prevData) =>
-        prevData.map((record) =>
-          record.idNumber === currentRecord.idNumber ? { ...record, ...updatedData } : record
-        )
+  // Handle Search Submit - improved to filter data
+  const handleSearchSubmit = useCallback((e) => {
+    preventDefaultAndStop(e);
+    console.log('Searching for:', searchText);
+    
+    // Apply search to filter data
+    let filteredData = [...originalData];
+    
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase();
+      filteredData = filteredData.filter(student => 
+        // Search through ID
+        student.idNumber?.toString().toLowerCase().includes(searchLower) ||
+        // Search through name
+        `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase().includes(searchLower) ||
+        // Search through date
+        student.latestLibraryHourDate?.toLowerCase().includes(searchLower)
       );
-
-      setOpen(false); // Close the modal
-      setError(null); // Clear any previous errors
-    } catch (error) {
-      console.error('Error updating record:', error);
-      setError(error.message || 'Failed to update record');
     }
-  };
+    
+    setData(filteredData);
+    setPage(0); // Reset to first page after search
+  }, [searchText, originalData, preventDefaultAndStop]);
 
-  // Handle Delete action
-  const handleDelete = (id) => {
-    console.log(`Deleting student with ID: ${id}`);
-    // Add your delete logic here, e.g., make a DELETE API call
-    const newData = data.filter((item) => item.id !== id);
-    setData(newData); // Update state after deleting
-  };
+  // Reset all filters function
+  const handleResetFilters = useCallback((e) => {
+    if (e) preventDefaultAndStop(e);
+    
+    // Reset all filter states
+    setSearchText('');
+    setDateFrom('');
+    setDateTo('');
+    setAcademicYear('');
+    
+    // Reset data to original
+    setData(originalData);
+    setPage(0);
+  }, [originalData, preventDefaultAndStop]);
 
-  // Update Modal Component
+  // Handle Filter Apply with improved event handling
+  const handleFilterApply = useCallback((e) => {
+    preventDefaultAndStop(e);
+    console.log('Applying filters:', { dateFrom, dateTo, academicYear });
+    
+    // Start with original or search-filtered data
+    let filteredData = [...originalData];
+    
+    // Apply search text filter if present
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase();
+      filteredData = filteredData.filter(student => 
+        student.idNumber?.toString().toLowerCase().includes(searchLower) ||
+        `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase().includes(searchLower) ||
+        student.latestLibraryHourDate?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Filter by date range
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      filteredData = filteredData.filter(student => {
+        if (!student.latestLibraryHourDate) return false;
+        const recordDate = new Date(student.latestLibraryHourDate);
+        return recordDate >= fromDate;
+      });
+    }
+    
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // Set to end of day
+      filteredData = filteredData.filter(student => {
+        if (!student.latestLibraryHourDate) return false;
+        const recordDate = new Date(student.latestLibraryHourDate);
+        return recordDate <= toDate;
+      });
+    }
+    
+    // Filter by academic year
+    if (academicYear) {
+      // Academic years typically run from August/September to May/June
+      // Adjust this logic based on your specific requirements
+      const [startYear, endYear] = academicYear.split('-');
+      const academicStartDate = new Date(`${startYear}-08-01`); // August 1st of start year
+      const academicEndDate = new Date(`${endYear}-07-31`);    // July 31st of end year
+      
+      filteredData = filteredData.filter(student => {
+        if (!student.latestLibraryHourDate) return false;
+        const recordDate = new Date(student.latestLibraryHourDate);
+        return recordDate >= academicStartDate && recordDate <= academicEndDate;
+      });
+    }
+    
+    // Update the filtered data
+    setData(filteredData);
+    // Reset pagination
+    setPage(0);
+  }, [dateFrom, dateTo, academicYear, searchText, originalData, preventDefaultAndStop]);
+
+  // Handle field changes in the update modal - improved
+  const handleFieldChange = useCallback((field, value, event) => {
+    if (event) {
+      preventDefaultAndStop(event);
+    }
+    
+    if (!currentRecord) return;
+    
+    setCurrentRecord(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
+  }, [currentRecord, preventDefaultAndStop]);
+
+  // Handle Update Submit - updated to accept a manual record
+  const handleUpdateSubmit = useCallback((e, manualRecord = null) => {
+    if (e) {
+      preventDefaultAndStop(e);
+    }
+    
+    const recordToUpdate = manualRecord || currentRecord;
+    
+    const updateRecord = async () => {
+      try {
+        // Validate input with null checks
+        if (!recordToUpdate || 
+            !recordToUpdate.latestLibraryHourDate || 
+            !recordToUpdate.latestTimeIn || 
+            !recordToUpdate.latestTimeOut) {
+          setError('Please fill in all required fields');
+          return;
+        }
+
+        const updatedData = {
+          idNumber: recordToUpdate.idNumber,
+          latestLibraryHourDate: new Date(recordToUpdate.latestLibraryHourDate)
+            .toISOString()
+            .split('T')[0], // Format date to yyyy-MM-dd
+          latestTimeIn: convertTo24HourTime(recordToUpdate.latestTimeIn), // Convert to HH:mm:ss
+          latestTimeOut: convertTo24HourTime(recordToUpdate.latestTimeOut), // Convert to HH:mm:ss
+          totalMinutes: recordToUpdate.totalMinutes || 0,
+        };
+
+        const response = await fetch('http://localhost:8080/api/library-hours/update-summary', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedData),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update the record');
+        }
+
+        const result = await response.json();
+        console.log('Record updated successfully:', result);
+
+        // Update local state to reflect changes
+        setData((prevData) =>
+          prevData.map((record) =>
+            record.idNumber === recordToUpdate.idNumber ? { ...record, ...updatedData } : record
+          )
+        );
+        
+        // Also update original data
+        setOriginalData((prevData) =>
+          prevData.map((record) =>
+            record.idNumber === recordToUpdate.idNumber ? { ...record, ...updatedData } : record
+          )
+        );
+
+        setOpen(false); // Close the modal
+        setError(null); // Clear any previous errors
+      } catch (error) {
+        console.error('Error updating record:', error);
+        setError(error.message || 'Failed to update record');
+      }
+    };
+
+    updateRecord();
+  }, [currentRecord, convertTo24HourTime, preventDefaultAndStop]);
+
+  // Improved Update Modal Component with local state to prevent refresh issues
   const UpdateModal = () => {
+    // Create local state for form values
+    const [formValues, setFormValues] = useState({
+      idNumber: '',
+      date: '',
+      timeIn: '',
+      timeOut: '',
+      minutes: 0
+    });
+    
+    // Set initial values when modal opens
+    useEffect(() => {
+      if (currentRecord) {
+        setFormValues({
+          idNumber: currentRecord.idNumber || '',
+          date: currentRecord.latestLibraryHourDate || '',
+          timeIn: currentRecord.latestTimeIn || '',
+          timeOut: currentRecord.latestTimeOut || '',
+          minutes: currentRecord.totalMinutes || 0
+        });
+      }
+    }, [currentRecord]);
+    
+    // Safe change handler that won't trigger form submission
+    const handleInputChange = (field, value) => {
+      setFormValues(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    };
+    
+    // Only update the actual record when submit button is clicked
+    // Only update the actual record when submit button is clicked
+    const submitChanges = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      // Update the currentRecord with local form values
+      const updatedRecord = {
+        ...currentRecord,
+        latestLibraryHourDate: formValues.date,
+        latestTimeIn: formValues.timeIn,
+        latestTimeOut: formValues.timeOut,
+        totalMinutes: formValues.minutes
+      };
+      
+      // Call the existing update handler with the updated record
+      handleUpdateSubmit(e, updatedRecord);
+    };
+    
     if (!currentRecord) return null;
 
     return (
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>Update Library Hours Record</DialogTitle>
-        <DialogContent>
-          {error && (
-            <Typography color="error" sx={{ marginBottom: 2 }}>
-              {error}
-            </Typography>
-          )}
-          <TextField
-            label="ID Number"
-            value={currentRecord.idNumber}
-            fullWidth
-            disabled
-            sx={{ marginBottom: 2 }}
-          />
-          <TextField
-            label="Date"
-            type="date"
-            value={currentRecord.latestLibraryHourDate}
-            onChange={(e) => setCurrentRecord(prev => ({
-              ...prev, 
-              latestLibraryHourDate: e.target.value
-            }))}
-            fullWidth
-            sx={{ marginBottom: 2 }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-          <TextField
-            label="Time In"
-            value={currentRecord.latestTimeIn}
-            onChange={(e) => setCurrentRecord(prev => ({
-              ...prev, 
-              latestTimeIn: e.target.value
-            }))}
-            fullWidth
-            sx={{ marginBottom: 2 }}
-          />
-          <TextField
-            label="Time Out"
-            value={currentRecord.latestTimeOut}
-            onChange={(e) => setCurrentRecord(prev => ({
-              ...prev, 
-              latestTimeOut: e.target.value
-            }))}
-            fullWidth
-            sx={{ marginBottom: 2 }}
-          />
-          <TextField
-            label="Total Minutes"
-            type="number"
-            value={currentRecord.totalMinutes}
-            onChange={(e) => setCurrentRecord(prev => ({
-              ...prev, 
-              totalMinutes: parseInt(e.target.value, 10)
-            }))}
-            fullWidth
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleUpdateSubmit} color="primary">Update</Button>
-        </DialogActions>
-      </Dialog>
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+      >
+        <Dialog 
+          open={open}
+          onClose={() => setOpen(false)}
+          disableRestoreFocus
+          disableEnforceFocus
+          disableAutoFocus
+          disableEscapeKeyDown
+        >
+          <DialogTitle>Update Library Hours Record</DialogTitle>
+          <DialogContent>
+            {error && (
+              <Typography color="error" sx={{ marginBottom: 2 }}>
+                {error}
+              </Typography>
+            )}
+            
+            <TextField
+              label="ID Number"
+              value={formValues.idNumber}
+              fullWidth
+              disabled
+              sx={{ marginBottom: 2, marginTop: 2 }}
+              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+            />
+            
+            <TextField
+              label="Date"
+              type="date"
+              value={formValues.date}
+              onChange={(e) => {
+                e.preventDefault();
+                handleInputChange('date', e.target.value);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+              fullWidth
+              sx={{ marginBottom: 2 }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ autoComplete: "off" }}
+            />
+            
+            <TextField
+              label="Time In"
+              value={formValues.timeIn}
+              onChange={(e) => {
+                e.preventDefault();
+                handleInputChange('timeIn', e.target.value);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+              fullWidth
+              sx={{ marginBottom: 2 }}
+              inputProps={{ autoComplete: "off" }}
+            />
+            
+            <TextField
+              label="Time Out"
+              value={formValues.timeOut}
+              onChange={(e) => {
+                e.preventDefault();
+                handleInputChange('timeOut', e.target.value);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+              fullWidth
+              sx={{ marginBottom: 2 }}
+              inputProps={{ autoComplete: "off" }}
+            />
+            
+            <TextField
+              label="Total Minutes"
+              type="number"
+              value={formValues.minutes}
+              onChange={(e) => {
+                e.preventDefault();
+                handleInputChange('minutes', parseInt(e.target.value, 10) || 0);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+              fullWidth
+              inputProps={{ autoComplete: "off" }}
+            />
+          </DialogContent>
+              
+          <DialogActions>
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                setOpen(false);
+              }}
+              type="button"
+            >
+              Cancel
+            </Button>
+            
+            <Button 
+              onClick={submitChanges}
+              color="primary"
+              type="button"
+            >
+              Update
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </div>
     );
   };
-
+    
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -231,7 +568,8 @@ const LibrarianManageRecords = () => {
       </Box>
     );
   }
-
+    
+  // Main component JSX with all the "form" elements replaced with divs
   return (
     <>
       <NavBar />
@@ -262,6 +600,7 @@ const LibrarianManageRecords = () => {
               borderRadius: '4px',
             }
           }}
+          onClick={preventDefaultAndStop}
         >
           <Typography
             variant="h4"
@@ -270,7 +609,7 @@ const LibrarianManageRecords = () => {
             Manage Records
           </Typography>
 
-          {/* Search and Filters Section */}
+          {/* Search and Filters Section - Changed from form to div */}
           <Box
             sx={{
               display: 'flex',
@@ -280,14 +619,21 @@ const LibrarianManageRecords = () => {
               flexWrap: { xs: 'wrap', md: 'nowrap' },
             }}
           >
-            <IconButton>
-              <MenuIcon />
-            </IconButton>
-
             <TextField
               variant="outlined"
               placeholder="Type here..."
               size="small"
+              value={searchText}
+              onChange={handleSearch}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  preventDefaultAndStop(e);
+                  handleSearchSubmit(e);
+                } else {
+                  preventSubmitOnEnter(e);
+                }
+              }}
+              onClick={preventDefaultAndStop}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
@@ -300,14 +646,25 @@ const LibrarianManageRecords = () => {
                     <SearchIcon />
                   </InputAdornment>
                 ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton 
+                      onClick={handleSearchSubmit}
+                      size="small"
+                      type="button"
+                    >
+                      <SearchIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              inputProps={{
+                autoComplete: "off"
               }}
             />
-
-            <IconButton>
-            </IconButton>
           </Box>
 
-          {/* Additional Filters Section: Date, Academic Year, Grade */}
+          {/* Additional Filters Section: Date, Academic Year - Changed from form to div */}
           <Box
             sx={{
               display: 'flex',
@@ -317,15 +674,33 @@ const LibrarianManageRecords = () => {
               flexWrap: { xs: 'wrap', md: 'nowrap' },
               marginBottom: 3,
             }}
+            onClick={preventDefaultAndStop}
           >
             <TextField
               label="Date From"
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              sx={{ backgroundColor: '#fff', borderRadius: '15px', flexGrow: 1, maxWidth: '200px' }}
+              onChange={(e) => {
+                preventDefaultAndStop(e);
+                setDateFrom(e.target.value);
+              }}
+              onKeyDown={preventSubmitOnEnter}
+              onClick={preventDefaultAndStop}
+              sx={{ 
+                backgroundColor: '#fff', 
+                borderRadius: '15px', 
+                flexGrow: 1, 
+                maxWidth: '200px',
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(0, 0, 0, 0.7)',
+                  fontWeight: 'medium',
+                }
+              }}
               InputLabelProps={{
                 shrink: true,
+              }}
+              inputProps={{
+                autoComplete: "off"
               }}
             />
 
@@ -333,21 +708,54 @@ const LibrarianManageRecords = () => {
               label="Date To"
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              sx={{ backgroundColor: '#fff', borderRadius: '15px', flexGrow: 1, maxWidth: '200px' }}
+              onChange={(e) => {
+                preventDefaultAndStop(e);
+                setDateTo(e.target.value);
+              }}
+              onKeyDown={preventSubmitOnEnter}
+              onClick={preventDefaultAndStop}
+              sx={{ 
+                backgroundColor: '#fff', 
+                borderRadius: '15px', 
+                flexGrow: 1, 
+                maxWidth: '200px',
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(0, 0, 0, 0.7)',
+                  fontWeight: 'medium',
+                }
+              }}
               InputLabelProps={{
                 shrink: true,
               }}
+              inputProps={{
+                autoComplete: "off"
+              }}
             />
 
-            <FormControl sx={{ backgroundColor: '#fff', borderRadius: '15px', minWidth: '250px' }}>
+            <FormControl 
+              sx={{ 
+                backgroundColor: '#fff', 
+                borderRadius: '15px', 
+                minWidth: '250px',
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(0, 0, 0, 0.7)',
+                  fontWeight: 'medium',
+                }
+              }}
+              onClick={preventDefaultAndStop}
+            >
               <InputLabel>Select Academic Year</InputLabel>
               <Select
                 value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
+                onChange={(e) => {
+                  preventDefaultAndStop(e);
+                  setAcademicYear(e.target.value);
+                }}
                 label="Academic Year"
                 size="small"
+                onKeyDown={preventSubmitOnEnter}
               >
+                <MenuItem value="">All Academic Years</MenuItem>
                 <MenuItem value="2023-2024">2023-2024</MenuItem>
                 <MenuItem value="2024-2025">2024-2025</MenuItem>
                 <MenuItem value="2025-2026">2025-2026</MenuItem>
@@ -355,10 +763,50 @@ const LibrarianManageRecords = () => {
               </Select>
             </FormControl>
 
-            {/* Filter Button next to Academic Year */}
-            <IconButton>
-              <FilterListIcon sx={{ fontSize: 24 }} />
-            </IconButton>
+            {/* Filter Buttons */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                type="button"
+                variant="contained"
+                onClick={(e) => {
+                  preventDefaultAndStop(e);
+                  handleFilterApply(e);
+                }}
+                sx={{
+                  color: 'black',
+                  backgroundColor: '#FFDF16',
+                  fontSize: '11px',
+                  border: '1px solid #FFEB3B',
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    backgroundColor: '#FFEB3B',
+                  },
+                  '&:active': {
+                    transform: 'scale(0.98)',
+                  },
+                }}
+              >
+                Apply Filter
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={handleResetFilters}
+                sx={{
+                  color: 'black',
+                  borderColor: '#ccc',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    backgroundColor: '#f5f5f5',
+                    borderColor: '#aaa',
+                  },
+                }}
+              >
+                Reset
+              </Button>
+            </Box>
           </Box>
 
           {/* Table Section */}
@@ -367,34 +815,35 @@ const LibrarianManageRecords = () => {
             sx={{
               flexGrow: 1,
               borderRadius: '15px',
-              overflow: 'visible', // Changed from 'auto' to 'visible'
-              marginBottom: 5, // Added bottom margin for pagination
+              overflow: 'visible', 
+              marginBottom: 5,
               display: 'flex',
               flexDirection: 'column',
             }}
+            onClick={preventDefaultAndStop}
           >
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell sx={{ fontWeight: 'bold', borderTopLeftRadius: '5px', color: 'black', backgroundColor: '#F8C400' }}>
                     ID Number
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     Name
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
-                     Date
+                  <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
+                    Date
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     Time-In
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     Time-Out
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     Completed Minutes
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#fff', backgroundColor: '#CD6161' }}>
+                  <TableCell sx={{ fontWeight: 'bold', borderTopRightRadius: '5px', color: 'black', backgroundColor: '#F8C400' }}>
                     Action
                   </TableCell>
                 </TableRow>
@@ -412,34 +861,28 @@ const LibrarianManageRecords = () => {
                       }}
                     >
                       <TableCell>{student.idNumber}</TableCell>
-                      <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                      <TableCell>{`${student.firstName || ''} ${student.lastName || ''}`}</TableCell>
                       <TableCell>{student.latestLibraryHourDate}</TableCell>
                       <TableCell>{student.latestTimeIn}</TableCell>
                       <TableCell>{student.latestTimeOut}</TableCell>
                       <TableCell>{student.totalMinutes}</TableCell>
                       <TableCell>
                         <Button
+                          type="button"
                           variant="contained"
-                          color="primary"
-                          onClick={() => handleUpdate(student)}
+                          onClick={(e) => handleUpdate(student, e)}
                           sx={{
-                            marginRight: 1,
-                            backgroundColor: '#FFB300',
-                            '&:hover': { backgroundColor: '#FF8F00' },
+                            color: 'black',
+                            backgroundColor: '#FFDF16',
+                            fontSize: '11px',
+                            border: '1px solid #FFEB3B',
+                            fontWeight: 'bold',
+                            '&:hover': {
+                              backgroundColor: '#FFEB3B',
+                            },
                           }}
                         >
                           Update
-                        </Button>
-                        <Button
-                          variant="contained"
-                          color="error"
-                          onClick={() => handleDelete(student.id)}
-                          sx={{
-                            backgroundColor: '#F44336',
-                            '&:hover': { backgroundColor: '#D32F2F' },
-                          }}
-                        >
-                          Delete
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -464,7 +907,7 @@ const LibrarianManageRecords = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 width: '100%',
-                position: 'relative', // Ensure visibility
+                position: 'relative',
               }}
             />
           </TableContainer>
