@@ -1,5 +1,12 @@
 {
-    "rewrites": [
-      { "source": "/(.*)", "destination": "/index.html" }
-    ]
-  }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "routes": [
+    { "src": "/studentDashboard/(.*)", "dest": "/index.html" },
+    { "src": "/StudentDashboard/(.*)", "dest": "/index.html" },
+    { "src": "/TeacherDashboard/(.*)", "dest": "/index.html" },
+    { "src": "/nasDashboard/(.*)", "dest": "/index.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

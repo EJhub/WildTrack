@@ -29,61 +29,95 @@ function InputIDLogout() {
   });
   const [error, setError] = useState(null);
   const [recentLogouts, setRecentLogouts] = useState([]);
+  
+  // Add global event listener for Enter key
+  useEffect(() => {
+    const handleGlobalKeyPress = (e) => {
+      if (e.key === "Enter" || e.keyCode === 13) {
+        handleSubmit();
+      }
+    };
+
+    // Add the event listener when component mounts
+    document.addEventListener("keydown", handleGlobalKeyPress);
+
+    // Cleanup the event listener when component unmounts
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyPress);
+    };
+  }, [idInput]); // Re-attach when idInput changes
 
   const handleInputChange = (e) => {
     setIdInput(e.target.value);
   };
 
-  const handleKeyPress = async (e) => {
-    if (e.key === "Enter") {
-      try {
-        // Call backend API with the entered ID Number for time-out
-        const response = await axios.post("http://localhost:8080/api/time-out", { idNumber: idInput });
+  // Separate function to handle submission logic
+  const handleSubmit = async () => {
+    if (!idInput.trim()) return; // Prevent submission of empty ID
+    
+    try {
+      // Call backend API with the entered ID Number for time-out
+      const response = await axios.post("http://localhost:8080/api/time-out", { idNumber: idInput });
 
-        const { student } = response.data;
+      const { student } = response.data;
 
-        const currentTime = new Date();
-        const timeOut = response.data.timeOut || currentTime.toLocaleTimeString();
-        const date = response.data.date || currentTime.toLocaleDateString();
+      const currentTime = new Date();
+      const timeOut = response.data.timeOut || currentTime.toLocaleTimeString();
+      const date = response.data.date || currentTime.toLocaleDateString();
 
-        // Create student details object
-        const newStudentDetails = {
-          name: `${student.firstName} ${student.lastName || ""}`,
-          idNumber: student.idNumber,
-          grade: student.grade || "",
-          section: student.section || "",
-          date: date,
-          timeOut: timeOut,
-          profilePictureUrl: student.profilePictureUrl,
-        };
+      // Create student details object
+      const newStudentDetails = {
+        name: `${student.firstName} ${student.lastName || ""}`,
+        idNumber: student.idNumber,
+        grade: student.grade || "",
+        section: student.section || "",
+        date: date,
+        timeOut: timeOut,
+        profilePictureUrl: student.profilePictureUrl,
+      };
 
-        // Update the displayed student details
-        setStudentDetails(newStudentDetails);
+      // Update the displayed student details
+      setStudentDetails(newStudentDetails);
 
-        // Add to recent logouts (at the beginning)
-        setRecentLogouts(prevLogouts => {
-          // Create a new array with the current student at the beginning
-          const updatedLogouts = [
-            {
-              ...student,
-              timeOut: timeOut,
-            },
-            ...prevLogouts
-          ];
-          
-          // Keep only the most recent 5 logouts
-          return updatedLogouts.slice(0, 5);
-        });
-
-        setError(null);
-        setIdInput(""); // Clear the input field
-      } catch (err) {
-        console.error("Error:", err);
-        const errorMsg = err.response?.data?.error || "Student not found. Please check the ID number.";
+      // Add to recent logouts (at the beginning)
+      setRecentLogouts(prevLogouts => {
+        // Create a new array with the current student at the beginning
+        const updatedLogouts = [
+          {
+            ...student,
+            timeOut: timeOut,
+          },
+          ...prevLogouts
+        ];
         
-        // Set the error to display below the input field
-        setError(errorMsg);
-      }
+        // Keep only the most recent 5 logouts
+        return updatedLogouts.slice(0, 5);
+      });
+
+      setError(null);
+      setIdInput(""); // Clear the input field
+    } catch (err) {
+      console.error("Error:", err);
+      const errorMsg = err.response?.data?.error || "Student not found. Please check the ID number.";
+      
+      // Set the error to display below the input field
+      setError(errorMsg);
+    }
+  };
+
+  // Multiple event handlers to ensure cross-browser and cross-environment compatibility
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevent any default behavior
+      handleSubmit();
+    }
+  };
+  
+  // Backup handler using keyCode for older browsers/environments
+  const handleKeyUp = (e) => {
+    if (e.keyCode === 13 || e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
     }
   };
 
@@ -216,7 +250,8 @@ function InputIDLogout() {
                         placeholder="Input your ID Number"
                         value={idInput}
                         onChange={handleInputChange}
-                        onKeyPress={handleKeyPress}
+                        onKeyDown={handleKeyDown}
+                        onKeyUp={handleKeyUp}
                         fullWidth
                         sx={{
                           mb: 2,
