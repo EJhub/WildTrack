@@ -14,7 +14,7 @@ import {
  Grid,
 } from "@mui/material";
 import LoginNavBar from "./component/AppBar";
-import axios from "axios";
+import api from "../../utils/api"; // Changed from axios to the custom API utility
 
 function InputIdLogin() {
  const [idInput, setIdInput] = useState("");
@@ -57,7 +57,7 @@ function InputIdLogin() {
    
    try {
      // Call time-in API with the entered ID Number
-     const response = await axios.post("http://localhost:8080/api/time-in", { idNumber: idInput });
+     const response = await api.post("/time-in", { idNumber: idInput });
      const { student } = response.data;
 
      const currentTime = new Date();
@@ -121,7 +121,7 @@ function InputIdLogin() {
  const getFullImageUrl = (url) => {
    if (!url) return null;
    if (url.startsWith("http")) return url;
-   return `http://localhost:8080${url}`;
+   return url; // No need to add base URL - the proxy takes care of this
  };
 
  return (

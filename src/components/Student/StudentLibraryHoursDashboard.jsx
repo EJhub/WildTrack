@@ -23,12 +23,12 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import { toast, ToastContainer } from "react-toastify";
-import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import AddBook from "./components/Addbook";
 import { AuthContext } from '../AuthContext';
+import api from "../../utils/api"; // Import the API utility
 
 const StudentLibraryHours = () => {
   const [libraryHours, setLibraryHours] = useState([]);
@@ -148,8 +148,8 @@ const StudentLibraryHours = () => {
       }
       
       // Check for new requirements first, even if all existing ones are completed
-      await axios.get(
-        `http://localhost:8080/api/library-progress/check-new-requirements/${user.idNumber}`,
+      await api.get(
+        `/library-progress/check-new-requirements/${user.idNumber}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -158,8 +158,8 @@ const StudentLibraryHours = () => {
       );
       
       // Get summary data using auto-init endpoint
-      const summaryResponse = await axios.get(
-        `http://localhost:8080/api/library-progress/summary-with-init/${user.idNumber}`,
+      const summaryResponse = await api.get(
+        `/library-progress/summary-with-init/${user.idNumber}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -168,8 +168,8 @@ const StudentLibraryHours = () => {
       );
       
       // Fetch detailed progress to get current subject
-      const progressResponse = await axios.get(
-        `http://localhost:8080/api/library-progress/${user.idNumber}`,
+      const progressResponse = await api.get(
+        `/library-progress/${user.idNumber}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -207,7 +207,7 @@ const StudentLibraryHours = () => {
       const token = localStorage.getItem("token");
       
       try {
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', {
+        const academicYearsResponse = await api.get('/academic-years/all', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -231,8 +231,8 @@ const StudentLibraryHours = () => {
             return;
           }
 
-          const response = await axios.get(
-            `http://localhost:8080/api/library-hours/user/${idNumber}`,
+          const response = await api.get(
+            `/library-hours/user/${idNumber}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -249,7 +249,7 @@ const StudentLibraryHours = () => {
 
       const fetchBooks = async () => {
         try {
-          const response = await axios.get("http://localhost:8080/api/books/all");
+          const response = await api.get("/books/all");
           setRegisteredBooks(response.data);
         } catch (error) {
           console.error("Error fetching books:", error);
@@ -290,8 +290,8 @@ const StudentLibraryHours = () => {
       }
   
       // Step 1: Assign book to library hours
-      await axios.put(
-        `http://localhost:8080/api/books/${bookDetails.id}/assign-library-hours/${emptyEntry.id}`,
+      await api.put(
+        `/books/${bookDetails.id}/assign-library-hours/${emptyEntry.id}`,
         {},
         {
           headers: {
@@ -314,8 +314,8 @@ const StudentLibraryHours = () => {
         try {
           const encodedIdNumber = encodeURIComponent(user.idNumber);
           
-          await axios.put(
-            `http://localhost:8080/api/booklog/${bookDetails.id}/add-to-booklog/${encodedIdNumber}`,
+          await api.put(
+            `/booklog/${bookDetails.id}/add-to-booklog/${encodedIdNumber}`,
             {
               dateRead: bookDetails.dateRead,
               rating: bookDetails.rating,

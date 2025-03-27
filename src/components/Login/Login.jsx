@@ -1,6 +1,6 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api"; // Import the custom API utility
 import { AuthContext } from "../AuthContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { CircularProgress } from "@mui/material";
@@ -26,11 +26,8 @@ const Login = () => {
     setError(null);
 
     try {
-      // Create a new axios instance specifically for this request to avoid setting global headers
-      const loginAxios = axios.create();
-      
       // 1. Make login request to get authentication token
-      const response = await loginAxios.post("http://localhost:8080/api/login", {
+      const response = await api.post("/login", {
         idNumber: credentials.idNumber,
         password: credentials.password,
       });
@@ -58,8 +55,8 @@ const Login = () => {
         localStorage.setItem("userId", userId || "");
       }
 
-      // 3. Configure axios to use the token for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // 3. Configure api to use the token for future requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // 4. Wait for the login context to be fully updated
       // This is critical - we need to await this
