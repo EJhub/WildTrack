@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../utils/api'; // Import the API utility instead of axios
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import ActivityLogView from './components/ActivityLogView';
@@ -47,7 +47,7 @@ const LibrarianManageTeacher = () => {
 
   const getTeachers = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/teachers/all', {
+      const response = await api.get('/teachers/all', {
         params: {
           query: searchQuery
         },
@@ -108,7 +108,7 @@ const LibrarianManageTeacher = () => {
   const handleDeleteTeacher = async () => {
     try {
       if (teacherToDelete) {
-        await axios.delete(`http://localhost:8080/api/teachers/${teacherToDelete.id}`);
+        await api.delete(`/teachers/${teacherToDelete.id}`);
         setTeachers(teachers.filter((teacher) => teacher.id !== teacherToDelete.id)); // Remove teacher from state
         setTeacherToDelete(null); // Clear selected teacher
         setIsDeleteModalOpen(false); // Close delete modal

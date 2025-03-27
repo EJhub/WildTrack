@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
+import api from "../../utils/api"; // Import the API utility
 import { 
   Box, 
   Paper, 
@@ -47,10 +48,12 @@ const LibrarianLogin = () => {
 
     try {
       // Clone the axios instance to use without interceptors for this request
-      const axiosInstance = axios.create();
+      // Instead of creating a custom instance, use the baseURL from our api utility
+      const baseURL = api.defaults.baseURL;
+      const loginURL = `${baseURL}/login`;
       
-      // Login request using custom instance
-      const response = await axiosInstance.post("http://localhost:8080/api/login", {
+      // Login request using direct axios to bypass any interceptors
+      const response = await axios.post(loginURL, {
         idNumber: credentials.idNumber,
         password: credentials.password,
       });
@@ -69,8 +72,9 @@ const LibrarianLogin = () => {
       localStorage.setItem("role", role);
       localStorage.setItem("idNumber", idNumber);
 
-      // Configure axios
+      // Configure axios and our api utility with the token
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Update auth context
       await login({ token, role, idNumber });

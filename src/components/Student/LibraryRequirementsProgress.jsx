@@ -22,7 +22,6 @@ import {
   Alert
 } from "@mui/material";
 import { toast, ToastContainer } from "react-toastify";
-import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
@@ -31,7 +30,7 @@ import DoneIcon from "@mui/icons-material/Done";
 import WarningIcon from "@mui/icons-material/Warning";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-// No Socket.io import needed
+import api from "../../utils/api"; // Import the API utility instead of axios
 
 const LibraryRequirementsProgress = () => {
   const [requirements, setRequirements] = useState([]);
@@ -65,6 +64,11 @@ const LibraryRequirementsProgress = () => {
         return;
       }
 
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+
       // Initialize requirements if empty - this will call the refresh endpoint
       if (requirements.length === 0) {
         await initializeRequirements(idNumber, token);
@@ -72,9 +76,8 @@ const LibraryRequirementsProgress = () => {
       }
 
       // Check for new requirements (including when all existing ones are completed)
-      const progressResponse = await axios.get(
-        `http://localhost:8080/api/library-progress/check-new-requirements/${idNumber}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const progressResponse = await api.get(
+        `/library-progress/check-new-requirements/${idNumber}`
       );
 
       const newRequirements = progressResponse.data;
@@ -128,9 +131,8 @@ const LibraryRequirementsProgress = () => {
         setLastRequirementHash(newRequirementsHash);
         
         // Use the auto-init endpoint to ensure requirements are initialized and get summary
-        const summaryResponse = await axios.get(
-          `http://localhost:8080/api/library-progress/summary-with-init/${idNumber}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const summaryResponse = await api.get(
+          `/library-progress/summary-with-init/${idNumber}`
         );
         
         setSummary(summaryResponse.data);
@@ -144,10 +146,14 @@ const LibraryRequirementsProgress = () => {
   // Function to initialize requirements if none exist
   const initializeRequirements = async (idNumber, token) => {
     try {
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+
       // First check for new requirements
-      const requirementsResponse = await axios.get(
-        `http://localhost:8080/api/library-progress/check-new-requirements/${idNumber}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const requirementsResponse = await api.get(
+        `/library-progress/check-new-requirements/${idNumber}`
       );
       
       // If we got requirements back, use them
@@ -156,10 +162,9 @@ const LibraryRequirementsProgress = () => {
         setLastRequirementHash(createRequirementsHash(requirementsResponse.data));
       } else {
         // Otherwise call the refresh endpoint to force initialization
-        const response = await axios.post(
-          `http://localhost:8080/api/library-progress/refresh/${idNumber}`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
+        const response = await api.post(
+          `/library-progress/refresh/${idNumber}`,
+          {}
         );
   
         if (response.data.requirements) {
@@ -169,9 +174,8 @@ const LibraryRequirementsProgress = () => {
       }
       
       // Get summary data
-      const summaryResponse = await axios.get(
-        `http://localhost:8080/api/library-progress/summary-with-init/${idNumber}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const summaryResponse = await api.get(
+        `/library-progress/summary-with-init/${idNumber}`
       );
       
       setSummary(summaryResponse.data);

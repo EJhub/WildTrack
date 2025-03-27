@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import Box from '@mui/material/Box';
@@ -29,6 +28,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import CheckIcon from '@mui/icons-material/Check';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import ClearIcon from '@mui/icons-material/Clear';
+// Import API utility
+import api from '../../utils/api';
 
 const TeacherDashboard = () => {
   const [open, setOpen] = useState(false);
@@ -94,9 +95,9 @@ const TeacherDashboard = () => {
       }
       
       // Make API call with filters
-      const url = `http://localhost:8080/api/statistics/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/statistics/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
       
-      const response = await axios.get(url, {
+      const response = await api.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -119,7 +120,7 @@ const TeacherDashboard = () => {
         return;
       }
       
-      const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
+      const response = await api.get(`/users/${user.idNumber}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -155,7 +156,7 @@ const TeacherDashboard = () => {
         
         // Fetch all sections for this grade level
         try {
-          const gradeSectionResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formattedGrade}`, {
+          const gradeSectionResponse = await api.get(`/grade-sections/grade/${formattedGrade}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           
@@ -179,9 +180,6 @@ const TeacherDashboard = () => {
       setAssignedDeadlinesLoading(true);
       const token = localStorage.getItem('token');
       
-      // Configure axios with auth token
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
       // Build query parameters - ALWAYS filter by teacher's assigned grade level and subject
       const params = new URLSearchParams();
       
@@ -197,7 +195,9 @@ const TeacherDashboard = () => {
       }
       
       // Fetch assigned deadlines
-      const deadlinesResponse = await axios.get(`http://localhost:8080/api/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`);
+      const deadlinesResponse = await api.get(`/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       // Add client-side filtering to ensure only the teacher's grade level and subject is displayed
       const filteredDeadlines = deadlinesResponse.data.filter(deadline => {
@@ -252,9 +252,6 @@ const TeacherDashboard = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
         
-        // Configure axios with auth token
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
         // Build query parameters - ALWAYS filter by teacher's assigned grade level and subject
         const params = new URLSearchParams();
         
@@ -269,7 +266,9 @@ const TeacherDashboard = () => {
         }
         
         // Fetch deadlines with filters
-        const deadlinesResponse = await axios.get(`http://localhost:8080/api/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`);
+        const deadlinesResponse = await api.get(`/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         
         // Add client-side filtering to ensure only the teacher's grade level and subject is displayed
         const filteredDeadlines = deadlinesResponse.data.filter(deadline => {
@@ -317,8 +316,10 @@ const TeacherDashboard = () => {
         }
         
         // Fetch participants data
-        const url = `http://localhost:8080/api/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
-        const response = await axios.get(url);
+        const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+        const response = await api.get(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         
         // Process the data for chart display
         const formattedData = response.data.map(item => ({
@@ -356,6 +357,7 @@ const TeacherDashboard = () => {
   const fetchParticipantsData = async (filterParams = {}) => {
     try {
       setParticipantsLoading(true);
+      const token = localStorage.getItem('token');
       
       // Build query parameters
       const params = new URLSearchParams();
@@ -384,8 +386,10 @@ const TeacherDashboard = () => {
       if (filterParams.dateTo) params.append('dateTo', filterParams.dateTo);
       
       // Fetch participants data
-      const url = `http://localhost:8080/api/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await axios.get(url);
+      const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await api.get(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       // Process the data for chart display
       const formattedData = response.data.map(item => ({
@@ -435,7 +439,7 @@ const TeacherDashboard = () => {
       }
       
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:8080/api/set-library-hours', data, {
+      const response = await api.post('/set-library-hours', data, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -544,7 +548,7 @@ const TeacherDashboard = () => {
       if (subjectToFilter) params.append('subject', subjectToFilter);
       
       // Fetch deadlines with filters
-      const response = await axios.get(`http://localhost:8080/api/set-library-hours?${params.toString()}`, {
+      const response = await api.get(`/set-library-hours?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

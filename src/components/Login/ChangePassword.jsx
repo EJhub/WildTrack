@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import { AuthContext } from "../AuthContext";
 import { CircularProgress } from "@mui/material";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import api from "../../utils/api"; // Import the API utility instead of axios
 
 const ChangePassword = () => {
   const { user, clearPasswordResetRequired } = useContext(AuthContext);
@@ -103,10 +103,8 @@ const ChangePassword = () => {
         hasCurrentPassword: !!requestData.currentPassword,
       });
 
-      const response = await axios.put(
-        "http://localhost:8080/api/users/change-password",
-        requestData
-      );
+      // Use the api utility instead of direct axios call with hardcoded URL
+      const response = await api.put("/users/change-password", requestData);
 
       console.log("Password change response:", response.data);
       setSuccess("Password changed successfully!");

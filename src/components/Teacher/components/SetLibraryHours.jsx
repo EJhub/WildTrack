@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -14,8 +13,7 @@ import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../../AuthContext'; // Import AuthContext
-
-const API_BASE_URL = 'http://localhost:8080/api/set-library-hours';
+import api from '../../../utils/api'; // Import the API utility
 
 const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, defaultSubject }) => {
   const { user } = useContext(AuthContext); // Get current user from context
@@ -55,7 +53,13 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
   useEffect(() => {
     const fetchGradeLevels = async () => {
       try {
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const token = localStorage.getItem('token');
+        // Set token in API utility headers
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const gradesResponse = await api.get('/grade-sections/all');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         setGradeOptions(uniqueGrades);
       } catch (error) {

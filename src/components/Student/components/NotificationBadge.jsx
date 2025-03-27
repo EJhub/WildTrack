@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Badge, IconButton } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../AuthContext';
+import api from '../../../utils/api'; // Import the API utility instead of axios
 
 const StudentNotificationBadge = () => {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -25,14 +25,14 @@ const StudentNotificationBadge = () => {
       if (!idNumber) return;
       
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `http://localhost:8080/api/notifications/unread-count/${idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      
+      // Set the token in the api headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Use the API utility to make the request
+      const response = await api.get(`/notifications/unread-count/${idNumber}`);
       
       setUnreadCount(response.data.unreadCount);
     } catch (error) {

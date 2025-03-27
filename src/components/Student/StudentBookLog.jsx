@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useContext } from "react";
-import axios from "axios";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import AddBookLog from "./components/AddbookLog";
@@ -26,6 +25,7 @@ import { AuthContext } from "../AuthContext";
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import api from "../../utils/api"; // Import the API utility instead of axios
 
 const BookLog = () => {
   const [bookLogs, setBookLogs] = useState([]);
@@ -75,12 +75,13 @@ const BookLog = () => {
         return;
       }
 
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+
       try {
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const academicYearsResponse = await api.get('/academic-years/all');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
       } catch (error) {
@@ -101,14 +102,12 @@ const BookLog = () => {
         return;
       }
 
-      const response = await axios.get(
-        `http://localhost:8080/api/booklog/user/${user.idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await api.get(`/booklog/user/${user.idNumber}`);
 
       setBookLogs(response.data);
       // Don't set filtered logs here, will be done by applyFiltersAndSort
@@ -123,7 +122,7 @@ const BookLog = () => {
 
   const fetchRegisteredBooks = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/books/all");
+      const response = await api.get("/books/all");
       setRegisteredBooks(response.data);
     } catch (error) {
       console.error("Error fetching registered books:", error);
@@ -341,18 +340,18 @@ const BookLog = () => {
       }
 
       const encodedIdNumber = encodeURIComponent(user.idNumber);
+      
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
   
-      const response = await axios.put(
-        `http://localhost:8080/api/booklog/${bookLog.id}/add-to-booklog/${encodedIdNumber}`,
+      const response = await api.put(
+        `/booklog/${bookLog.id}/add-to-booklog/${encodedIdNumber}`,
         {
           dateRead: bookLog.dateRead,
           rating: bookLog.rating,
           academicYear: bookLog.academicYear,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         }
       );
   

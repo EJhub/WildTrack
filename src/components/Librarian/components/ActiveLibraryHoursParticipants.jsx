@@ -24,10 +24,11 @@ import {
 } from 'recharts';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
+// Import API utility
+import api from '../../../utils/api';
 
 const LibraryHoursParticipants = () => {
   // Filter states
@@ -93,7 +94,7 @@ const LibraryHoursParticipants = () => {
         
         // Fetch grade levels from the grade-sections API
         const token = localStorage.getItem("token");
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all', {
+        const gradesResponse = await api.get('/grade-sections/all', {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         
@@ -132,7 +133,7 @@ const LibraryHoursParticipants = () => {
         setAcademicYearsLoading(true);
         
         const token = localStorage.getItem("token");
-        const response = await axios.get('http://localhost:8080/api/academic-years/all', {
+        const response = await api.get('/academic-years/all', {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         
@@ -173,8 +174,8 @@ const LibraryHoursParticipants = () => {
           formattedGradeLevel = `Grade ${gradeLevel}`;
         }
         
-        const response = await axios.get(
-          `http://localhost:8080/api/grade-sections/grade/${formattedGradeLevel}`, 
+        const response = await api.get(
+          `/grade-sections/grade/${formattedGradeLevel}`, 
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         );
         
@@ -241,10 +242,10 @@ const LibraryHoursParticipants = () => {
 
       // Fetch data from the API with query parameters
       const token = localStorage.getItem('token');
-      const url = `http://localhost:8080/api/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
       console.log("Fetching participants data from:", url);
       
-      const response = await axios.get(url, {
+      const response = await api.get(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       

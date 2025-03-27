@@ -23,6 +23,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import api from '../utils/api'; // Import the API utility instead of fetch
 
 const LibrarianStudentLibraryHours = () => {
   const [data, setData] = useState([]);
@@ -40,12 +41,8 @@ const LibrarianStudentLibraryHours = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/library-hours/summary');
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
-        const result = await response.json();
-        setData(result);
+        const response = await api.get('/library-hours/summary');
+        setData(response.data);
       } catch (error) {
         console.error('Error fetching library hours summary:', error);
       } finally {

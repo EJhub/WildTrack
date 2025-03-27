@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { AuthContext } from '../../AuthContext';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility instead of axios
 
 const StudentReportForm = ({ open, onClose, onSubmitSuccess }) => {
   const { user } = useContext(AuthContext);
@@ -75,8 +75,14 @@ const StudentReportForm = ({ open, onClose, onSubmitSuccess }) => {
         dateSubmitted: new Date().toISOString()
       };
       
-      // Send the report to the backend API
-      const response = await axios.post('http://localhost:8080/api/reports/submit', reportPayload);
+      // Make sure the token is set
+      const token = localStorage.getItem('token');
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Send the report to the backend API using the api utility
+      const response = await api.post('/reports/submit', reportPayload);
       
       console.log('Report submitted:', response.data);
       

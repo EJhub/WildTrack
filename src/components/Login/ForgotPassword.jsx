@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { CircularProgress } from "@mui/material";
+import api from "../../utils/api"; // Import the API utility instead of axios
 
 const ForgotPassword = () => {
   const [idNumber, setIdNumber] = useState("");
@@ -33,12 +33,12 @@ const ForgotPassword = () => {
     setError(null);
     
     try {
-      // First check if the user exists
-      const userResponse = await axios.get(`http://localhost:8080/api/users/${idNumber}`);
+      // First check if the user exists - use the API utility
+      const userResponse = await api.get(`/users/${idNumber}`);
       
       if (userResponse.data) {
-        // User exists, now create notification for librarians
-        const notificationResponse = await axios.post("http://localhost:8080/api/notifications/password-reset-request", {
+        // User exists, now create notification for librarians - use the API utility
+        const notificationResponse = await api.post("/notifications/password-reset-request", {
           userId: userResponse.data.id,
           idNumber: idNumber,
           userName: `${userResponse.data.firstName} ${userResponse.data.lastName}`

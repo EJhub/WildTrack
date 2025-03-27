@@ -22,9 +22,9 @@ import {
   Legend
 } from 'chart.js';
 import { AuthContext } from '../../AuthContext'; // Import AuthContext
-import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import api from '../../../utils/api'; // Import the API utility
 
 // Register ChartJS components
 ChartJS.register(
@@ -75,9 +75,12 @@ const ActiveLibraryHoursParticipants = () => {
 
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Set token in API utility headers
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await api.get(`/users/${user.idNumber}`);
         
         if (response.data) {
           // Format grade to match expected format (e.g., "2" to "Grade 2")
@@ -121,6 +124,11 @@ const ActiveLibraryHoursParticipants = () => {
         toast.error('Authentication token not found. Please log in again.');
         setLoading(false);
         return;
+      }
+      
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
       
       // Prepare query parameters
@@ -168,12 +176,10 @@ const ActiveLibraryHoursParticipants = () => {
       }
       
       // Make API call to fetch participants data
-      const url = `http://localhost:8080/api/statistics/active-participants?${queryParams.toString()}`;
+      const url = `/statistics/active-participants?${queryParams.toString()}`;
       console.log(`Fetching data from: ${url}`);
       
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(url);
       
       // Process the data for the chart
       processChartData(response.data, params);
@@ -268,10 +274,12 @@ const ActiveLibraryHoursParticipants = () => {
       
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(
-          `http://localhost:8080/api/grade-sections/grade/${gradeLevel}`, 
-          { headers: { Authorization: `Bearer ${token}` }}
-        );
+        // Set token in API utility headers
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await api.get(`/grade-sections/grade/${gradeLevel}`);
         
         if (response.data && response.data.length > 0) {
           setAvailableSections(response.data);

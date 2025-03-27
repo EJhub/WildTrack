@@ -20,6 +20,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import AddGradeSection from './AddGradeSection';
 import AddSectionModal from './AddSectionModal';
 import ViewSectionModal from './ViewSectionModal';
+import api from '../../../utils/api'; // Import the API utility
 
 // GradeRow Component
 const GradeRow = ({ 
@@ -223,9 +224,8 @@ const GradeSectionTable = () => {
   const fetchGradeSections = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8080/api/grade-sections/all');
-      if (!response.ok) throw new Error('Failed to fetch grade sections');
-      const data = await response.json();
+      const response = await api.get('/grade-sections/all');
+      const data = response.data;
 
       // Process the data to group by grade level
       const groupedData = data.reduce((acc, item) => {
@@ -269,7 +269,7 @@ const GradeSectionTable = () => {
       setGradeSections(groupedData);
     } catch (error) {
       console.error('Error fetching grade sections:', error);
-      setError(error.message);
+      setError(error.message || 'Failed to fetch grade sections');
     } finally {
       setLoading(false);
     }
@@ -282,11 +282,7 @@ const GradeSectionTable = () => {
   const handleArchiveGrade = async (gradeLevel) => {
     try {
       // Use the new endpoint for archiving/unarchiving an entire grade level
-      const response = await fetch(`http://localhost:8080/api/grade-sections/grade/${gradeLevel}/toggle-archive`, {
-        method: 'PUT'
-      });
-      
-      if (!response.ok) throw new Error('Failed to toggle grade archive status');
+      const response = await api.put(`/grade-sections/grade/${gradeLevel}/toggle-archive`);
       
       // Refresh the data after successful update
       fetchGradeSections();
@@ -297,10 +293,7 @@ const GradeSectionTable = () => {
 
   const handleArchiveSection = async (sectionId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/grade-sections/${sectionId}/toggle-archive`, {
-        method: 'PUT'
-      });
-      if (!response.ok) throw new Error('Failed to toggle section archive status');
+      await api.put(`/grade-sections/${sectionId}/toggle-archive`);
       fetchGradeSections();
     } catch (error) {
       console.error('Error toggling section archive status:', error);
@@ -309,15 +302,7 @@ const GradeSectionTable = () => {
 
   const handleAddSection = async (sectionData) => {
     try {
-      const response = await fetch('http://localhost:8080/api/grade-sections/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sectionData)
-      });
-      
-      if (!response.ok) throw new Error('Failed to add section');
+      await api.post('/grade-sections/add', sectionData);
       fetchGradeSections();
     } catch (error) {
       console.error('Error adding section:', error);
@@ -326,15 +311,7 @@ const GradeSectionTable = () => {
 
   const handleUpdateSection = async (sectionId, updateData) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/grade-sections/${sectionId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData)
-      });
-      
-      if (!response.ok) throw new Error('Failed to update section');
+      await api.put(`/grade-sections/${sectionId}`, updateData);
       fetchGradeSections();
     } catch (error) {
       console.error('Error updating section:', error);

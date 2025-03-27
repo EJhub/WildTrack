@@ -20,7 +20,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import KeyIcon from '@mui/icons-material/Key';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 import ConfirmUpdateDialog from './ConfirmUpdateDialog';
 
 const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
@@ -86,7 +86,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
   useEffect(() => {
     const fetchGradeOptions = async () => {
       try {
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const gradesResponse = await api.get('/grade-sections/all');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         setGradeOptions(uniqueGrades);
       } catch (error) {
@@ -106,7 +106,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
     const fetchSectionOptions = async () => {
       if (formData.grade) {
         try {
-          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}`);
+          const sectionsResponse = await api.get(`/grade-sections/grade/${formData.grade}`);
           const sections = sectionsResponse.data.map(section => section.sectionName);
           setSectionOptions(sections);
         } catch (error) {
@@ -237,7 +237,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
       const tempPass = "Change123!";
       
       // Call API to reset password
-      const response = await axios.post('http://localhost:8080/api/users/reset-password', {
+      const response = await api.post('/users/reset-password', {
         userId: teacherData.id,
         tempPassword: tempPass
       });
@@ -338,7 +338,7 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
         role: formData.role,
       };
 
-      await axios.put(`http://localhost:8080/api/teachers/${teacherData.id}`, payload);
+      await api.put(`/teachers/${teacherData.id}`, payload);
       
       setSnackbar({ open: true, message: 'Teacher information updated successfully!', severity: 'success' });
       

@@ -20,7 +20,7 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Rating from "@mui/material/Rating";
-import axios from "axios";
+import api from "../../../utils/api"; // Import the API utility instead of axios
 
 const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,7 +35,7 @@ const AddBookLog = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   useEffect(() => {
     const fetchAcademicYears = async () => {
       try {
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        const academicYearsResponse = await api.get('/academic-years/all');
         const formattedAcademicYears = academicYearsResponse.data.map(year => ({
           id: year.id,
           academicYear: `${year.startYear}-${year.endYear}`

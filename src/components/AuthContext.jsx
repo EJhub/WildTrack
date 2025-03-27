@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api'; // Import the API utility
 
 export const AuthContext = createContext();
 
@@ -7,42 +7,6 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [passwordResetRequired, setPasswordResetRequired] = useState(false);
-
-  // Configure axios interceptor for all requests
-  useEffect(() => {
-    // Add request interceptor to include authorization header
-    axios.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Add response interceptor to handle 401 errors
-    axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response && error.response.status === 401) {
-          // Clear auth data if we get an unauthorized response
-          localStorage.removeItem('token');
-          localStorage.removeItem('role');
-          localStorage.removeItem('idNumber');
-          localStorage.removeItem('requirePasswordChange');
-          localStorage.removeItem('userId');
-          setUser(null);
-          setPasswordResetRequired(false);
-          
-          // Optionally redirect to login
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
-  }, []);
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -56,15 +20,16 @@ const AuthProvider = ({ children }) => {
       
       if (token && role && idNumber) {
         try {
+          // Set token in API utility headers
+          if (token) {
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          }
+
           // Verify token with backend
-          await axios.get('http://localhost:8080/api/verify-token', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          await api.get('/verify-token');
           
           // Fetch complete user information including firstName and lastName
-          const userResponse = await axios.get(`http://localhost:8080/api/users/${idNumber}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const userResponse = await api.get(`/users/${idNumber}`);
           
           // If successful, set the user state with complete user data
           setUser({ 
@@ -117,10 +82,13 @@ const AuthProvider = ({ children }) => {
       
       setPasswordResetRequired(resetRequired);
       
+      // Set token in API utility headers
+      if (userData.token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+      }
+      
       // Fetch complete user details
-      const userResponse = await axios.get(`http://localhost:8080/api/users/${userData.idNumber}`, {
-        headers: { Authorization: `Bearer ${userData.token}` },
-      });
+      const userResponse = await api.get(`/users/${userData.idNumber}`);
       
       // Create complete user object with all necessary data
       const completeUserData = {
@@ -158,6 +126,8 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem('idNumber');
     localStorage.removeItem('requirePasswordChange');
     localStorage.removeItem('userId');
+    // Clear authorization header
+    api.defaults.headers.common['Authorization'] = '';
   };
 
   // Function to clear password reset requirement

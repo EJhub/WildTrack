@@ -32,6 +32,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import api from '../../utils/api'; // Import the API utility
 
 const LibrarianManageBooks = () => {
   const [data, setData] = useState([]); // Book data with additional UI states
@@ -65,24 +66,14 @@ const LibrarianManageBooks = () => {
     setLoading(true);
     try {
       // Fetch books
-      const booksResponse = await fetch('http://localhost:8080/api/books/all');
-      if (!booksResponse.ok) {
-        const errorMessage = await booksResponse.text();
-        console.error(`Error fetching books: ${errorMessage}`);
-        return;
-      }
-      const books = await booksResponse.json();
+      const booksResponse = await api.get('/books/all');
+      const books = booksResponse.data;
       setData(books);
       setFilteredBooks(books);
       
       // Fetch genres for dropdown
-      const genresResponse = await fetch('http://localhost:8080/api/genres');
-      if (!genresResponse.ok) {
-        const errorMessage = await genresResponse.text();
-        console.error(`Error fetching genres: ${errorMessage}`);
-        return;
-      }
-      const genresData = await genresResponse.json();
+      const genresResponse = await api.get('/genres');
+      const genresData = genresResponse.data;
       setGenres(genresData);
       
       // Filter out archived genres for the dropdown
@@ -291,15 +282,7 @@ const LibrarianManageBooks = () => {
 
   const handleConfirmDelete = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/books/${bookToDelete.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        alert(data.error || 'Error deleting book');
-        return;
-      }
+      await api.delete(`/books/${bookToDelete.id}`);
 
       // Remove the deleted book from the data state
       setData((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
@@ -350,21 +333,9 @@ const LibrarianManageBooks = () => {
       
       if (isEditing && selectedBook) {
         // Update existing book
-        const response = await fetch(`http://localhost:8080/api/books/${selectedBook.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(submissionData),
-        });
-
-        if (!response.ok) {
-          const errorMessage = await response.text();
-          alert(`Error: ${errorMessage}`);
-          return;
-        }
-
-        const updatedBook = await response.json();
+        const response = await api.put(`/books/${selectedBook.id}`, submissionData);
+        const updatedBook = response.data;
+        
         setData((prevData) => prevData.map(book => 
           book.id === selectedBook.id ? updatedBook : book
         ));
@@ -374,21 +345,9 @@ const LibrarianManageBooks = () => {
         alert('Book updated successfully');
       } else {
         // Add new book
-        const response = await fetch('http://localhost:8080/api/books/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(submissionData),
-        });
-
-        if (!response.ok) {
-          const errorMessage = await response.text();
-          alert(`Error: ${errorMessage}`);
-          return;
-        }
-
-        const newBook = await response.json();
+        const response = await api.post('/books/add', submissionData);
+        const newBook = response.data;
+        
         setData((prevData) => [...prevData, newBook]);
         setFilteredBooks((prevData) => [...prevData, newBook]);
         alert('Book added successfully');

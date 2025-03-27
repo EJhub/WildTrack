@@ -16,8 +16,8 @@ import {
   MenuItem
 } from '@mui/material';
 import BugReportIcon from '@mui/icons-material/BugReport';
-import axios from 'axios';
 import { toast } from 'react-toastify';
+import api from '../../utils/api'; // Import the API utility instead of axios
 
 const RequirementsDebugger = ({ idNumber, requirements, onComplete }) => {
   const [open, setOpen] = useState(false);
@@ -42,20 +42,20 @@ const RequirementsDebugger = ({ idNumber, requirements, onComplete }) => {
       setProcessing(true);
       const token = localStorage.getItem('token');
       
+      // Make sure the token is set
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
       // Get the requirement details
       const requirement = requirements.find(req => req.requirementId == selectedRequirement);
       
-      const response = await axios.post(
-        'http://localhost:8080/api/debug/process-hours',
+      const response = await api.post(
+        '/debug/process-hours',
         {
           idNumber: idNumber,
           subject: requirement.subject,
           requirementId: requirement.requirementId
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
         }
       );
       

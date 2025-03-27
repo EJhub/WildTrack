@@ -22,9 +22,9 @@ import {
   Legend
 } from 'chart.js';
 import { AuthContext } from '../../AuthContext'; // Import AuthContext
-import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import api from '../../../utils/api'; // Import the API utility
 
 // Register ChartJS components
 ChartJS.register(
@@ -196,9 +196,12 @@ const TeacherLibraryHoursCompletionRate = () => {
 
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Set token in API utility headers
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await api.get(`/users/${user.idNumber}`);
         
         if (response.data) {
           // Format grade to match expected format (e.g., "2" to "Grade 2")
@@ -239,10 +242,12 @@ const TeacherLibraryHoursCompletionRate = () => {
       
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(
-          `http://localhost:8080/api/grade-sections/grade/${gradeLevel}`, 
-          { headers: { Authorization: `Bearer ${token}` }}
-        );
+        // Set token in API utility headers
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await api.get(`/grade-sections/grade/${gradeLevel}`);
         
         if (response.data && response.data.length > 0) {
           setAvailableSections(response.data);
@@ -404,6 +409,11 @@ const TeacherLibraryHoursCompletionRate = () => {
         return;
       }
       
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
       // Prepare query parameters
       const queryParams = new URLSearchParams();
       
@@ -459,10 +469,8 @@ const TeacherLibraryHoursCompletionRate = () => {
       console.log('Fetching completion rate with params:', queryParams.toString());
       
       // Make API call to fetch completion rate data
-      const url = `http://localhost:8080/api/statistics/completion-rate?${queryParams.toString()}`;
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const url = `/statistics/completion-rate?${queryParams.toString()}`;
+      const response = await api.get(url);
       
       // Process the data for the chart - pass the effective dataView explicitly
       const effectiveView = (params.academicYear && params.forceMonthlyView) ? 'Monthly' : params.dataView || dataView;
