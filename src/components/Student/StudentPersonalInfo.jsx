@@ -12,14 +12,15 @@ import IconButton from "@mui/material/IconButton";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CircularProgress from "@mui/material/CircularProgress";
-import { AuthContext } from "../AuthContext"; // Import AuthContext
-import api from "../../utils/api"; // Import the API utility
+import { AuthContext } from "../AuthContext";
+import api from "../../utils/api";
 
 const PersonalInformation = () => {
-  // Get user information from AuthContext
   const { user, isAuthenticated, loading: authLoading } = useContext(AuthContext);
 
   const [userInfo, setUserInfo] = useState(null);
@@ -33,6 +34,13 @@ const PersonalInformation = () => {
   const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
   
+  // Snackbar state for notifications
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  
   // Password visibility states
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -40,7 +48,6 @@ const PersonalInformation = () => {
 
   // Set up API interceptor for authentication
   useEffect(() => {
-    // Only fetch user info once authentication is complete
     if (!authLoading) {
       fetchUserInfo();
     }
@@ -50,7 +57,6 @@ const PersonalInformation = () => {
     try {
       setLoading(true);
       
-      // Check if user is authenticated
       if (!isAuthenticated || !user || !user.idNumber) {
         setError("Unauthorized access. Please log in.");
         setLoading(false);
@@ -58,7 +64,6 @@ const PersonalInformation = () => {
       }
   
       const token = localStorage.getItem('token');
-      // Set token in API utility headers
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
@@ -69,8 +74,7 @@ const PersonalInformation = () => {
       setLoading(false);
     } catch (err) {
       if (err.response && err.response.status === 401) {
-        // Handle unauthorized error
-        window.location.href = '/login'; // Redirect to login if session expired
+        window.location.href = '/login';
       } else {
         console.error("Error fetching user info:", err);
         setError("Failed to fetch user information. Please try again later.");
@@ -119,7 +123,11 @@ const PersonalInformation = () => {
         newPassword,
       });
 
-      alert("Password changed successfully!");
+      setSnackbar({
+        open: true,
+        message: 'Password changed successfully!',
+        severity: 'success'
+      });
       handleCloseChangePasswordModal();
     } catch (error) {
       console.error("Error changing password:", error);
@@ -127,6 +135,12 @@ const PersonalInformation = () => {
     }
   };
 
+  // Toggle password visibility functions
+  const toggleOldPasswordVisibility = () => setShowOldPassword(!showOldPassword);
+  const toggleNewPasswordVisibility = () => setShowNewPassword(!showNewPassword);
+  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
+
+  // Profile Picture Modal Handlers
   const handleProfilePictureClick = () => {
     setShowProfilePictureModal(true);
   };
@@ -148,17 +162,14 @@ const PersonalInformation = () => {
       const formData = new FormData();
       formData.append('profilePicture', profilePicture);
       formData.append('userId', userInfo.id);
-      
+  
       try {
-        const token = localStorage.getItem('token');
-        // Set token in API utility headers
-        if (token) {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-        
-        // For FormData, we need to set the content type to multipart/form-data
-        // but axios will automatically set the correct content type with boundary
-        const response = await api.post('/users/upload-profile-picture', formData);
+        const response = await api.post('/users/upload-profile-picture', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
   
         // Update the user info with the new profile picture URL
         setUserInfo(prevInfo => ({
@@ -166,46 +177,71 @@ const PersonalInformation = () => {
           profilePictureUrl: response.data.profilePictureUrl
         }));
   
-        // Refresh the profile picture display
-        fetchUserInfo();
+        // Close the modal
         handleCloseProfilePictureModal();
+        
+        // Show success message
+        setSnackbar({
+          open: true,
+          message: 'Profile picture updated successfully!',
+          severity: 'success'
+        });
       } catch (error) {
         console.error('Error uploading profile picture:', error);
-        alert('Failed to upload profile picture');
+        setSnackbar({
+          open: true,
+          message: 'Failed to upload profile picture',
+          severity: 'error'
+        });
       }
     }
   };
 
   const handleRemoveProfilePicture = async () => {
     try {
-      const token = localStorage.getItem('token');
-      // Set token in API utility headers
-      if (token) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
+      await api.delete(`/users/${userInfo.id}/profile-picture`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       
-      await api.delete(`/users/${userInfo.id}/profile-picture`);
-      
+      // Update the user info to remove the profile picture URL
       setUserInfo(prevInfo => ({
         ...prevInfo,
         profilePictureUrl: null
       }));
 
+      // Close the modal
       handleCloseProfilePictureModal();
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Profile picture removed successfully!',
+        severity: 'success'
+      });
     } catch (error) {
       console.error('Error removing profile picture:', error);
-      alert('Failed to remove profile picture');
+      setSnackbar({
+        open: true,
+        message: 'Failed to remove profile picture',
+        severity: 'error'
+      });
     }
   };
 
-  // Toggle password visibility functions
-  const toggleOldPasswordVisibility = () => setShowOldPassword(!showOldPassword);
-  const toggleNewPasswordVisibility = () => setShowNewPassword(!showNewPassword);
-  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
+  // Handle closing the Snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   // Get base URL for images based on environment
   const getBaseUrl = () => {
-    return import.meta.env.PROD ? '' : 'http://localhost:8080';
+    // Use the same base URL as the API
+    if (import.meta.env.PROD) {
+      return 'https://backend-5erg.onrender.com';
+    }
+    return '';
   };
 
   // Show loading indicator while auth or data is loading
@@ -262,23 +298,23 @@ const PersonalInformation = () => {
         sx={{ 
           display: "flex", 
           height: "100vh",
-          overflow: "hidden" // Prevent outer document scrolling
+          overflow: "hidden"
         }}
       >
         <SideBar />
         <Box
           sx={{
             flexGrow: 1,
-            padding: "32px 32px 64px 32px", // Increased bottom padding
+            padding: "32px 32px 64px 32px",
             backgroundImage: 'url("/studentbackground.png")',
             backgroundSize: "cover",
             backgroundPosition: "center",
-            overflow: "auto", // Enable scrolling for main content
-            height: "100%", // Fill available height
+            overflow: "auto",
+            height: "100%",
             display: "flex",
             justifyContent: "center",
-            alignItems: "flex-start", // Changed from center to flex-start for better scrolling
-            '&::-webkit-scrollbar': { // Show scrollbar
+            alignItems: "flex-start",
+            '&::-webkit-scrollbar': {
               width: '8px',
               background: 'rgba(0,0,0,0.1)',
             },
@@ -293,7 +329,7 @@ const PersonalInformation = () => {
               backgroundColor: "rgba(120, 27, 27, 0.8)",
               padding: 4,
               marginTop: "20px",
-              marginBottom: "50px", // Added margin bottom
+              marginBottom: "50px",
               borderRadius: 2,
               maxWidth: 400,
               width: "90%",
@@ -379,46 +415,6 @@ const PersonalInformation = () => {
                     boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",
                   }}
                 >
-                  {userInfo.grade}
-                </Box>
-              </Box>
-
-              <Box sx={{ display: "flex", flexDirection: "column", width: "45%" }}>
-                <Typography variant="body1" sx={{ color: "white", marginBottom: 1, textAlign: "left" }}>
-                  Section:
-                </Typography>
-                <Box
-                  component="div"
-                  sx={{
-                    backgroundColor: "#fff",
-                    borderRadius: "5px",
-                    padding: 1,
-                    textAlign: "center",
-                    width: "90%",
-                    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",
-                  }}
-                >
-                  {userInfo.section}
-                </Box>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between", marginBottom: 2, alignItems: "center" }}>
-              <Box sx={{ display: "flex", flexDirection: "column", width: "70%" }}>
-                <Typography variant="body1" sx={{ color: "white", marginBottom: 1, textAlign: "left" }}>
-                  Password:
-                </Typography>
-                <Box
-                  component="div"
-                  sx={{
-                    backgroundColor: "#fff",
-                    borderRadius: "5px",
-                    padding: 1,
-                    textAlign: "center",
-                    width: "90%",
-                    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",
-                  }}
-                >
                   ******
                 </Box>
               </Box>
@@ -448,7 +444,7 @@ const PersonalInformation = () => {
         </Box>
       </Box>
 
-      {/* Updated Change Password Modal */}
+      {/* Change Password Modal */}
       <Modal open={showChangePasswordModal} onClose={handleCloseChangePasswordModal}>
         <Box
           sx={{
@@ -616,6 +612,23 @@ const PersonalInformation = () => {
         </Box>
       </Modal>
 
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Profile Picture Modal */}
       <Modal 
         open={showProfilePictureModal} 
         onClose={handleCloseProfilePictureModal}
@@ -649,21 +662,20 @@ const PersonalInformation = () => {
               mb: 2
             }}
           >
-           <Avatar
-            src={profilePicture ? 
-              URL.createObjectURL(profilePicture) : 
-              (userInfo.profilePictureUrl ? 
-                `${getBaseUrl()}${userInfo.profilePictureUrl}` : 
-                "/default-avatar.png"
-              )
-            }
-            sx={{ 
-              width: 200, 
-              height: 200, 
-              borderRadius: 2 
-            }}
-          />
-
+            <Avatar
+              src={profilePicture ? 
+                URL.createObjectURL(profilePicture) : 
+                (userInfo.profilePictureUrl ? 
+                  `${getBaseUrl()}${userInfo.profilePictureUrl}` : 
+                  "/default-avatar.png"
+                )
+              }
+              sx={{ 
+                width: 200, 
+                height: 200, 
+                borderRadius: 2 
+              }}
+            />
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
