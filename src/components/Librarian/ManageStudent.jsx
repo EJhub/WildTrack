@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import api from '../../utils/api'; // Import the API utility
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import AcademicYearTable from './components/AcademicYearTable';
@@ -57,51 +58,29 @@ const ManageStudent = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get token from localStorage
-        const token = localStorage.getItem("token");
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-        
-        // First fetch all students
-        const response = await fetch('http://localhost:8080/api/students/all', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) {
-          throw new Error('Failed to fetch students');
-        }
-        const studentsResult = await response.json();
+        // First fetch all students using the API utility
+        const response = await api.get('/students/all');
+        const studentsResult = response.data;
         
         // For each student, fetch their actual library requirements rather than grade-level potential subjects
         const enhancedStudents = await Promise.all(studentsResult.map(async student => {
           try {
             // Check if this student has initialized requirements
-            const progressResponse = await fetch(
-              `http://localhost:8080/api/library-progress/${student.idNumber}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
+            const progressResponse = await api.get(`/library-progress/${student.idNumber}`);
             
-            if (progressResponse.ok) {
-              const progressData = await progressResponse.json();
+            const progressData = progressResponse.data;
+            
+            // Only display subjects if the student has requirements and they're not empty
+            if (progressData && progressData.length > 0) {
+              // Extract only the subjects that have actual requirements
+              // Group by subject to remove duplicates
+              const actualSubjects = [...new Set(progressData.map(req => req.subject))];
               
-              // Only display subjects if the student has requirements and they're not empty
-              if (progressData && progressData.length > 0) {
-                // Extract only the subjects that have actual requirements
-                // Group by subject to remove duplicates
-                const actualSubjects = [...new Set(progressData.map(req => req.subject))];
-                
-                if (actualSubjects.length > 0) {
-                  return {
-                    ...student,
-                    subject: actualSubjects.join(', ')
-                  };
-                }
+              if (actualSubjects.length > 0) {
+                return {
+                  ...student,
+                  subject: actualSubjects.join(', ')
+                };
               }
             }
             
@@ -161,16 +140,9 @@ const ManageStudent = () => {
 
   const handleDeleteConfirmation = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:8080/api/students/${studentToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete student');
-      }
+      // Use the API utility for delete request
+      await api.delete(`/students/${studentToDelete.id}`);
+      
       setData((prevData) => prevData.filter((student) => student.id !== studentToDelete.id));
       setIsDeleteConfirmationOpen(false);
     } catch (error) {

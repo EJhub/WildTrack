@@ -23,10 +23,11 @@ import {
 } from 'recharts';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
+// Import API utility
+import api from '../../../utils/api';
 
 const AccessionUsageFrequency = () => {
   // Filter states
@@ -99,7 +100,7 @@ const AccessionUsageFrequency = () => {
         
         // Fetch grade levels from the grade-sections API
         const token = localStorage.getItem("token");
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all', {
+        const gradesResponse = await api.get('/grade-sections/all', {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         
@@ -138,7 +139,7 @@ const AccessionUsageFrequency = () => {
         setAcademicYearsLoading(true);
         
         const token = localStorage.getItem("token");
-        const response = await axios.get('http://localhost:8080/api/academic-years/all', {
+        const response = await api.get('/academic-years/all', {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         
@@ -179,8 +180,8 @@ const AccessionUsageFrequency = () => {
           formattedGradeLevel = `Grade ${gradeLevel}`;
         }
         
-        const response = await axios.get(
-          `http://localhost:8080/api/grade-sections/grade/${formattedGradeLevel}`, 
+        const response = await api.get(
+          `/grade-sections/grade/${formattedGradeLevel}`, 
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         );
         
@@ -221,7 +222,7 @@ const AccessionUsageFrequency = () => {
       const token = localStorage.getItem('token');
       
       // Fetch all users
-      const usersResponse = await axios.get('http://localhost:8080/api/users/all', {
+      const usersResponse = await api.get('/users/all', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (usersResponse.status !== 200) {
@@ -248,7 +249,7 @@ const AccessionUsageFrequency = () => {
         : sectionFilteredUsers;
 
       // Fetch all library hours
-      const hoursResponse = await axios.get('http://localhost:8080/api/library-hours/all', {
+      const hoursResponse = await api.get('/library-hours/all', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       

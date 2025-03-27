@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import CloseIcon from '@mui/icons-material/Close';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 
 // Success Dialog Component
 const SuccessDialog = ({ open, onClose, title, message }) => {
@@ -120,7 +120,7 @@ const RegisterLibrarian = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const response = await axios.post("http://localhost:8080/api/librarians/register", {
+      const response = await api.post("/librarians/register", {
         firstName: formData.firstName,
         lastName: formData.lastName,
         middleName: formData.middleName,

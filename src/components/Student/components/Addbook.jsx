@@ -21,7 +21,7 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import InfoIcon from "@mui/icons-material/Info";
 import Tooltip from "@mui/material/Tooltip";
-import axios from "axios";
+import api from "../../../utils/api"; // Import the API utility instead of axios
 
 const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   const [searchQuery, setSearchQuery] = useState(""); // For search input
@@ -41,7 +41,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   useEffect(() => {
     const fetchAcademicYears = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/academic-years/all');
+        const response = await api.get('/academic-years/all');
         const formattedYears = response.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedYears);
       } catch (error) {

@@ -16,7 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { AuthContext } from '../../AuthContext';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 import RegisterLibrarian from './RegisterLibrarian';
 import ConfirmUpdateDialog from './ConfirmUpdateDialog';
 
@@ -81,7 +81,7 @@ const Settings = ({ open, onClose }) => {
     const fetchUserProfile = async () => {
       if (user && user.id) {
         try {
-          const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`);
+          const response = await api.get(`/users/${user.idNumber}`);
           const userData = response.data;
           
           setProfileData({
@@ -152,7 +152,7 @@ const Settings = ({ open, onClose }) => {
       formData.append('userId', user.id);
   
       try {
-        const response = await axios.post('http://localhost:8080/api/users/upload-profile-picture', formData, {
+        const response = await api.post('/users/upload-profile-picture', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -187,7 +187,7 @@ const Settings = ({ open, onClose }) => {
 
   const handleRemoveProfilePicture = async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/users/${user.id}/profile-picture`, {
+      await api.delete(`/users/${user.id}/profile-picture`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -240,7 +240,7 @@ const Settings = ({ open, onClose }) => {
       };
       
       // Call the librarian API endpoint
-      await axios.put(`http://localhost:8080/api/librarians/${user.id}`, userUpdateData);
+      await api.put(`/librarians/${user.id}`, userUpdateData);
       
       setSnackbar({
         open: true,
@@ -269,7 +269,7 @@ const Settings = ({ open, onClose }) => {
     }
     
     try {
-      await axios.put("http://localhost:8080/api/users/change-password", {
+      await api.put("/users/change-password", {
         id: user.id,
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
@@ -319,6 +319,15 @@ const Settings = ({ open, onClose }) => {
   
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
+  };
+  
+  // Get the base URL for images from environment
+  const getBaseURL = () => {
+    // Use the same base URL as the API
+    if (import.meta.env.PROD) {
+      return 'https://backend-5erg.onrender.com';
+    }
+    return '';
   };
   
   if (!open) return null;
@@ -418,7 +427,7 @@ const Settings = ({ open, onClose }) => {
                   <Avatar
                     alt={profileData.name}
                     src={profileData.profilePictureUrl ? 
-                      `http://localhost:8080${profileData.profilePictureUrl}` : 
+                      `${getBaseURL()}${profileData.profilePictureUrl}` : 
                       "/default-avatar.png"
                     }
                     sx={{
@@ -663,7 +672,7 @@ const Settings = ({ open, onClose }) => {
               src={profilePicture ? 
                 URL.createObjectURL(profilePicture) : 
                 (profileData.profilePictureUrl ? 
-                  `http://localhost:8080${profileData.profilePictureUrl}` : 
+                  `${getBaseURL()}${profileData.profilePictureUrl}` : 
                   "/default-avatar.png"
                 )
               }

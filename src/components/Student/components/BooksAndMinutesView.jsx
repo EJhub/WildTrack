@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import axios from 'axios';
-import { Bar } from 'react-chartjs-2';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -12,6 +10,8 @@ import { AuthContext } from '../../AuthContext';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
+import api from '../../../utils/api'; // Import the API utility
+import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -61,13 +61,15 @@ const BooksAndMinutesView = () => {
       
       // Get authentication token
       const token = localStorage.getItem('token');
-      const config = {
-        headers: { Authorization: `Bearer ${token}` }
-      };
+      
+      // Set the Authorization header for all subsequent API calls
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
       
       // Fetch Academic Years
       try {
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', config);
+        const academicYearsResponse = await api.get('/academic-years/all');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
       } catch (error) {
@@ -78,7 +80,7 @@ const BooksAndMinutesView = () => {
       // Get user ID and fetch user data
       const idNumber = user?.idNumber || localStorage.getItem('idNumber');
       if (idNumber) {
-        await fetchUserData(idNumber, token);
+        await fetchUserData(idNumber);
       } else {
         toast.error('User information not available');
         setLoading(false);
@@ -90,22 +92,12 @@ const BooksAndMinutesView = () => {
     }
   };
 
-  const fetchUserData = async (idNumber, token) => {
+  const fetchUserData = async (idNumber) => {
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${token}` }
-      };
-      
       // Call the user-specific endpoints
-      const booksReadResponse = await axios.get(
-        `http://localhost:8080/api/analytics/books-read/${idNumber}`, 
-        config
-      );
+      const booksReadResponse = await api.get(`/analytics/books-read/${idNumber}`);
       
-      const minutesSpentResponse = await axios.get(
-        `http://localhost:8080/api/analytics/minutes-spent/${idNumber}`,
-        config
-      );
+      const minutesSpentResponse = await api.get(`/analytics/minutes-spent/${idNumber}`);
 
       // Sort data by month for proper chronological display
       const sortedBooksData = sortDataByMonth(booksReadResponse.data);
@@ -209,19 +201,19 @@ const BooksAndMinutesView = () => {
       if (filters.dateTo) params.append('dateTo', filters.dateTo);
       if (filters.academicYear) params.append('academicYear', filters.academicYear);
       
-      // Get token
+      // Update the token just in case
       const token = localStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
       
       // Fetch filtered data
-      const booksReadResponse = await axios.get(
-        `http://localhost:8080/api/analytics/books-read/${idNumber}?${params.toString()}`,
-        config
+      const booksReadResponse = await api.get(
+        `/analytics/books-read/${idNumber}?${params.toString()}`
       );
       
-      const minutesSpentResponse = await axios.get(
-        `http://localhost:8080/api/analytics/minutes-spent/${idNumber}?${params.toString()}`,
-        config
+      const minutesSpentResponse = await api.get(
+        `/analytics/minutes-spent/${idNumber}?${params.toString()}`
       );
       
       // Sort and update chart data
@@ -249,9 +241,8 @@ const BooksAndMinutesView = () => {
     
     // Re-fetch original data
     const idNumber = user?.idNumber || localStorage.getItem('idNumber');
-    const token = localStorage.getItem('token');
-    if (idNumber && token) {
-      fetchUserData(idNumber, token);
+    if (idNumber) {
+      fetchUserData(idNumber);
     }
   };
 

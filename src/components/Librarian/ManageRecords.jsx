@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import api from '../../utils/api'; // Import the API utility
 
 // Force prevent ALL form submissions globally
 if (typeof window !== 'undefined') {
@@ -146,15 +147,12 @@ const LibrarianManageRecords = () => {
     };
   }, []);
 
-  // Fetch data
+  // Fetch data using API utility
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/library-hours/summary');
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
-        const result = await response.json();
+        const response = await api.get('/library-hours/summary');
+        const result = response.data;
         setData(result);
         setOriginalData(result); // Store original data for filtering
       } catch (error) {
@@ -323,7 +321,7 @@ const LibrarianManageRecords = () => {
     });
   }, [currentRecord, preventDefaultAndStop]);
 
-  // Handle Update Submit - updated to accept a manual record
+  // Handle Update Submit - updated to accept a manual record and use the API utility
   const handleUpdateSubmit = useCallback((e, manualRecord = null) => {
     if (e) {
       preventDefaultAndStop(e);
@@ -352,19 +350,9 @@ const LibrarianManageRecords = () => {
           totalMinutes: recordToUpdate.totalMinutes || 0,
         };
 
-        const response = await fetch('http://localhost:8080/api/library-hours/update-summary', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedData),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update the record');
-        }
-
-        const result = await response.json();
+        // Use the API utility instead of fetch
+        const response = await api.put('/library-hours/update-summary', updatedData);
+        const result = response.data;
         console.log('Record updated successfully:', result);
 
         // Update local state to reflect changes
@@ -424,7 +412,6 @@ const LibrarianManageRecords = () => {
       }));
     };
     
-    // Only update the actual record when submit button is clicked
     // Only update the actual record when submit button is clicked
     const submitChanges = (e) => {
       if (e) {

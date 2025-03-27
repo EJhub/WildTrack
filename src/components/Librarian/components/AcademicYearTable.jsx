@@ -12,10 +12,11 @@ import {
   Button,
   TablePagination,
 } from '@mui/material';
-import axios from 'axios';
 import AddAcademicYear from './AddAcademicYear';
 import ViewAcademicYear from './ViewAcademicYear';
 import AddIcon from '@mui/icons-material/Add';
+// Import API utility
+import api from '../../../utils/api';
 
 const AcademicYearTable = () => {
     const [page, setPage] = useState(0);
@@ -36,7 +37,7 @@ const AcademicYearTable = () => {
   
     const fetchAcademicYearData = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/academic-years/all');
+        const response = await api.get('/academic-years/all');
         // Ensure every academic year has a status property
         const processedData = response.data.map(year => ({
           ...year,
@@ -80,7 +81,7 @@ const AcademicYearTable = () => {
     const handleArchiveAcademicYear = async (id) => {
       try {
         // Use the archive endpoint which now implements toggle functionality
-        await axios.put(`http://localhost:8080/api/academic-years/${id}/archive`);
+        await api.put(`/academic-years/${id}/archive`);
         fetchAcademicYearData();
       } catch (error) {
         console.error('Error toggling academic year archive status:', error);

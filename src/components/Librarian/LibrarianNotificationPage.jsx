@@ -6,7 +6,7 @@ import {
   Tooltip, Snackbar, Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../utils/api'; // Import the API utility instead of axios
 import { AuthContext } from '../AuthContext';
 import SideBar from './components/SideBar';
 import NavBar from './components/NavBar';
@@ -49,7 +49,7 @@ const LibrarianNotificationPage = () => {
       }
 
       try {
-        const response = await axios.get(`http://localhost:8080/api/notifications/user/${user.idNumber}`);
+        const response = await api.get(`/notifications/user/${user.idNumber}`);
         setNotifications(response.data);
         setLoading(false);
       } catch (err) {
@@ -70,7 +70,7 @@ const LibrarianNotificationPage = () => {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      await axios.put(`http://localhost:8080/api/notifications/${notificationId}/mark-read`);
+      await api.put(`/notifications/${notificationId}/mark-read`);
       // Update the local state to reflect the change
       setNotifications(prevNotifications => 
         prevNotifications.map(notification => 
@@ -91,7 +91,7 @@ const LibrarianNotificationPage = () => {
     if (!user || !user.idNumber) return;
     
     try {
-      await axios.put(`http://localhost:8080/api/notifications/mark-all-read/${user.idNumber}`);
+      await api.put(`/notifications/mark-all-read/${user.idNumber}`);
       // Update all notifications in the local state to be marked as read
       setNotifications(prevNotifications => 
         prevNotifications.map(notification => ({ ...notification, read: true }))
@@ -107,7 +107,7 @@ const LibrarianNotificationPage = () => {
   const handleDeleteNotification = async (notificationId) => {
     try {
       // API call to delete the notification
-      await axios.delete(`http://localhost:8080/api/notifications/${notificationId}`);
+      await api.delete(`/notifications/${notificationId}`);
       
       // Update the UI by removing the deleted notification
       setNotifications(prevNotifications => 
@@ -153,7 +153,7 @@ const LibrarianNotificationPage = () => {
     
     try {
       // First, get the user details to determine if they're a student or teacher
-      const userResponse = await axios.get(`http://localhost:8080/api/users/${idNumber}`);
+      const userResponse = await api.get(`/users/${idNumber}`);
       
       if (userResponse.data) {
         const userId = userResponse.data.id;

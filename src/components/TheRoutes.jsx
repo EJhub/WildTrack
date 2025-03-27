@@ -1,5 +1,5 @@
 import StudentLibraryHours from "./Student/StudentLibraryHoursDashboard";
-import NasDashboard from "./NAS/NasDashboard";
+
 import TeacherDashboard from "./Teacher/TeacherDashboard";
 import LibrarianDashboard from "./Librarian/LibrarianDashboard";
 import BookLog from "./Student/StudentBookLog";
@@ -7,10 +7,7 @@ import InputIDLogin from "./Login/InputIDLogin";
 import InputIDLogout from "./Login/InputIDLogout";
 import ForgotPassword from "./Login/ForgotPassword";
 import StudentPersonalInfo from "./Student/StudentPersonalInfo";
-import NasLibraryAttendance from "./NAS/NasLibraryAttendance";
-import NasBookEntry from "./NAS/NasBookEntry";
-import NasBooklRegistration from "./NAS/NasBooklRegistration";
-import NasActivityLog from "./NAS/NasActivityLog";
+
 import StudentRecords from "./Teacher/StudentRecords";
 import CompletedLibraryHours from "./Teacher/CompletedLibraryHours";
 import Analytics from "./Teacher/Analytics";
@@ -19,13 +16,13 @@ import LogIn from "./Login/Login";
 import Register from "./Login/Register";
 import LibrarianAnalytics from "./Librarian/LibrarianAnalytics";
 import LibrarianCompletedHours from './Librarian/LibrarianCompletedHours';
-import LibrarianNASActivityLog from './Librarian/LibrarianNASActivityLog';
+
 import LibrarianManageTeacher from "./Librarian/ManageTeacher";
 import LibrarianManageRecords from "./Librarian/ManageRecords";
 import LibrarianManageBooks from "./Librarian/ManageBooks";
 import LibrarianManageStudent from "./Librarian/ManageStudent";
 import LibrarianManageGenre from "./Librarian/ManageGenre";
-import LibrarianManageNASStudent from "./Librarian/ManageNASStudent";
+
 import StudentAnalyticsAndReports from "./Student/StudentAnalytics";
 import ProtectedRoute from './ProtectedRoute';
 import NotificationsPage from './Student/NotificationsPage';
@@ -54,13 +51,9 @@ export default function TheRoutes() {
             <Route path="/studentDashboard/TimeRemaining/Addbook" element={<ProtectedRoute><StudentLibraryHours /> </ProtectedRoute>} />
             <Route path="/studentDashboard/booklog" element={<ProtectedRoute><BookLog /></ProtectedRoute>} />
             <Route path="/studentDashboard/personalInfo" element={<ProtectedRoute><StudentPersonalInfo /></ProtectedRoute>} />
-            <Route path="/nasDashboard/Home" element={<NasDashboard />} />
+
             <Route path="/studentDashboard/StudentAnalyticsAndReports" element={<ProtectedRoute><StudentAnalyticsAndReports/></ProtectedRoute>} />
-            <Route path="/nasDashboard/LibraryAttendance" element={<NasLibraryAttendance />} />
-            <Route path="/nasDashboard/BookEntry" element={<NasBookEntry />} />
-            <Route path="/nasDashboard/BookEntry/AddLog" element={<NasBookEntry />} />
-            <Route path="/nasDashboard/NasBooklRegistration" element={<NasBooklRegistration />} />
-            <Route path="/nasDashboard/ActivityLog" element={<NasActivityLog />} />
+            
             <Route path="/TeacherDashboard/Home" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/TeacherDashboard/Home/SetLibraryHours" element={<TeacherDashboard />} />
             <Route path="/TeacherDashboard/StudentRecords" element={<ProtectedRoute><StudentRecords /></ProtectedRoute>} />
@@ -85,11 +78,7 @@ export default function TheRoutes() {
                     <LibrarianCompletedHours />
                 </ProtectedRoute>
             } />
-            <Route path="/librarian/LibrarianNASActivityLog" element={
-                <ProtectedRoute allowedRoles={['Librarian']}>
-                    <LibrarianNASActivityLog />
-                </ProtectedRoute>
-            } />
+           
             <Route path="/librarian/LibrarianManageTeacher" element={
                 <ProtectedRoute allowedRoles={['Librarian']}>
                     <LibrarianManageTeacher />
@@ -115,11 +104,7 @@ export default function TheRoutes() {
                     <LibrarianManageGenre/>
                 </ProtectedRoute>
             } />
-            <Route path="/librarian/LibrarianManageNASStudent" element={
-                <ProtectedRoute allowedRoles={['Librarian']}>
-                    <LibrarianManageNASStudent/>
-                </ProtectedRoute>
-            } />
+         
             <Route path="/librarian/notifications" element={
                 <ProtectedRoute allowedRoles={['Librarian']}>
                     <LibrarianNotificationPage/>

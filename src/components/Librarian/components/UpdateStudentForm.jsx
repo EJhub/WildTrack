@@ -20,7 +20,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import KeyIcon from '@mui/icons-material/Key';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 import ConfirmUpdateDialog from './ConfirmUpdateDialog';
 
 const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
@@ -71,12 +71,12 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
     const fetchDropdownOptions = async () => {
       try {
         // Fetch Grade Levels
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all');
+        const gradesResponse = await api.get('/grade-sections/all');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         setGradeOptions(uniqueGrades);
 
         // Fetch Academic Years
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all');
+        const academicYearsResponse = await api.get('/academic-years/all');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
 
@@ -93,7 +93,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
     const fetchSectionsForGrade = async () => {
       if (userData.grade) {
         try {
-          const response = await axios.get(`http://localhost:8080/api/grade-sections/grade/${userData.grade}`);
+          const response = await api.get(`/grade-sections/grade/${userData.grade}`);
           const sections = response.data.map(section => section.sectionName);
           setSectionOptions(sections);
         } catch (error) {
@@ -113,7 +113,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
         try {
           // Fetch sections for the user's grade
           if (user.grade) {
-            const response = await axios.get(`http://localhost:8080/api/grade-sections/grade/${user.grade}`);
+            const response = await api.get(`/grade-sections/grade/${user.grade}`);
             const sections = response.data.map(section => section.sectionName);
             setSectionOptions(sections);
           }
@@ -254,7 +254,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
       const tempPass = "Change123!";
       
       // Call API to reset password
-      const response = await axios.post('http://localhost:8080/api/users/reset-password', {
+      const response = await api.post('/users/reset-password', {
         userId: user.id,
         tempPassword: tempPass
       });
@@ -346,7 +346,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
 
     try {
       // Update student information
-      const response = await axios.put(`http://localhost:8080/api/students/${user.id}`, {
+      const response = await api.put(`/students/${user.id}`, {
         ...userData,
         name: `${userData.firstName} ${userData.lastName}`,
         gradeSection: `${userData.grade} - ${userData.section}`,

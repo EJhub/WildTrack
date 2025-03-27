@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Badge, IconButton } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../AuthContext';
+import api from '../../../utils/api'; // Import the API utility
 
 const LibrarianNotificationBadge = () => {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -23,8 +23,8 @@ const LibrarianNotificationBadge = () => {
     try {
       if (!user || !user.idNumber) return;
       
-      const response = await axios.get(
-        `http://localhost:8080/api/notifications/unread-count/${user.idNumber}`
+      const response = await api.get(
+        `/notifications/unread-count/${user.idNumber}`
       );
       
       setUnreadCount(response.data.unreadCount);

@@ -12,8 +12,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import axios from 'axios';
 import { format, isAfter, isBefore } from 'date-fns';
+// Import API utility
+import api from '../../../utils/api';
 
 const AddAcademicYear = ({ open, onClose }) => {
   const [formData, setFormData] = useState({
@@ -109,7 +110,7 @@ const AddAcademicYear = ({ open, onClose }) => {
     };
   
     try {
-      const response = await axios.post('http://localhost:8080/api/academic-years/create', academicYearData);
+      const response = await api.post('/academic-years/create', academicYearData);
       console.log('Academic year created:', response.data);
       onClose();
     } catch (error) {

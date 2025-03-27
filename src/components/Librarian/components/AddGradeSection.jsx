@@ -14,6 +14,8 @@ import {
   Alert,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+// Import API utility
+import api from '../../../utils/api';
 
 const AddGradeSection = ({ open, onClose, onGradeSectionAdded }) => {
   const [formData, setFormData] = useState({
@@ -65,15 +67,9 @@ const AddGradeSection = ({ open, onClose, onGradeSectionAdded }) => {
         status: 'active'
       }));
 
-      // Send each section to the backend
+      // Send each section to the backend using the API utility
       const promises = gradeSections.map(section =>
-        fetch('http://localhost:8080/api/grade-sections/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(section),
-        })
+        api.post('/grade-sections/add', section)
       );
 
       await Promise.all(promises);

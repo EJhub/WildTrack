@@ -6,7 +6,6 @@ import {
   Tooltip, Snackbar, Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { AuthContext } from '../AuthContext';
 import TeacherSideBar from './components/SideBar';
 import NavBar from './components/NavBar';
@@ -16,6 +15,8 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+// Import API utility
+import api from '../../utils/api';
 
 const TeacherNotificationPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -47,7 +48,7 @@ const TeacherNotificationPage = () => {
       }
 
       try {
-        const response = await axios.get(`http://localhost:8080/api/notifications/user/${user.idNumber}`);
+        const response = await api.get(`/notifications/user/${user.idNumber}`);
         setNotifications(response.data);
         setLoading(false);
       } catch (err) {
@@ -68,7 +69,7 @@ const TeacherNotificationPage = () => {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      await axios.put(`http://localhost:8080/api/notifications/${notificationId}/mark-read`);
+      await api.put(`/notifications/${notificationId}/mark-read`);
       // Update the local state to reflect the change
       setNotifications(prevNotifications => 
         prevNotifications.map(notification => 
@@ -89,7 +90,7 @@ const TeacherNotificationPage = () => {
     if (!user || !user.idNumber) return;
     
     try {
-      await axios.put(`http://localhost:8080/api/notifications/mark-all-read/${user.idNumber}`);
+      await api.put(`/notifications/mark-all-read/${user.idNumber}`);
       // Update all notifications in the local state to be marked as read
       setNotifications(prevNotifications => 
         prevNotifications.map(notification => ({ ...notification, read: true }))
@@ -105,7 +106,7 @@ const TeacherNotificationPage = () => {
   const handleDeleteNotification = async (notificationId) => {
     try {
       // API call to delete the notification
-      await axios.delete(`http://localhost:8080/api/notifications/${notificationId}`);
+      await api.delete(`/notifications/${notificationId}`);
       
       // Update the UI by removing the deleted notification
       setNotifications(prevNotifications => 

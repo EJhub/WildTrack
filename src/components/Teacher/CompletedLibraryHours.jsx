@@ -20,7 +20,6 @@ import Button from '@mui/material/Button';
 import TablePagination from '@mui/material/TablePagination';
 import { AuthContext } from '../AuthContext'; // Import AuthContext
 import CircularProgress from '@mui/material/CircularProgress';
-import axios from 'axios';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Tooltip from '@mui/material/Tooltip';
@@ -28,6 +27,8 @@ import Tooltip from '@mui/material/Tooltip';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+// Import API utility
+import api from '../../utils/api';
 
 const CompletedLibraryHours = () => {
   const [dateFrom, setDateFrom] = useState('');
@@ -63,7 +64,7 @@ const CompletedLibraryHours = () => {
 
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
+        const response = await api.get(`/users/${user.idNumber}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -204,9 +205,9 @@ const CompletedLibraryHours = () => {
         queryParams.append('academicYear', params.academicYear);
       }
       
-      // Make API call to fetch completed library hours
-      const response = await axios.get(
-        `http://localhost:8080/api/library-hours/completed?${queryParams.toString()}`,
+      // Make API call to fetch completed library hours using the API utility
+      const response = await api.get(
+        `/library-hours/completed?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`

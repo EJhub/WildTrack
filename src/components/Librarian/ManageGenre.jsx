@@ -34,6 +34,7 @@ import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import UnarchiveIcon from '@mui/icons-material/Unarchive';
+import api from '../../utils/api'; // Import the API utility
 
 const LibrarianManageGenre = () => {
   const [data, setData] = useState([]);
@@ -64,15 +65,11 @@ const LibrarianManageGenre = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const genreResponse = await fetch('http://localhost:8080/api/genres');
-      const bookResponse = await fetch('http://localhost:8080/api/books/all');
+      const genreResponse = await api.get('/genres');
+      const bookResponse = await api.get('/books/all');
 
-      if (!genreResponse.ok || !bookResponse.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const genres = await genreResponse.json();
-      const books = await bookResponse.json();
+      const genres = genreResponse.data;
+      const books = bookResponse.data;
 
       // Map books to their respective genres
       const genresWithBooks = genres.map((genre) => {
@@ -201,19 +198,8 @@ const LibrarianManageGenre = () => {
   // Add new genre
   const handleAddGenre = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/genres', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ genre: genreName, title }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add genre');
-      }
-
-      const newGenre = await response.json();
+      const response = await api.post('/genres', { genre: genreName, title });
+      const newGenre = response.data;
       
       // Add empty books array to the new genre object
       const newGenreWithBooks = { ...newGenre, books: [] };
@@ -252,22 +238,12 @@ const LibrarianManageGenre = () => {
     if (!genreToUpdate) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/api/genres/${genreToUpdate.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          genre: updatedGenreName, 
-          title: updatedDescription 
-        }),
+      const response = await api.put(`/genres/${genreToUpdate.id}`, { 
+        genre: updatedGenreName, 
+        title: updatedDescription 
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update genre');
-      }
-
-      const updatedResponse = await response.json();
+      const updatedResponse = response.data;
       let updatedGenre;
       
       // Check response format - it might be direct object or nested in response.genre
@@ -326,17 +302,7 @@ const LibrarianManageGenre = () => {
     if (!genreToArchive) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/api/genres/${genreToArchive.id}/archive`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ archived: isArchiving }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${isArchiving ? 'archive' : 'unarchive'} genre`);
-      }
+      const response = await api.put(`/genres/${genreToArchive.id}/archive`, { archived: isArchiving });
 
       // Close dialog first
       handleCloseArchiveDialog();
@@ -482,17 +448,17 @@ const LibrarianManageGenre = () => {
               }}
             />
             <Button
-  variant="contained"
-  sx={{
-    fontWeight: 'bold',
-    fontSize: '11px',
-    backgroundColor: '#800000', // Changed from #4CAF50
-    '&:hover': { backgroundColor: '#5D0000' }, // Darker shade for hover (changed from #388E3C)
-  }}
-  onClick={handleOpenUpdateDialog}
->
-  View Genre
-</Button>
+              variant="contained"
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '11px',
+                backgroundColor: '#800000', // Changed from #4CAF50
+                '&:hover': { backgroundColor: '#5D0000' }, // Darker shade for hover (changed from #388E3C)
+              }}
+              onClick={handleOpenUpdateDialog}
+            >
+              View Genre
+            </Button>
             <Button
               variant="contained"
               sx={{
@@ -692,17 +658,17 @@ const LibrarianManageGenre = () => {
           >
             <Table>
               <TableHead>
-              <TableRow sx={{ backgroundColor: '#800000' }}> {/* Changed from #4CAF50 */}
-  <TableCell 
-    sx={{ 
-      color: 'white', 
-      fontWeight: 'bold', 
-      py: 1.5,
-      textAlign: 'left'
-    }}
-  >
-    GENRE NAME
-  </TableCell>
+                <TableRow sx={{ backgroundColor: '#800000' }}> {/* Changed from #4CAF50 */}
+                  <TableCell 
+                    sx={{ 
+                      color: 'white', 
+                      fontWeight: 'bold', 
+                      py: 1.5,
+                      textAlign: 'left'
+                    }}
+                  >
+                    GENRE NAME
+                  </TableCell>
                   <TableCell 
                     sx={{ 
                       color: 'white', 
@@ -891,7 +857,6 @@ const LibrarianManageGenre = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Archive/Unarchive Confirmation Dialog */}
       {/* Archive/Unarchive Confirmation Dialog */}
       <Dialog
         open={openArchiveDialog}

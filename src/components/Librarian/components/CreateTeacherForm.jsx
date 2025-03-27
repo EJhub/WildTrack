@@ -23,7 +23,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import InfoIcon from '@mui/icons-material/Info';
 import WarningIcon from '@mui/icons-material/Warning';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 import SuccessDialog from './SuccessDialog'; // Import the success dialog component
 
 const CreateTeacherForm = ({ open, onClose }) => {
@@ -113,7 +113,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
   useEffect(() => {
     const fetchGradeOptions = async () => {
       try {
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/active');
+        const gradesResponse = await api.get('/grade-sections/active');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         setGradeOptions(uniqueGrades);
       } catch (error) {
@@ -136,7 +136,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
     const fetchSectionOptions = async () => {
       if (formData.grade) {
         try {
-          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}/active`);
+          const sectionsResponse = await api.get(`/grade-sections/grade/${formData.grade}/active`);
           const sections = sectionsResponse.data.map(section => section.sectionName);
           setSectionOptions(sections);
         } catch (error) {
@@ -351,7 +351,7 @@ const CreateTeacherForm = ({ open, onClose }) => {
       const dataToSubmit = { ...formData };
       delete dataToSubmit.confirmPassword;
       
-      const response = await axios.post('http://localhost:8080/api/teachers/register', dataToSubmit);
+      const response = await api.post('/teachers/register', dataToSubmit);
       if (response.status === 200) {
         // Store the teacher name before resetting the form
         setTeacherName({

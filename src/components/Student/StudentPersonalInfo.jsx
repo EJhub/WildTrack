@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useContext } from "react";
-import axios from "axios";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import Box from "@mui/material/Box";
@@ -17,6 +16,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CircularProgress from "@mui/material/CircularProgress";
 import { AuthContext } from "../AuthContext"; // Import AuthContext
+import api from "../../utils/api"; // Import the API utility
 
 const PersonalInformation = () => {
   // Get user information from AuthContext
@@ -38,14 +38,7 @@ const PersonalInformation = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  axios.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  });
-
+  // Set up API interceptor for authentication
   useEffect(() => {
     // Only fetch user info once authentication is complete
     if (!authLoading) {
@@ -65,11 +58,12 @@ const PersonalInformation = () => {
       }
   
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await api.get(`/users/${user.idNumber}`);
       
       setUserInfo(response.data);
       setLoading(false);
@@ -113,7 +107,13 @@ const PersonalInformation = () => {
     setPasswordError("");
 
     try {
-      await axios.put("http://localhost:8080/api/users/change-password", {
+      const token = localStorage.getItem('token');
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      await api.put("/users/change-password", {
         id: userInfo.id,
         currentPassword,
         newPassword,
@@ -148,14 +148,17 @@ const PersonalInformation = () => {
       const formData = new FormData();
       formData.append('profilePicture', profilePicture);
       formData.append('userId', userInfo.id);
-  
+      
       try {
-        const response = await axios.post('http://localhost:8080/api/users/upload-profile-picture', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        const token = localStorage.getItem('token');
+        // Set token in API utility headers
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        
+        // For FormData, we need to set the content type to multipart/form-data
+        // but axios will automatically set the correct content type with boundary
+        const response = await api.post('/users/upload-profile-picture', formData);
   
         // Update the user info with the new profile picture URL
         setUserInfo(prevInfo => ({
@@ -175,7 +178,13 @@ const PersonalInformation = () => {
 
   const handleRemoveProfilePicture = async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/users/${userInfo.id}/profile-picture`);
+      const token = localStorage.getItem('token');
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      await api.delete(`/users/${userInfo.id}/profile-picture`);
       
       setUserInfo(prevInfo => ({
         ...prevInfo,
@@ -193,6 +202,11 @@ const PersonalInformation = () => {
   const toggleOldPasswordVisibility = () => setShowOldPassword(!showOldPassword);
   const toggleNewPasswordVisibility = () => setShowNewPassword(!showNewPassword);
   const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
+
+  // Get base URL for images based on environment
+  const getBaseUrl = () => {
+    return import.meta.env.PROD ? '' : 'http://localhost:8080';
+  };
 
   // Show loading indicator while auth or data is loading
   if (authLoading || loading) {
@@ -297,7 +311,7 @@ const PersonalInformation = () => {
             <Avatar
               alt={`${userInfo.firstName} ${userInfo.lastName}`}
               src={userInfo.profilePictureUrl ? 
-                `http://localhost:8080${userInfo.profilePictureUrl}` : 
+                `${getBaseUrl()}${userInfo.profilePictureUrl}` : 
                 "/default-avatar.png"
               }
               sx={{
@@ -639,7 +653,7 @@ const PersonalInformation = () => {
             src={profilePicture ? 
               URL.createObjectURL(profilePicture) : 
               (userInfo.profilePictureUrl ? 
-                `http://localhost:8080${userInfo.profilePictureUrl}` : 
+                `${getBaseUrl()}${userInfo.profilePictureUrl}` : 
                 "/default-avatar.png"
               )
             }

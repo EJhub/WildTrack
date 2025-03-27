@@ -19,7 +19,7 @@ import Button from '@mui/material/Button';
 import TablePagination from '@mui/material/TablePagination';
 import { AuthContext } from '../AuthContext';
 import CircularProgress from '@mui/material/CircularProgress';
-import axios from 'axios';
+import api from '../../utils/api'; // Import the API utility instead of axios
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Tooltip from '@mui/material/Tooltip';
@@ -145,13 +145,6 @@ const LibrarianCompletedHours = () => {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Authentication token not found. Please log in again.');
-        setLoading(false);
-        return;
-      }
-      
       // Prepare query parameters
       const queryParams = new URLSearchParams();
       
@@ -180,14 +173,9 @@ const LibrarianCompletedHours = () => {
         queryParams.append('academicYear', params.academicYear);
       }
       
-      // Make API call to fetch all completed library hours
-      const response = await axios.get(
-        `http://localhost:8080/api/library-hours/completed?${queryParams.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+      // Make API call using the api utility instead of direct axios
+      const response = await api.get(
+        `/library-hours/completed?${queryParams.toString()}`
       );
       
       setCompletedRecords(response.data);

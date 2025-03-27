@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import {
   Box,
   Table,
@@ -24,6 +23,8 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon, FilterList as FilterListIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+// Import API utility
+import api from '../../../utils/api';
 
 const ActivityLogView = ({ currentView, setCurrentView }) => {
   // States for activity logs
@@ -50,7 +51,7 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
         const token = localStorage.getItem("token");
         if (!token) return;
         
-        const response = await axios.get('http://localhost:8080/api/teachers/all', {
+        const response = await api.get('/teachers/all', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -83,7 +84,7 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
       if (searchQuery) params.query = searchQuery;
       if (selectedTeacher) params.userId = selectedTeacher;
       
-      const response = await axios.get('http://localhost:8080/api/activity-logs', {
+      const response = await api.get('/activity-logs', {
         headers: { 
           Authorization: `Bearer ${token}` 
         },

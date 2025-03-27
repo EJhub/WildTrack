@@ -30,7 +30,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 import { AuthContext } from '../../AuthContext';
 
 const ReportsView = ({ refreshTrigger }) => {
@@ -65,9 +65,9 @@ const ReportsView = ({ refreshTrigger }) => {
         // For students or teachers, fetch only their own reports
         let response;
         if (user && (user.role === 'Admin' || user.role === 'Librarian')) {
-          response = await axios.get('http://localhost:8080/api/reports/all');
+          response = await api.get('/reports/all');
         } else if (user) {
-          response = await axios.get(`http://localhost:8080/api/reports/user/idNumber/${user.idNumber}`);
+          response = await api.get(`/reports/user/idNumber/${user.idNumber}`);
         }
         
         if (response && response.data) {
@@ -161,13 +161,13 @@ const ReportsView = ({ refreshTrigger }) => {
       
       let response;
       if (newStatus === 'Resolved') {
-        response = await axios.put(
-          `http://localhost:8080/api/reports/${selectedReport.id}/resolve`,
+        response = await api.put(
+          `/reports/${selectedReport.id}/resolve`,
           { adminComments: adminComments }
         );
       } else {
-        response = await axios.put(
-          `http://localhost:8080/api/reports/${selectedReport.id}`,
+        response = await api.put(
+          `/reports/${selectedReport.id}`,
           updatedReport
         );
       }

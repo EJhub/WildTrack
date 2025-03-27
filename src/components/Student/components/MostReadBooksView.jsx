@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import axios from 'axios';
 import { Bar } from 'react-chartjs-2';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -12,6 +11,7 @@ import { AuthContext } from '../../AuthContext';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
+import api from '../../../utils/api'; // Import the API utility
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -60,12 +60,14 @@ const MostReadBooksView = () => {
       
       // Fetch academic years
       const token = localStorage.getItem('token');
-      const config = {
-        headers: { Authorization: `Bearer ${token}` }
-      };
+      
+      // Set auth token once for all API calls
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
       
       try {
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/all', config);
+        const academicYearsResponse = await api.get('/academic-years/all');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
       } catch (error) {
@@ -86,15 +88,9 @@ const MostReadBooksView = () => {
     try {
       setLoading(true);
       
-      // Configure axios with auth token
-      const token = localStorage.getItem('token');
-      const config = {
-        headers: { Authorization: `Bearer ${token}` }
-      };
-      
       // Call the user-specific endpoints
-      const mostReadResponse = await axios.get(`http://localhost:8080/api/analytics/most-read-books/${idNumber}`, config);
-      const highestRatedResponse = await axios.get(`http://localhost:8080/api/analytics/highest-rated-books/${idNumber}`, config);
+      const mostReadResponse = await api.get(`/analytics/most-read-books/${idNumber}`);
+      const highestRatedResponse = await api.get(`/analytics/highest-rated-books/${idNumber}`);
 
       // Process most read books data
       setMostReadData({
@@ -174,18 +170,19 @@ const MostReadBooksView = () => {
       if (filters.dateTo) params.append('dateTo', filters.dateTo);
       if (filters.academicYear) params.append('academicYear', filters.academicYear);
       
-      // Get token
+      // Refresh token in case it's changed
       const token = localStorage.getItem('token');
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
       
       // Fetch filtered data
-      const mostReadResponse = await axios.get(
-        `http://localhost:8080/api/analytics/most-read-books/${user.idNumber}?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const mostReadResponse = await api.get(
+        `/analytics/most-read-books/${user.idNumber}?${params.toString()}`
       );
       
-      const highestRatedResponse = await axios.get(
-        `http://localhost:8080/api/analytics/highest-rated-books/${user.idNumber}?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const highestRatedResponse = await api.get(
+        `/analytics/highest-rated-books/${user.idNumber}?${params.toString()}`
       );
       
       // Update chart data

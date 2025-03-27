@@ -21,7 +21,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import InfoIcon from '@mui/icons-material/Info';
 import WarningIcon from '@mui/icons-material/Warning';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 import SuccessDialog from './SuccessDialog';
 
 const CreateStudentForm = ({ open, onClose }) => {
@@ -98,13 +98,13 @@ const CreateStudentForm = ({ open, onClose }) => {
     const fetchDropdownOptions = async () => {
       try {
         // Fetch Grade Levels
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/active');
+        const gradesResponse = await api.get('/grade-sections/active');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         const sortedGrades = sortGradeLevels(uniqueGrades);
         setGradeOptions(sortedGrades);
 
         // Fetch Academic Years
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/active');
+        const academicYearsResponse = await api.get('/academic-years/active');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
 
@@ -123,7 +123,7 @@ const CreateStudentForm = ({ open, onClose }) => {
     const fetchSectionOptions = async () => {
       if (formData.grade) {
         try {
-          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}/active`);
+          const sectionsResponse = await api.get(`/grade-sections/grade/${formData.grade}/active`);
           const sections = sectionsResponse.data.map(section => section.sectionName);
           setSectionOptions(sections);
         } catch (error) {
@@ -368,7 +368,7 @@ const CreateStudentForm = ({ open, onClose }) => {
 
     try {
       setIsLoading(true);
-      const response = await axios.post("http://localhost:8080/api/students/register", {
+      const response = await api.post("/students/register", {
         firstName: formData.firstName,
         lastName: formData.lastName,
         middleName: formData.middleName,

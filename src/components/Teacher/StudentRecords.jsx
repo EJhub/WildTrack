@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useContext } from 'react';
-import axios from 'axios';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import Box from '@mui/material/Box';
@@ -26,6 +25,8 @@ import Tooltip from '@mui/material/Tooltip';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+// Import API utility
+import api from '../../utils/api';
 
 const StudentRecords = () => {
   const [students, setStudents] = useState([]);
@@ -62,7 +63,7 @@ const StudentRecords = () => {
 
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:8080/api/users/${user.idNumber}`, {
+        const response = await api.get(`/users/${user.idNumber}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -102,7 +103,7 @@ const StudentRecords = () => {
         const token = localStorage.getItem('token');
         
         // Fetch only students with the teacher's subject
-        const response = await axios.get(`http://localhost:8080/api/students`, {
+        const response = await api.get(`/students`, {
           params: {
             role: 'Student',
             gradeLevel: teacherGradeLevel,

@@ -13,7 +13,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from 'axios';
+import api from '../../utils/api'; // Import API utility instead of axios
 
 // Icons
 import CheckIcon from '@mui/icons-material/Check';
@@ -102,11 +102,8 @@ const LibrarianDashboard = () => {
       try {
         setGradeLevelsLoading(true);
         
-        // Fetch grade levels from the grade-sections API
-        const token = localStorage.getItem("token");
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/all', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Fetch grade levels using the api utility
+        const gradesResponse = await api.get('/grade-sections/all');
         
         if (gradesResponse.data) {
           // Extract unique grade levels from the grade sections data
@@ -142,10 +139,7 @@ const LibrarianDashboard = () => {
       try {
         setAcademicYearsLoading(true);
         
-        const token = localStorage.getItem("token");
-        const response = await axios.get('http://localhost:8080/api/academic-years/all', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/academic-years/all');
         
         if (response.data) {
           // Format academic years as needed
@@ -176,11 +170,7 @@ const LibrarianDashboard = () => {
       try {
         setSectionsLoading(true);
         
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
-          `http://localhost:8080/api/grade-sections/grade/${selectedGradeLevel}`, 
-          { headers: { Authorization: `Bearer ${token}` }}
-        );
+        const response = await api.get(`/grade-sections/grade/${selectedGradeLevel}`);
         
         if (response.data) {
           // Extract section names from the response
@@ -339,18 +329,15 @@ const LibrarianDashboard = () => {
     if (!currentRequirement || !actionType) return;
     
     setActionInProgress(true);
-    const token = localStorage.getItem("token");
     
     try {
       const endpoint = actionType === 'approve' 
-        ? `/api/library-hours-approval/approve/${currentRequirement.id}`
-        : `/api/library-hours-approval/reject/${currentRequirement.id}`;
+        ? `/library-hours-approval/approve/${currentRequirement.id}`
+        : `/library-hours-approval/reject/${currentRequirement.id}`;
         
       const requestBody = actionType === 'reject' ? { reason: rejectionReason } : {};
       
-      const response = await axios.post(`http://localhost:8080${endpoint}`, requestBody, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.post(endpoint, requestBody);
       
       if (response.data.success) {
         // Show success message
@@ -404,11 +391,8 @@ const LibrarianDashboard = () => {
     const fetchPendingApprovals = async () => {
       try {
         setApprovalsLoading(true);
-        const token = localStorage.getItem("token");
         
-        const response = await axios.get('http://localhost:8080/api/library-hours-approval/pending', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/library-hours-approval/pending');
         
         setPendingApprovals(response.data);
       } catch (err) {
@@ -457,14 +441,11 @@ const LibrarianDashboard = () => {
       params.append('timeframe', 'monthly');
       
       // Fetch data from API with filters
-      const url = `http://localhost:8080/api/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
       console.log("Fetching participants data from:", url);
       
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch participants data');
-      
-      const data = await response.json();
-      setParticipantsData(data);
+      const response = await api.get(url);
+      setParticipantsData(response.data);
     } catch (err) {
       console.error('Error fetching participants data:', err);
       toast.error("Failed to load participants data");
@@ -505,14 +486,11 @@ const LibrarianDashboard = () => {
       params.append('timeframe', 'monthly');
       
       // Fetch data from API with filters
-      const url = `http://localhost:8080/api/statistics/completion-rate${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/statistics/completion-rate${params.toString() ? `?${params.toString()}` : ''}`;
       console.log("Fetching completion rate data from:", url);
       
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch completion rate data');
-      
-      const data = await response.json();
-      setBarData(data);
+      const response = await api.get(url);
+      setBarData(response.data);
     } catch (err) {
       console.error('Error fetching completion rate data:', err);
       toast.error("Failed to load completion rate data");
@@ -540,12 +518,11 @@ const LibrarianDashboard = () => {
       // Note: The dashboard endpoint may or may not support all these filters
       // depending on how the backend is implemented
       
-      const url = `http://localhost:8080/api/statistics/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/statistics/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
       console.log("Fetching dashboard statistics from:", url);
       
-      const response = await fetch(url);
-      const data = await response.json();
-      setStatistics(data);
+      const response = await api.get(url);
+      setStatistics(response.data);
       setError(null);
     } catch (err) {
       setError('Failed to fetch dashboard statistics');

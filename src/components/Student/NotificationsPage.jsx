@@ -10,13 +10,13 @@ import {
   Divider,
   Paper,
 } from '@mui/material';
-import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import { AuthContext } from '../AuthContext';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+import api from '../../utils/api'; // Import the API utility instead of axios
 
 const StudentNotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -36,14 +36,12 @@ const StudentNotificationsPage = () => {
       }
       
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `http://localhost:8080/api/notifications/user/${idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await api.get(`/notifications/user/${idNumber}`);
       
       setNotifications(response.data);
     } catch (error) {
@@ -57,15 +55,12 @@ const StudentNotificationsPage = () => {
   const markAsRead = async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(
-        `http://localhost:8080/api/notifications/${notificationId}/mark-read`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      await api.put(`/notifications/${notificationId}/mark-read`, {});
       
       // Update local state
       setNotifications(
@@ -86,15 +81,12 @@ const StudentNotificationsPage = () => {
     try {
       const idNumber = user?.idNumber || localStorage.getItem('idNumber');
       const token = localStorage.getItem('token');
-      await axios.put(
-        `http://localhost:8080/api/notifications/mark-all-read/${idNumber}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      await api.put(`/notifications/mark-all-read/${idNumber}`, {});
       
       // Update local state
       setNotifications(

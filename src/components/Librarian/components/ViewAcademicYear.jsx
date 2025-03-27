@@ -13,7 +13,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import CloseIcon from '@mui/icons-material/Close';
-import axios from 'axios';
+import api from '../../../utils/api'; // Import the API utility
 import { format, isBefore } from 'date-fns';
 
 const ViewAcademicYear = ({ open, onClose, academicYear }) => {
@@ -191,7 +191,7 @@ const ViewAcademicYear = ({ open, onClose, academicYear }) => {
     };
 
     try {
-      const response = await axios.put(`http://localhost:8080/api/academic-years/${academicYear.id}`, updateData);
+      const response = await api.put(`/academic-years/${academicYear.id}`, updateData);
       console.log('Academic year updated:', response.data);
       onClose(); // Close the modal after successful update
     } catch (error) {
