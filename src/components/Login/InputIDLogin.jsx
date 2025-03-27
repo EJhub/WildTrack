@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PersonIcon from "@mui/icons-material/Person";
 import {
  Box,
@@ -29,57 +29,91 @@ function InputIdLogin() {
  });
  const [error, setError] = useState(null);
  const [recentLogins, setRecentLogins] = useState([]);
+ 
+ // Add global event listener for Enter key
+ useEffect(() => {
+   const handleGlobalKeyPress = (e) => {
+     if (e.key === "Enter" || e.keyCode === 13) {
+       handleSubmit();
+     }
+   };
+
+   // Add the event listener when component mounts
+   document.addEventListener("keydown", handleGlobalKeyPress);
+
+   // Cleanup the event listener when component unmounts
+   return () => {
+     document.removeEventListener("keydown", handleGlobalKeyPress);
+   };
+ }, [idInput]); // Re-attach when idInput changes
 
  const handleInputChange = (e) => {
    setIdInput(e.target.value);
  };
 
- const handleKeyPress = async (e) => {
+ // Separate function to handle submission logic
+ const handleSubmit = async () => {
+   if (!idInput.trim()) return; // Prevent submission of empty ID
+   
+   try {
+     // Call time-in API with the entered ID Number
+     const response = await axios.post("http://localhost:8080/api/time-in", { idNumber: idInput });
+     const { student } = response.data;
+
+     const currentTime = new Date();
+     const timeIn = response.data.timeIn || currentTime.toLocaleTimeString();
+     const date = response.data.date || currentTime.toLocaleDateString();
+
+     // Create student details object
+     const newStudentDetails = {
+       name: `${student.firstName} ${student.lastName || ""}`,
+       idNumber: student.idNumber,
+       grade: student.grade || "",
+       section: student.section || "",
+       date: date,
+       timeIn: timeIn,
+       profilePictureUrl: student.profilePictureUrl,
+     };
+
+     // Update the displayed student details
+     setStudentDetails(newStudentDetails);
+
+     // Add to recent logins (at the beginning)
+     setRecentLogins(prevLogins => {
+       // Create a new array with the current student at the beginning
+       const updatedLogins = [
+         {
+           ...student,
+           timeIn: timeIn,
+         },
+         ...prevLogins
+       ];
+       
+       // Keep only the most recent 5 logins
+       return updatedLogins.slice(0, 5);
+     });
+
+     setError(null);
+     setIdInput(""); // Clear the input field
+   } catch (err) {
+     console.error("Error:", err);
+     setError(err.response?.data?.error || "Student not found. Please check the ID number.");
+   }
+ };
+
+ // Multiple event handlers to ensure cross-browser and cross-environment compatibility
+ const handleKeyDown = (e) => {
    if (e.key === "Enter") {
-     try {
-       // Call time-in API with the entered ID Number
-       const response = await axios.post("http://localhost:8080/api/time-in", { idNumber: idInput });
-       const { student } = response.data;
-
-       const currentTime = new Date();
-       const timeIn = response.data.timeIn || currentTime.toLocaleTimeString();
-       const date = response.data.date || currentTime.toLocaleDateString();
-
-       // Create student details object
-       const newStudentDetails = {
-         name: `${student.firstName} ${student.lastName || ""}`,
-         idNumber: student.idNumber,
-         grade: student.grade || "",
-         section: student.section || "",
-         date: date,
-         timeIn: timeIn,
-         profilePictureUrl: student.profilePictureUrl,
-       };
-
-       // Update the displayed student details
-       setStudentDetails(newStudentDetails);
-
-       // Add to recent logins (at the beginning)
-       setRecentLogins(prevLogins => {
-         // Create a new array with the current student at the beginning
-         const updatedLogins = [
-           {
-             ...student,
-             timeIn: timeIn,
-           },
-           ...prevLogins
-         ];
-         
-         // Keep only the most recent 5 logins
-         return updatedLogins.slice(0, 5);
-       });
-
-       setError(null);
-       setIdInput(""); // Clear the input field
-     } catch (err) {
-       console.error("Error:", err);
-       setError(err.response?.data?.error || "Student not found. Please check the ID number.");
-     }
+     e.preventDefault(); // Prevent any default behavior
+     handleSubmit();
+   }
+ };
+ 
+ // Backup handler using keyCode for older browsers/environments
+ const handleKeyUp = (e) => {
+   if (e.keyCode === 13 || e.key === "Enter") {
+     e.preventDefault();
+     handleSubmit();
    }
  };
 
@@ -212,7 +246,8 @@ function InputIdLogin() {
                        placeholder="Input your ID Number"
                        value={idInput}
                        onChange={handleInputChange}
-                       onKeyPress={handleKeyPress}
+                       onKeyDown={handleKeyDown}
+                       onKeyUp={handleKeyUp}
                        fullWidth
                        sx={{
                          mb: 2,
