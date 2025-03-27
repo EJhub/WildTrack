@@ -14,7 +14,7 @@ import {
   Grid,
 } from "@mui/material";
 import LoginNavBar from "./component/AppBar";
-import axios from "axios";
+import api from "../../utils/api"; // Changed from axios to the custom API utility
 
 function InputIDLogout() {
   const [idInput, setIdInput] = useState("");
@@ -57,7 +57,7 @@ function InputIDLogout() {
     
     try {
       // Call backend API with the entered ID Number for time-out
-      const response = await axios.post("http://localhost:8080/api/time-out", { idNumber: idInput });
+      const response = await api.post("/time-out", { idNumber: idInput });
 
       const { student } = response.data;
 
@@ -125,7 +125,7 @@ function InputIDLogout() {
   const getFullImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    return `http://localhost:8080${url}`;
+    return url; // No need to add base URL - the proxy takes care of this
   };
 
   return (

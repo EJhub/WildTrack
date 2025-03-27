@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from 'axios';
+import api from "../../utils/api"; // Changed from axios to the custom API utility
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -67,13 +67,13 @@ function Register() {
         setIsLoading(true);
         
         // Fetch active grade levels
-        const gradesResponse = await axios.get('http://localhost:8080/api/grade-sections/active');
+        const gradesResponse = await api.get('/grade-sections/active');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         const sortedGrades = sortGradeLevels(uniqueGrades);
         setGradeOptions(sortedGrades);
 
         // Fetch active academic years using the new endpoint
-        const academicYearsResponse = await axios.get('http://localhost:8080/api/academic-years/active');
+        const academicYearsResponse = await api.get('/academic-years/active');
         const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
         setAcademicYearOptions(formattedAcademicYears);
 
@@ -95,7 +95,7 @@ function Register() {
         try {
           setIsLoading(true);
           // Use the new endpoint for active sections by grade
-          const sectionsResponse = await axios.get(`http://localhost:8080/api/grade-sections/grade/${formData.grade}/active`);
+          const sectionsResponse = await api.get(`/grade-sections/grade/${formData.grade}/active`);
           const sections = sectionsResponse.data.map(section => section.sectionName);
           setSectionOptions(sections);
         } catch (error) {
@@ -246,7 +246,7 @@ function Register() {
 
     try {
       setIsLoading(true);
-      const response = await axios.post("http://localhost:8080/api/users/register", {
+      const response = await api.post("/users/register", {
         firstName: formData.firstName,
         middleName: formData.middleName,
         lastName: formData.lastName,
