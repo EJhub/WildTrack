@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Determine the base URL based on the environment
 const baseURL = import.meta.env.PROD 
-  ? 'https://backend-Serg.onrender.com/api' // Direct URL to backend in production
+  ? 'https://backend-5erg.onrender.com/api' // Direct URL to backend in production
   : '/api'; // Use the proxy in development
 
 const api = axios.create({
