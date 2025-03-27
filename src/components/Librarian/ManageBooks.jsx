@@ -52,7 +52,6 @@ const LibrarianManageBooks = () => {
     title: '',
     author: '',
     accessionNumber: '',
-    isbn: '',
     genre: '',
     dateRegistered: new Date().toISOString()
   });
@@ -94,11 +93,11 @@ const LibrarianManageBooks = () => {
       
       // Sample data for testing
       const sampleBooks = [
-        { id: 1, title: 'hjkhjkhjk', author: 'KJDKSADSI', accessionNumber: 'ewr', isbn: 'awer', genre: 'Fiction', dateRegistered: '2025-03-22' },
-        { id: 2, title: 'Ssad', author: 'asdasdsad', accessionNumber: '56675', isbn: '232', genre: 'LOL', dateRegistered: '2025-03-23' },
-        { id: 3, title: 'sfdsfsd', author: 'dsffsd', accessionNumber: '234236546', isbn: 'sdfsdsrt', genre: 'Poetry', dateRegistered: '2025-03-24' },
-        { id: 4, title: 'sa', author: 'Ambos', accessionNumber: 'DZ1', isbn: '213', genre: 'Poetry', dateRegistered: '2025-03-24' },
-        { id: 5, title: 'Ygg', author: 'asdas', accessionNumber: 'asa21', isbn: '2321', genre: 'Actions', dateRegistered: '2025-03-25' },
+        { id: 1, title: 'hjkhjkhjk', author: 'KJDKSADSI', accessionNumber: 'ewr', genre: 'Fiction', dateRegistered: '2025-03-22' },
+        { id: 2, title: 'Ssad', author: 'asdasdsad', accessionNumber: '56675', genre: 'LOL', dateRegistered: '2025-03-23' },
+        { id: 3, title: 'sfdsfsd', author: 'dsffsd', accessionNumber: '234236546', genre: 'Poetry', dateRegistered: '2025-03-24' },
+        { id: 4, title: 'sa', author: 'Ambos', accessionNumber: 'DZ1', genre: 'Poetry', dateRegistered: '2025-03-24' },
+        { id: 5, title: 'Ygg', author: 'asdas', accessionNumber: 'asa21', genre: 'Actions', dateRegistered: '2025-03-25' },
       ];
       
       const sampleGenres = [
@@ -155,7 +154,6 @@ const LibrarianManageBooks = () => {
         book.title?.toLowerCase().includes(lowercasedTerm) ||
         book.author?.toLowerCase().includes(lowercasedTerm) ||
         book.accessionNumber?.toLowerCase().includes(lowercasedTerm) ||
-        book.isbn?.toLowerCase().includes(lowercasedTerm) ||
         book.genre?.toLowerCase().includes(lowercasedTerm)
       );
       setFilteredBooks(filtered);
@@ -172,7 +170,6 @@ const LibrarianManageBooks = () => {
         book.title?.toLowerCase().includes(lowercasedTerm) ||
         book.author?.toLowerCase().includes(lowercasedTerm) ||
         book.accessionNumber?.toLowerCase().includes(lowercasedTerm) ||
-        book.isbn?.toLowerCase().includes(lowercasedTerm) ||
         book.genre?.toLowerCase().includes(lowercasedTerm)
       );
       setFilteredBooks(filtered);
@@ -205,7 +202,6 @@ const LibrarianManageBooks = () => {
         title: book.title || '',
         author: book.author || '',
         accessionNumber: book.accessionNumber || '',
-        isbn: book.isbn || '',
         genre: initialGenre,
         dateRegistered: book.dateRegistered || new Date().toISOString()
       });
@@ -216,7 +212,6 @@ const LibrarianManageBooks = () => {
         title: '',
         author: '',
         accessionNumber: '',
-        isbn: '',
         genre: '',
         dateRegistered: new Date().toISOString()
       });
@@ -232,7 +227,6 @@ const LibrarianManageBooks = () => {
       title: '',
       author: '',
       accessionNumber: '',
-      isbn: '',
       genre: '',
       dateRegistered: new Date().toISOString()
     });
@@ -571,9 +565,6 @@ const LibrarianManageBooks = () => {
                     ACCESSION NUMBER
                   </TableCell>
                   <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    ISBN
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     GENRE
                   </TableCell>
                   <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
@@ -601,7 +592,6 @@ const LibrarianManageBooks = () => {
                       <TableCell align="center">{book.title}</TableCell>
                       <TableCell align="center">{book.author}</TableCell>
                       <TableCell align="center">{book.accessionNumber}</TableCell>
-                      <TableCell align="center">{book.isbn}</TableCell>
                       <TableCell align="center">{book.genre}</TableCell>
                       <TableCell align="center">{formatDate(book.dateRegistered)}</TableCell>
                       <TableCell align="center">
@@ -636,7 +626,7 @@ const LibrarianManageBooks = () => {
                   ))}
                 {filteredBooks.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">No books found</TableCell>
+                    <TableCell colSpan={6} align="center">No books found</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -691,14 +681,6 @@ const LibrarianManageBooks = () => {
             onChange={handleInputChange}
             fullWidth
             required
-          />
-          <TextField
-            margin="dense"
-            label="ISBN"
-            name="isbn"
-            value={formFields.isbn}
-            onChange={handleInputChange}
-            fullWidth
           />
           <FormControl fullWidth margin="dense" required>
             <InputLabel>Genre</InputLabel>
@@ -767,14 +749,6 @@ const LibrarianManageBooks = () => {
                   <TextField
                     fullWidth
                     value={selectedBook.accessionNumber || ''}
-                    InputProps={{ readOnly: true }}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" sx={{ mb: 1 }}>ISBN</Typography>
-                  <TextField
-                    fullWidth
-                    value={selectedBook.isbn || ''}
                     InputProps={{ readOnly: true }}
                   />
                 </Box>
@@ -880,7 +854,6 @@ const LibrarianManageBooks = () => {
                   <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>BOOK TITLE</TableCell>
                   <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>AUTHOR</TableCell>
                   <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>ACCESSION NUMBER</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>ISBN</TableCell>
                   <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>GENRE</TableCell>
                 </TableRow>
               </TableHead>
@@ -897,13 +870,12 @@ const LibrarianManageBooks = () => {
                       <TableCell>{book.title}</TableCell>
                       <TableCell>{book.author}</TableCell>
                       <TableCell>{book.accessionNumber}</TableCell>
-                      <TableCell>{book.isbn}</TableCell>
                       <TableCell>{book.genre}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">No books found</TableCell>
+                    <TableCell colSpan={4} align="center">No books found</TableCell>
                   </TableRow>
                 )}
               </TableBody>

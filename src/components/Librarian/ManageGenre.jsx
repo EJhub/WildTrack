@@ -491,7 +491,7 @@ const LibrarianManageGenre = () => {
   }}
   onClick={handleOpenUpdateDialog}
 >
-  Update Genre
+  View Genre
 </Button>
             <Button
               variant="contained"
