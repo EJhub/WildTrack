@@ -15,6 +15,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CircularProgress from "@mui/material/CircularProgress";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import { AuthContext } from "../AuthContext"; // Import AuthContext
 import api from "../../utils/api"; // Import the API utility
 
@@ -37,6 +39,13 @@ const PersonalInformation = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Set up API interceptor for authentication
   useEffect(() => {
@@ -119,7 +128,13 @@ const PersonalInformation = () => {
         newPassword,
       });
 
-      alert("Password changed successfully!");
+      // Replace alert with Snackbar
+      setSnackbar({
+        open: true,
+        message: "Password changed successfully!",
+        severity: "success"
+      });
+      
       handleCloseChangePasswordModal();
     } catch (error) {
       console.error("Error changing password:", error);
@@ -151,14 +166,14 @@ const PersonalInformation = () => {
       
       try {
         const token = localStorage.getItem('token');
-        // Set token in API utility headers
-        if (token) {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
         
-        // For FormData, we need to set the content type to multipart/form-data
-        // but axios will automatically set the correct content type with boundary
-        const response = await api.post('/users/upload-profile-picture', formData);
+        // Explicitly set Content-Type header for multipart/form-data
+        const response = await api.post('/users/upload-profile-picture', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        });
   
         // Update the user info with the new profile picture URL
         setUserInfo(prevInfo => ({
@@ -166,12 +181,23 @@ const PersonalInformation = () => {
           profilePictureUrl: response.data.profilePictureUrl
         }));
   
-        // Refresh the profile picture display
-        fetchUserInfo();
         handleCloseProfilePictureModal();
+        
+        // Show success message with Snackbar
+        setSnackbar({
+          open: true,
+          message: 'Profile picture updated successfully!',
+          severity: 'success'
+        });
       } catch (error) {
         console.error('Error uploading profile picture:', error);
-        alert('Failed to upload profile picture');
+        
+        // Show error with Snackbar instead of alert
+        setSnackbar({
+          open: true,
+          message: 'Failed to upload profile picture',
+          severity: 'error'
+        });
       }
     }
   };
@@ -179,12 +205,12 @@ const PersonalInformation = () => {
   const handleRemoveProfilePicture = async () => {
     try {
       const token = localStorage.getItem('token');
-      // Set token in API utility headers
-      if (token) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
       
-      await api.delete(`/users/${userInfo.id}/profile-picture`);
+      await api.delete(`/users/${userInfo.id}/profile-picture`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       setUserInfo(prevInfo => ({
         ...prevInfo,
@@ -192,10 +218,28 @@ const PersonalInformation = () => {
       }));
 
       handleCloseProfilePictureModal();
+      
+      // Show success message with Snackbar
+      setSnackbar({
+        open: true,
+        message: 'Profile picture removed successfully!',
+        severity: 'success'
+      });
     } catch (error) {
       console.error('Error removing profile picture:', error);
-      alert('Failed to remove profile picture');
+      
+      // Show error with Snackbar instead of alert
+      setSnackbar({
+        open: true,
+        message: 'Failed to remove profile picture',
+        severity: 'error'
+      });
     }
+  };
+  
+  // Snackbar close handler
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   // Toggle password visibility functions
@@ -204,7 +248,7 @@ const PersonalInformation = () => {
   const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
   // Get base URL for images based on environment
-  const getBaseUrl = () => {
+  const getBaseURL = () => {
     if (import.meta.env.PROD) {
       return 'https://backend-5erg.onrender.com';
     }
@@ -314,7 +358,7 @@ const PersonalInformation = () => {
             <Avatar
               alt={`${userInfo.firstName} ${userInfo.lastName}`}
               src={userInfo.profilePictureUrl ? 
-                `${getBaseUrl()}${userInfo.profilePictureUrl}` : 
+                `${getBaseURL()}${userInfo.profilePictureUrl}` : 
                 "/default-avatar.png"
               }
               sx={{
@@ -619,6 +663,7 @@ const PersonalInformation = () => {
         </Box>
       </Modal>
 
+      {/* Profile Picture Modal */}
       <Modal 
         open={showProfilePictureModal} 
         onClose={handleCloseProfilePictureModal}
@@ -656,7 +701,7 @@ const PersonalInformation = () => {
             src={profilePicture ? 
               URL.createObjectURL(profilePicture) : 
               (userInfo.profilePictureUrl ? 
-                `${getBaseUrl()}${userInfo.profilePictureUrl}` : 
+                `${getBaseURL()}${userInfo.profilePictureUrl}` : 
                 "/default-avatar.png"
               )
             }
@@ -726,6 +771,22 @@ const PersonalInformation = () => {
           </Button>
         </Box>
       </Modal>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
