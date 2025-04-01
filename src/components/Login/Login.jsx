@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../utils/api"; // Import the custom API utility
 import { AuthContext } from "../AuthContext";
@@ -13,6 +13,23 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
+  // Add global event listener for Enter key - similar to InputIdLogin component
+  useEffect(() => {
+    const handleGlobalKeyPress = (e) => {
+      if (e.key === "Enter" || e.keyCode === 13) {
+        handleLogin(e);
+      }
+    };
+
+    // Add the event listener when component mounts
+    document.addEventListener("keydown", handleGlobalKeyPress);
+
+    // Cleanup the event listener when component unmounts
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyPress);
+    };
+  }, [credentials]); // Re-attach when credentials changes
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setCredentials({ ...credentials, [name]: value });
@@ -20,8 +37,26 @@ const Login = () => {
     if (error) setError(null);
   };
 
+  // Multiple event handlers for redundancy (similar to InputIdLogin)
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevent any default behavior
+      handleLogin(e);
+    }
+  };
+  
+  // Backup handler using keyCode for older browsers/environments
+  const handleKeyUp = (e) => {
+    if (e.keyCode === 13 || e.key === "Enter") {
+      e.preventDefault();
+      handleLogin(e);
+    }
+  };
+
   const handleLogin = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (isLoading) return; // Prevent multiple submissions
+    
     setIsLoading(true);
     setError(null);
 
@@ -84,7 +119,6 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Login error:", err);
-      setIsLoading(false); // Ensure loading is turned off
       
       // Handle specific error cases
       if (err.response?.data?.error === "temporary_password_incorrect") {
@@ -96,9 +130,6 @@ const Login = () => {
       } else {
         setError(err.response?.data?.error || "Login failed. Please try again.");
       }
-      
-      // Ensure nothing else happens after error
-      return;
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +142,7 @@ const Login = () => {
           <div style={styles.loginBox}>
             <h2 style={styles.title}>Sign in</h2>
             {error && <p style={{ color: "red" }}>{error}</p>}
+            
             <form onSubmit={handleLogin}>
               <input
                 type="text"
@@ -120,6 +152,8 @@ const Login = () => {
                 style={styles.input}
                 value={credentials.idNumber}
                 onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
                 disabled={isLoading}
               />
               <div style={{ position: "relative" }}>
@@ -131,6 +165,8 @@ const Login = () => {
                   style={styles.input}
                   value={credentials.password}
                   onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  onKeyUp={handleKeyUp}
                   disabled={isLoading}
                 />
                 {

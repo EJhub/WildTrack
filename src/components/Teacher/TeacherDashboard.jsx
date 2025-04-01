@@ -39,6 +39,7 @@ const TeacherDashboard = () => {
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
+  const [pendingGradeLevel, setPendingGradeLevel] = useState(''); // Track grade level before applying filter
   const [section, setSection] = useState('');
   const [deadlines, setDeadlines] = useState([]);
   const [assignedDeadlines, setAssignedDeadlines] = useState([]); // New state for assigned deadlines
@@ -59,6 +60,8 @@ const TeacherDashboard = () => {
     assignedGrade: '',
     assignedSection: ''
   });
+  // State to prevent automatic refreshing during filter application
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [availableSections, setAvailableSections] = useState([]);
   const [filteredSection, setFilteredSection] = useState(''); // Track the actually applied section filter
   const [filteredQuarter, setFilteredQuarter] = useState(''); // Track the actually applied quarter filter
@@ -66,6 +69,8 @@ const TeacherDashboard = () => {
   const [filteredDateFrom, setFilteredDateFrom] = useState(''); // Track the applied date from filter
   const [filteredDateTo, setFilteredDateTo] = useState(''); // Track the applied date to filter
   const [filteredAcademicYear, setFilteredAcademicYear] = useState(''); // Track the applied academic year filter
+  const [assignedGradeOptions, setAssignedGradeOptions] = useState([]); // Store the assigned grades as options
+  const [sectionsLoading, setSectionsLoading] = useState(false); // Track sections loading state
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
 
@@ -78,15 +83,16 @@ const TeacherDashboard = () => {
       // Create params for filtering
       const params = new URLSearchParams();
       
-      // Always include the teacher's assigned grade level if available
-      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
-      if (gradeToFilter) {
-        params.append('gradeLevel', gradeToFilter);
+      // Always include the selected grade level if available
+      if (gradeLevel) {
+        params.append('gradeLevel', gradeLevel);
       }
       
-      // Only add section filter if it's in the filterParams
+      // Only add section filter if it's in the filterParams or use filtered value
       if (filterParams.section) {
         params.append('section', filterParams.section);
+      } else if (filteredSection) {
+        params.append('section', filteredSection);
       }
       
       // Always add teacher's subject filter if available
@@ -109,7 +115,48 @@ const TeacherDashboard = () => {
     } finally {
       setStatisticsLoading(false);
     }
-  }, [teacherAssignments.assignedGrade, gradeLevel, teacherSubject]);
+  }, [gradeLevel, teacherSubject, filteredSection]);
+
+  // Function to fetch sections for a specific grade level
+  const fetchSectionsForGrade = async (grade) => {
+    if (!grade) {
+      setAvailableSections([]);
+      setSection('');
+      return;
+    }
+    
+    try {
+      setSectionsLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await api.get(`/grade-sections/grade/${grade}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && response.data.length > 0) {
+        // Store unique sections for dropdown (remove duplicates by section name)
+        const uniqueSections = [...new Map(response.data.map(item => 
+          [item.sectionName, item])).values()];
+          
+        setAvailableSections(uniqueSections);
+        
+        // Log for debugging
+        console.log(`Fetched ${uniqueSections.length} sections for grade ${grade}:`, 
+          uniqueSections.map(s => s.sectionName).join(', '));
+      } else {
+        console.log(`No sections found for grade ${grade}`);
+        setAvailableSections([]);
+        setSection('');
+      }
+    } catch (error) {
+      console.error('Error fetching sections for grade:', error);
+      toast.error("Failed to load sections for the selected grade");
+      setAvailableSections([]);
+      setSection('');
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
 
   // Function to fetch teacher assignments (grade, section, and subject)
   const fetchTeacherAssignments = async () => {
@@ -126,19 +173,14 @@ const TeacherDashboard = () => {
       
       // Process the teacher's information
       if (response.data) {
-        // Format grade to match the dropdown values (e.g., "2" to "Grade 2")
-        let formattedGrade = '';
-        if (response.data.grade) {
-          formattedGrade = response.data.grade.includes('Grade') 
-            ? response.data.grade 
-            : `Grade ${response.data.grade}`;
-        }
+        // Get grade info (could be comma-separated string if multiple grades)
+        let assignedGrades = response.data.grade || '';
         
         // Get teacher's assigned subject
         const assignedSubject = response.data.subject || '';
         
         setTeacherAssignments({
-          assignedGrade: formattedGrade,
+          assignedGrade: assignedGrades,
           assignedSection: response.data.section || ''
         });
         
@@ -149,24 +191,20 @@ const TeacherDashboard = () => {
         setSubject(assignedSubject);
         setFilteredSubject(assignedSubject);
         
-        // Set the grade level filter to the teacher's assigned grade
-        setGradeLevel(formattedGrade);
+        // Set the grade options and default selection
+        if (assignedGrades.includes(',')) {
+          // For multiple grades, extract the first grade as default
+          const gradesArray = assignedGrades.split(',').map(g => g.trim());
+          setAssignedGradeOptions(gradesArray);
+          setGradeLevel(gradesArray[0]); // Set first grade as default
+        } else {
+          // For single grade
+          setAssignedGradeOptions([assignedGrades]);
+          setGradeLevel(assignedGrades);
+        }
         
         console.log(`Teacher subject set to: ${assignedSubject}`);
-        
-        // Fetch all sections for this grade level
-        try {
-          const gradeSectionResponse = await api.get(`/grade-sections/grade/${formattedGrade}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          if (gradeSectionResponse.data && gradeSectionResponse.data.length > 0) {
-            // Store sections for dropdown
-            setAvailableSections(gradeSectionResponse.data);
-          }
-        } catch (sectionError) {
-          console.error("Error fetching grade sections:", sectionError);
-        }
+        console.log(`Teacher grades set to: ${assignedGrades}`);
       }
     } catch (error) {
       console.error('Error fetching teacher assignments:', error);
@@ -174,19 +212,19 @@ const TeacherDashboard = () => {
     }
   };
 
-  // NEW FUNCTION: Fetch assigned deadlines (not affected by filters)
-  const fetchAssignedDeadlines = async () => {
+  // Fetch assigned deadlines (not affected by filters)
+  const fetchAssignedDeadlines = async (overrideGradeLevel = null) => {
     try {
       setAssignedDeadlinesLoading(true);
       const token = localStorage.getItem('token');
       
-      // Build query parameters - ALWAYS filter by teacher's assigned grade level and subject
+      // Build query parameters
       const params = new URLSearchParams();
       
-      // IMPORTANT: Always use teacher's assigned grade level
-      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
-      if (gradeToFilter) {
-        params.append('gradeLevel', gradeToFilter);
+      // Only include selected grade (or override if provided)
+      const currentGradeLevel = overrideGradeLevel || gradeLevel;
+      if (currentGradeLevel) {
+        params.append('gradeLevel', currentGradeLevel);
       }
       
       // Always use teacher's subject if available
@@ -199,17 +237,14 @@ const TeacherDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Add client-side filtering to ensure only the teacher's grade level and subject is displayed
+      // Filter deadlines by current grade and subject
       const filteredDeadlines = deadlinesResponse.data.filter(deadline => {
-        // Always filter by grade level
-        const gradeMatch = deadline.gradeLevel === gradeToFilter;
+        const gradeMatch = deadline.gradeLevel === currentGradeLevel;
         
-        // If teacher has an assigned subject, filter by that too
         if (teacherSubject) {
           return gradeMatch && deadline.subject === teacherSubject;
         }
         
-        // Otherwise just filter by grade
         return gradeMatch;
       });
       
@@ -236,125 +271,25 @@ const TeacherDashboard = () => {
     fetchTeacherAssignments();
   }, [user, logout, navigate]);
 
-  // Effect for data fetching when grade level or teacher subject changes
-  useEffect(() => {
-    if (!user || !gradeLevel) return;
+  // Handle grade level change - immediately fetch sections for the selected grade
+  const handleGradeLevelChange = (e) => {
+    const newGradeLevel = e.target.value;
+    setPendingGradeLevel(newGradeLevel);
     
-    // Fetch dashboard statistics when grade level changes
-    fetchDashboardStatistics();
+    // Clear section selection when grade level changes
+    setSection('');
     
-    // Fetch assigned deadlines (not affected by filters)
-    fetchAssignedDeadlines();
-    
-    // Function to fetch filtered deadlines (affected by filters)
-    const fetchDeadlines = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        
-        // Build query parameters - ALWAYS filter by teacher's assigned grade level and subject
-        const params = new URLSearchParams();
-        
-        // IMPORTANT: Always use teacher's assigned grade level
-        const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
-        if (gradeToFilter) {
-          params.append('gradeLevel', gradeToFilter);
-        }
-        
-        if (teacherSubject) {
-          params.append('subject', teacherSubject);
-        }
-        
-        // Fetch deadlines with filters
-        const deadlinesResponse = await api.get(`/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // Add client-side filtering to ensure only the teacher's grade level and subject is displayed
-        const filteredDeadlines = deadlinesResponse.data.filter(deadline => {
-          // Always filter by grade level
-          const gradeMatch = deadline.gradeLevel === gradeToFilter;
-          
-          // If teacher has an assigned subject, filter by that too
-          if (teacherSubject) {
-            return gradeMatch && deadline.subject === teacherSubject;
-          }
-          
-          // Otherwise just filter by grade
-          return gradeMatch;
-        });
-        
-        setDeadlines(filteredDeadlines);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error("Failed to fetch data: " + (error.response?.data?.message || error.message));
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Immediately fetch sections for the new grade level
+    if (newGradeLevel) {
+      setSectionsLoading(true);
+      fetchSectionsForGrade(newGradeLevel);
+    } else {
+      setAvailableSections([]);
+    }
+  };
 
-    // Updated function to fetch participants data with all filters
-    const fetchParticipantsData = async () => {
-      try {
-        setParticipantsLoading(true);
-        
-        // Build query parameters
-        const params = new URLSearchParams();
-        
-        // Always include the teacher's assigned grade level if available
-        const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
-        if (gradeToFilter) {
-          params.append('gradeLevel', gradeToFilter);
-        }
-        
-        // Always use monthly view
-        params.append('timeframe', 'monthly');
-        
-        // Always filter by teacher's subject
-        if (teacherSubject) {
-          params.append('subject', teacherSubject);
-        }
-        
-        // Fetch participants data
-        const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
-        const response = await api.get(url, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // Process the data for chart display
-        const formattedData = response.data.map(item => ({
-          name: getFullMonthName(item.month),
-          participants: item.participants
-        }));
-        
-        setParticipantsData(formattedData);
-      } catch (err) {
-        console.error('Error fetching participants data:', err);
-        toast.error("Failed to load participants data");
-      } finally {
-        setParticipantsLoading(false);
-      }
-    };
-    
-    // Fetch all required data
-    fetchDeadlines();
-    fetchParticipantsData();
-    
-    // Set up refresh intervals
-    const participantsInterval = setInterval(fetchParticipantsData, 300000); // 5 minutes
-    const statisticsInterval = setInterval(() => fetchDashboardStatistics(), 60000); // 1 minute
-    const assignedDeadlinesInterval = setInterval(fetchAssignedDeadlines, 60000); // 1 minute
-    
-    // Cleanup intervals when component unmounts
-    return () => {
-      clearInterval(participantsInterval);
-      clearInterval(statisticsInterval);
-      clearInterval(assignedDeadlinesInterval);
-    };
-  }, [user, gradeLevel, teacherSubject, fetchDashboardStatistics, teacherAssignments.assignedGrade]); // Added teacherAssignments.assignedGrade dependency
-
-  // Updated fetchParticipantsData function with date range and academic year filters
-  const fetchParticipantsData = async (filterParams = {}) => {
+  // Helper function that only uses the applied (filtered) values
+  const fetchParticipantsDataWithAppliedFilters = async () => {
     try {
       setParticipantsLoading(true);
       const token = localStorage.getItem('token');
@@ -362,10 +297,8 @@ const TeacherDashboard = () => {
       // Build query parameters
       const params = new URLSearchParams();
       
-      // Always include the teacher's assigned grade level if available
-      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
-      if (gradeToFilter) {
-        params.append('gradeLevel', gradeToFilter);
+      if (gradeLevel) {
+        params.append('gradeLevel', gradeLevel);
       }
       
       // Always use monthly view
@@ -376,14 +309,180 @@ const TeacherDashboard = () => {
         params.append('subject', teacherSubject);
       }
       
-      // Add filters from parameters
+      // Only use FILTERED values (those that have been applied via the Apply Filters button)
+      if (filteredSection) {
+        params.append('section', filteredSection);
+      }
+      
+      if (filteredQuarter) {
+        params.append('quarter', filteredQuarter);
+      }
+      
+      if (filteredAcademicYear) {
+        params.append('academicYear', filteredAcademicYear);
+      }
+      
+      if (filteredDateFrom) {
+        params.append('dateFrom', filteredDateFrom);
+      }
+      
+      if (filteredDateTo) {
+        params.append('dateTo', filteredDateTo);
+      }
+      
+      // Debug log to verify filters
+      console.log('Participants data fetch params (applied filters):', params.toString());
+      
+      // Fetch participants data
+      const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await api.get(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Process the data for chart display
+      const formattedData = response.data.map(item => ({
+        name: getFullMonthName(item.month),
+        participants: item.participants
+      }));
+      
+      setParticipantsData(formattedData);
+    } catch (err) {
+      console.error('Error fetching participants data:', err);
+      toast.error("Failed to load participants data");
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
+
+  // Effect for data fetching when grade level or teacher subject changes
+  useEffect(() => {
+    if (!user) return;
+    
+    // Skip this effect if we're in the middle of applying filters
+    if (isApplyingFilters) return;
+    
+    // On initial load or when dependencies change outside of filter application
+    const initialLoad = async () => {
+      if (!gradeLevel) return;
+      
+      // Make sure pending grade level matches actual grade level
+      setPendingGradeLevel(gradeLevel);
+      
+      // Fetch dashboard statistics
+      fetchDashboardStatistics();
+      
+      // Fetch assigned deadlines
+      fetchAssignedDeadlines();
+      
+      // Function to fetch filtered deadlines
+      const fetchDeadlines = async () => {
+        try {
+          setLoading(true);
+          const token = localStorage.getItem('token');
+          
+          // Build query parameters
+          const params = new URLSearchParams();
+          
+          if (gradeLevel) {
+            params.append('gradeLevel', gradeLevel);
+          }
+          
+          if (teacherSubject) {
+            params.append('subject', teacherSubject);
+          }
+          
+          // Use filteredAcademicYear instead of academicYear to ensure it only updates when Apply is clicked
+          if (filteredAcademicYear) {
+            params.append('academicYear', filteredAcademicYear);
+          }
+          
+          // Fetch deadlines with filters
+          const deadlinesResponse = await api.get(`/set-library-hours${params.toString() ? `?${params.toString()}` : ''}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          // Filter deadlines by current grade, subject, and academic year
+          const filteredDeadlines = deadlinesResponse.data.filter(deadline => {
+            const gradeMatch = deadline.gradeLevel === gradeLevel;
+            const subjectMatch = teacherSubject ? deadline.subject === teacherSubject : true;
+            const academicYearMatch = filteredAcademicYear ? deadline.academicYear === filteredAcademicYear : true;
+            
+            return gradeMatch && subjectMatch && academicYearMatch;
+          });
+          
+          setDeadlines(filteredDeadlines);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          toast.error("Failed to fetch data: " + (error.response?.data?.message || error.message));
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      // Fetch all required data
+      fetchDeadlines();
+      
+      // Use a custom function that only passes the filtered (applied) values
+      fetchParticipantsDataWithAppliedFilters();
+      
+      // For the initial grade level, fetch sections
+      fetchSectionsForGrade(gradeLevel);
+    };
+    
+    initialLoad();
+    
+    // Set up refresh intervals
+    const participantsInterval = setInterval(fetchParticipantsDataWithAppliedFilters, 300000); // 5 minutes
+    const statisticsInterval = setInterval(() => fetchDashboardStatistics(), 60000); // 1 minute
+    const assignedDeadlinesInterval = setInterval(fetchAssignedDeadlines, 60000); // 1 minute
+    
+    // Cleanup intervals when component unmounts
+    return () => {
+      clearInterval(participantsInterval);
+      clearInterval(statisticsInterval);
+      clearInterval(assignedDeadlinesInterval);
+    };
+  }, [user, gradeLevel, teacherSubject, filteredAcademicYear, filteredSection, filteredQuarter, 
+      filteredDateFrom, filteredDateTo, fetchDashboardStatistics, isApplyingFilters]);
+
+  // Fetch participants data (only used with explicitly passed filterParams)
+  const fetchParticipantsData = async (filterParams = {}) => {
+    try {
+      setParticipantsLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      // Only include basic filters by default
+      if (gradeLevel) {
+        params.append('gradeLevel', gradeLevel);
+      }
+      
+      // Always use monthly view
+      params.append('timeframe', 'monthly');
+      
+      // Always filter by teacher's subject
+      if (teacherSubject) {
+        params.append('subject', teacherSubject);
+      }
+      
+      // IMPORTANT: Only use explicitly passed filters, NOT the form state
+      // This prevents automatic filter application when form values change
       if (filterParams.section) params.append('section', filterParams.section);
       if (filterParams.quarter) params.append('quarter', filterParams.quarter);
       if (filterParams.academicYear) params.append('academicYear', filterParams.academicYear);
-      
-      // Add date filters if provided
       if (filterParams.dateFrom) params.append('dateFrom', filterParams.dateFrom);
       if (filterParams.dateTo) params.append('dateTo', filterParams.dateTo);
+      
+      // OR if we're using the filtered (already applied) values
+      if (filterParams.useFilteredValues) {
+        if (filteredSection) params.append('section', filteredSection);
+        if (filteredQuarter) params.append('quarter', filteredQuarter);
+        if (filteredAcademicYear) params.append('academicYear', filteredAcademicYear);
+        if (filteredDateFrom) params.append('dateFrom', filteredDateFrom);
+        if (filteredDateTo) params.append('dateTo', filteredDateTo);
+      }
       
       // Fetch participants data
       const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
@@ -428,9 +527,9 @@ const TeacherDashboard = () => {
   // Add deadline handler
   const handleAddDeadline = async (data) => {
     try {
-      // Add the teacher's assigned grade if not specified
-      if (!data.gradeLevel && teacherAssignments.assignedGrade) {
-        data.gradeLevel = teacherAssignments.assignedGrade;
+      // Add the current grade level if not specified
+      if (!data.gradeLevel) {
+        data.gradeLevel = gradeLevel;
       }
       
       // Always set the teacher's subject for new deadlines
@@ -513,13 +612,30 @@ const TeacherDashboard = () => {
     setAcademicYear(value);
   };
 
-  // Updated applyFilters function - called when filter button is clicked
+  // Apply filters function
   const applyFilters = async () => {
     try {
       setLoading(true);
+      setIsApplyingFilters(true); // Flag to prevent automatic refresh
+      
       const token = localStorage.getItem('token');
       
-      // Store the currently applied filters
+      // Check if grade level is changing and update if needed
+      const isGradeChanging = pendingGradeLevel !== gradeLevel;
+      let currentGradeLevel = gradeLevel;
+      
+      if (isGradeChanging) {
+        currentGradeLevel = pendingGradeLevel;
+        
+        // Update the grade level state immediately
+        setGradeLevel(pendingGradeLevel);
+        
+        // Clear section selection when grade level changes
+        if (section) setSection('');
+      }
+      
+      // Store the currently applied filters in the filtered states
+      // This is the key step - we only update these when Apply Filters is clicked
       setFilteredSection(section);
       setFilteredQuarter(quarter);
       setFilteredDateFrom(dateFrom);
@@ -530,48 +646,107 @@ const TeacherDashboard = () => {
       const subjectToFilter = teacherSubject || subject;
       setFilteredSubject(subjectToFilter);
       
-      // Build query parameters
-      const params = new URLSearchParams();
-      if (dateFrom) params.append('dateFrom', dateFrom);
-      if (dateTo) params.append('dateTo', dateTo);
-      if (academicYear) params.append('academicYear', academicYear);
+      // ---------- PARALLEL API CALLS FOR FASTER UPDATES ----------
       
-      // IMPORTANT: Always use teacher's assigned grade level
-      const gradeToFilter = teacherAssignments.assignedGrade || gradeLevel;
-      if (gradeToFilter) {
-        params.append('gradeLevel', gradeToFilter);
+      // Create promises for all the data fetching operations
+      const fetchPromises = [];
+      
+      // 1. Fetch deadlines with filters
+      const deadlinesPromise = (async () => {
+        const params = new URLSearchParams();
+        // Use the actual form values here since we're applying filters now
+        if (dateFrom) params.append('dateFrom', dateFrom);
+        if (dateTo) params.append('dateTo', dateTo);
+        if (academicYear) params.append('academicYear', academicYear);
+        if (currentGradeLevel) params.append('gradeLevel', currentGradeLevel);
+        if (section) params.append('section', section);
+        if (quarter) params.append('quarter', quarter);
+        if (subjectToFilter) params.append('subject', subjectToFilter);
+        
+        const response = await api.get(`/set-library-hours?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Filter deadlines and update state
+        const filteredDeadlines = response.data.filter(deadline => {
+          const gradeMatch = deadline.gradeLevel === currentGradeLevel;
+          if (subjectToFilter) {
+            return gradeMatch && deadline.subject === subjectToFilter;
+          }
+          return gradeMatch;
+        });
+        
+        setDeadlines(filteredDeadlines);
+      })();
+      fetchPromises.push(deadlinesPromise);
+      
+      // 2. Fetch assigned deadlines if grade level changed
+      if (isGradeChanging) {
+        const assignedDeadlinesPromise = fetchAssignedDeadlines(currentGradeLevel);
+        fetchPromises.push(assignedDeadlinesPromise);
       }
       
-      if (section) params.append('section', section);
-      if (quarter) params.append('quarter', quarter);
-      // Always include teacher's subject filter
-      if (subjectToFilter) params.append('subject', subjectToFilter);
-      
-      // Fetch deadlines with filters
-      const response = await api.get(`/set-library-hours?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      // Apply client-side filtering for both grade level and subject
-      const filteredDeadlines = response.data.filter(deadline => {
-        // Always filter by grade level
-        const gradeMatch = deadline.gradeLevel === gradeToFilter;
+      // 3. Fetch participants data for chart with the newly applied filters
+      const participantsPromise = (async () => {
+        // Immediately set loading state for chart
+        setParticipantsLoading(true);
         
-        // If teacher has an assigned subject, filter by that too
-        if (subjectToFilter) {
-          return gradeMatch && deadline.subject === subjectToFilter;
-        }
+        const params = new URLSearchParams();
+        params.append('timeframe', 'monthly');
         
-        // Otherwise just filter by grade
-        return gradeMatch;
-      });
+        // Use the actual form values here since we're applying filters now
+        if (currentGradeLevel) params.append('gradeLevel', currentGradeLevel);
+        if (section) params.append('section', section);
+        if (quarter) params.append('quarter', quarter);
+        if (academicYear) params.append('academicYear', academicYear);
+        if (dateFrom) params.append('dateFrom', dateFrom);
+        if (dateTo) params.append('dateTo', dateTo);
+        if (subjectToFilter) params.append('subject', subjectToFilter);
+        
+        // Log params for debugging
+        console.log('Apply filters - participants fetch params:', params.toString());
+        
+        const url = `/statistics/active-participants${params.toString() ? `?${params.toString()}` : ''}`;
+        const response = await api.get(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Process and update chart data immediately
+        const formattedData = response.data.map(item => ({
+          name: getFullMonthName(item.month),
+          participants: item.participants
+        }));
+        
+        setParticipantsData(formattedData);
+        setParticipantsLoading(false);
+      })();
+      fetchPromises.push(participantsPromise);
       
-      setDeadlines(filteredDeadlines);
+      // 4. Fetch statistics
+      const statisticsPromise = (async () => {
+        setStatisticsLoading(true);
+        
+        const params = new URLSearchParams();
+        if (currentGradeLevel) params.append('gradeLevel', currentGradeLevel);
+        if (section) params.append('section', section);
+        if (subjectToFilter) params.append('subject', subjectToFilter);
+        
+        const url = `/statistics/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
+        const response = await api.get(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setStatistics(response.data);
+        setStatisticsLoading(false);
+      })();
+      fetchPromises.push(statisticsPromise);
+      
+      // Wait for all fetches to complete
+      await Promise.all(fetchPromises);
       
       // Build filter description for toast
       const filterDescriptions = [];
+      if (currentGradeLevel) filterDescriptions.push(`Grade: ${currentGradeLevel}`);
       if (section) filterDescriptions.push(`Section: ${section}`);
       if (quarter) filterDescriptions.push(`Quarter: ${quarter}`);
       if (subjectToFilter) filterDescriptions.push(`Subject: ${subjectToFilter}`);
@@ -579,26 +754,15 @@ const TeacherDashboard = () => {
       if (dateTo) filterDescriptions.push(`To: ${dateTo}`);
       if (academicYear) filterDescriptions.push(`AY: ${academicYear}`);
       
+      // Show toast after all data is fetched and states are updated
       toast.info(`Filters applied: ${filterDescriptions.length > 0 ? filterDescriptions.join(', ') : 'None'}`);
-      
-      // Also refresh participants data with all filters
-      await fetchParticipantsData({
-        section,
-        quarter,
-        academicYear,
-        dateFrom,
-        dateTo,
-        subject: subjectToFilter
-      });
-
-      // Refresh student count statistics with section filter
-      await fetchDashboardStatistics({ section });
       
     } catch (error) {
       console.error('Error applying filters:', error);
       toast.error(`Failed to apply filters: ${error.response?.data?.message || error.message}`);
     } finally {
       setLoading(false);
+      setIsApplyingFilters(false); // Reset flag once everything is complete
     }
   };
 
@@ -617,6 +781,9 @@ const TeacherDashboard = () => {
     // Maintain teacher's subject filter
     setSubject(teacherSubject);
     setFilteredSubject(teacherSubject);
+    
+    // Reset pending grade level back to actual grade level
+    setPendingGradeLevel(gradeLevel);
     
     // Apply cleared filters
     toast.info("Filters cleared (subject and grade level filters maintained)");
@@ -665,20 +832,23 @@ const TeacherDashboard = () => {
 
   // Get appropriate label for student count based on filtering
   const getStudentCountLabel = () => {
-    const gradeText = teacherAssignments.assignedGrade || gradeLevel || "";
     const subjectText = teacherSubject ? ` (${teacherSubject})` : "";
     
     if (filteredSection) {
-      return `TOTAL REGISTERED ${gradeText} SECTION ${filteredSection}${subjectText} STUDENTS`;
+      return `TOTAL REGISTERED ${gradeLevel} SECTION ${filteredSection}${subjectText} STUDENTS`;
     } else {
-      return `TOTAL REGISTERED ${gradeText}${subjectText} STUDENTS`;
+      return `TOTAL REGISTERED ${gradeLevel}${subjectText} STUDENTS`;
     }
   };
 
-  // Updated getChartTitle function to show date range and academic year
+  // Get chart title
   const getChartTitle = () => {
     const parts = [];
     parts.push("Active Library Hours Participants");
+    
+    if (gradeLevel) {
+      parts.push(gradeLevel);
+    }
     
     if (filteredSection) {
       parts.push(`Section ${filteredSection}`);
@@ -694,8 +864,8 @@ const TeacherDashboard = () => {
     }
     
     // Add academic year to chart title if specified
-    if (filteredAcademicYear) {
-      parts.push(`AY ${filteredAcademicYear}`);
+    if (filteredAcademicYear || academicYear) {
+      parts.push(`AY ${filteredAcademicYear || academicYear}`);
     }
     
     // Add date range to chart title if specified
@@ -867,6 +1037,7 @@ const TeacherDashboard = () => {
                   }}
                 >
                   <MenuItem value="">Select Academic Year</MenuItem>
+                  <MenuItem value="2025-2026">2025-2026</MenuItem>
                   <MenuItem value="2024-2025">2024-2025</MenuItem>
                   <MenuItem value="2023-2024">2023-2024</MenuItem>
                   <MenuItem value="2022-2023">2022-2023</MenuItem>
@@ -880,17 +1051,22 @@ const TeacherDashboard = () => {
                   variant="outlined"
                   size="small"
                   fullWidth
-                  value={gradeLevel}
-                  onChange={(e) => setGradeLevel(e.target.value)}
-                  disabled={!!teacherAssignments.assignedGrade} // Disable if teacher has an assigned grade
+                  value={pendingGradeLevel}
+                  onChange={handleGradeLevelChange}
+                  disabled={assignedGradeOptions.length === 1} // Disable if teacher has only one grade level
+                  sx={{
+                    "& .Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    }
+                  }}
                 >
                   <MenuItem value="">Choose here...</MenuItem>
-                  <MenuItem value="Grade 1">Grade 1</MenuItem>
-                  <MenuItem value="Grade 2">Grade 2</MenuItem>
-                  <MenuItem value="Grade 3">Grade 3</MenuItem>
-                  <MenuItem value="Grade 4">Grade 4</MenuItem>
-                  <MenuItem value="Grade 5">Grade 5</MenuItem>
-                  <MenuItem value="Grade 6">Grade 6</MenuItem>
+                  {/* Show teacher's assigned grades as options */}
+                  {assignedGradeOptions.map(grade => (
+                    <MenuItem key={grade} value={grade}>
+                      {grade}
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Grid>
               
@@ -903,13 +1079,20 @@ const TeacherDashboard = () => {
                   fullWidth
                   value={section}
                   onChange={(e) => setSection(e.target.value)}
+                  disabled={sectionsLoading} // Disable while sections are loading
                 >
                   <MenuItem value="">All Sections</MenuItem>
-                  {availableSections.map((sectionItem) => (
-                    <MenuItem key={sectionItem.id} value={sectionItem.sectionName}>
-                     {sectionItem.sectionName}
-                    </MenuItem>
-                  ))}
+                  {sectionsLoading ? (
+                    <MenuItem disabled>Loading sections...</MenuItem>
+                  ) : availableSections.length === 0 ? (
+                    <MenuItem disabled>No sections available</MenuItem>
+                  ) : (
+                    availableSections.map((sectionItem) => (
+                      <MenuItem key={sectionItem.id} value={sectionItem.sectionName}>
+                        {sectionItem.sectionName}
+                      </MenuItem>
+                    ))
+                  )}
                 </TextField>
               </Grid>
               
@@ -979,6 +1162,15 @@ const TeacherDashboard = () => {
               <Box sx={{ mt: 2, p: 1.5, bgcolor: 'rgba(255, 215, 0, 0.1)', borderRadius: 1 }}>
                 <Typography variant="subtitle2" fontWeight="bold">Active Filters:</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                  {/* Display currently selected grade */}
+                  {gradeLevel && (
+                    <Chip 
+                      label={`Grade: ${gradeLevel}`} 
+                      size="small" 
+                      color="secondary" 
+                      variant="filled"
+                    />
+                  )}
                   {filteredSection && (
                     <Chip 
                       label={`Section: ${filteredSection}`} 
@@ -1102,9 +1294,9 @@ const TeacherDashboard = () => {
             )}
           </Paper>
 
-          {/* Assigned Deadline Table - Now separate and unaffected by filters */}
+          {/* Assigned Deadline Table */}
           <Typography variant="h6" sx={{ textAlign: 'left', marginBottom: 2 }}>
-            Assigned Deadlines for {teacherAssignments.assignedGrade || gradeLevel} {teacherSubject || ""}
+            Assigned Deadlines for {gradeLevel} {teacherSubject || ""}
           </Typography>
 
           <TableContainer sx={{ borderRadius: 2, overflow: 'hidden', mb: 4 }}>
@@ -1130,7 +1322,7 @@ const TeacherDashboard = () => {
                 ) : displayedAssignedDeadlines.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
-                      {`No assigned deadlines found for ${teacherAssignments.assignedGrade || gradeLevel} ${teacherSubject || ""}`}
+                      {`No assigned deadlines found for ${gradeLevel} ${teacherSubject || ""}`}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1189,7 +1381,7 @@ const TeacherDashboard = () => {
         open={open} 
         handleClose={handleClose} 
         handleSubmit={handleAddDeadline} 
-        defaultGradeLevel={teacherAssignments.assignedGrade}
+        defaultGradeLevel={teacherAssignments.assignedGrade} // Pass all assigned grades as comma-separated string
         defaultSubject={teacherSubject} // Pass the teacher's subject as the default
       />
     </>

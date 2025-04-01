@@ -39,6 +39,26 @@ function Register() {
   
   const navigate = useNavigate();
 
+  // Add global event listener for Enter key
+  useEffect(() => {
+    const handleGlobalKeyPress = (e) => {
+      if (e.key === "Enter" || e.keyCode === 13) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+          // Only trigger if not already in an input field (to avoid double submission)
+          handleSubmit(e);
+        }
+      }
+    };
+
+    // Add the event listener when component mounts
+    document.addEventListener("keydown", handleGlobalKeyPress);
+
+    // Cleanup the event listener when component unmounts
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyPress);
+    };
+  }, [formData]); // Re-attach when formData changes
+
   // Validation functions
   const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
   const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
@@ -153,6 +173,27 @@ function Register() {
     }
   };
 
+  // Handle key press for enter key on individual fields
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevent form submission on individual fields
+      const form = e.target.form;
+      const index = Array.prototype.indexOf.call(form, e.target);
+      // Move to next input
+      if (form.elements[index + 1]) {
+        form.elements[index + 1].focus();
+      }
+    }
+  };
+
+  // Handle key press for the last field (should submit the form)
+  const handleLastFieldKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
   const handleFocus = (inputName) => {
     setFocusedInput(inputName);
     
@@ -215,7 +256,9 @@ function Register() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    
+    if (isLoading) return; // Prevent multiple submissions
 
     // Validate names and ID number
     if (!isLettersOnly(formData.firstName) || !isLettersOnly(formData.lastName) || 
@@ -300,7 +343,7 @@ function Register() {
         <div style={styles.registerBox}>
           <h2 style={styles.title}>Student Registration</h2>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} method="post">
             <div style={styles.rowInputGroup}>
               <input
                 type="text"
@@ -308,6 +351,7 @@ function Register() {
                 placeholder="First Name"
                 value={formData.firstName}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={{ ...getInputStyle("firstName"), width: "32%" }}
                 onFocus={() => handleFocus("firstName")}
                 onBlur={() => handleBlur("firstName")}
@@ -319,6 +363,7 @@ function Register() {
                 placeholder="Middle Name"
                 value={formData.middleName}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={{ ...getInputStyle("middleName"), width: "32%" }}
                 onFocus={() => handleFocus("middleName")}
                 onBlur={() => handleBlur("middleName")}
@@ -329,6 +374,7 @@ function Register() {
                 placeholder="Last Name"
                 value={formData.lastName}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={{ ...getInputStyle("lastName"), width: "32%" }}
                 onFocus={() => handleFocus("lastName")}
                 onBlur={() => handleBlur("lastName")}
@@ -350,6 +396,7 @@ function Register() {
                 placeholder="ID Number"
                 value={formData.idNumber}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={getInputStyle("idNumber")}
                 onFocus={() => handleFocus("idNumber")}
                 onBlur={() => handleBlur("idNumber")}
@@ -365,6 +412,7 @@ function Register() {
                 name="grade"
                 value={formData.grade}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={{ ...getInputStyle("grade"), width: "48%" }}
                 onFocus={() => handleFocus("grade")}
                 onBlur={() => handleBlur("grade")}
@@ -383,6 +431,7 @@ function Register() {
                 name="section"
                 value={formData.section}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={{ ...getInputStyle("section"), width: "48%" }}
                 onFocus={() => handleFocus("section")}
                 onBlur={() => handleBlur("section")}
@@ -405,6 +454,7 @@ function Register() {
                 name="academicYear"
                 value={formData.academicYear}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={getInputStyle("academicYear")}
                 onFocus={() => handleFocus("academicYear")}
                 onBlur={() => handleBlur("academicYear")}
@@ -425,6 +475,7 @@ function Register() {
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
                 style={getInputStyle("password")}
                 onFocus={() => handleFocus("password")}
                 onBlur={() => handleBlur("password")}
@@ -478,6 +529,7 @@ function Register() {
                 placeholder="Confirm Password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
+                onKeyPress={handleLastFieldKeyPress} // Special handler for last field
                 style={{
                   ...getInputStyle("confirmPassword"),
                   borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#dc3545' : undefined

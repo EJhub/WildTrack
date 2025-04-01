@@ -14,11 +14,10 @@ import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
-import MenuIcon from '@mui/icons-material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 import TablePagination from '@mui/material/TablePagination';
-import { AuthContext } from '../AuthContext'; // Import AuthContext
+import { AuthContext } from '../AuthContext';
 import CircularProgress from '@mui/material/CircularProgress';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -31,27 +30,84 @@ import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import api from '../../utils/api';
 
 const CompletedLibraryHours = () => {
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [academicYear, setAcademicYear] = useState('');
-  const [search, setSearch] = useState('');
+  // Filters state - using a unified approach like in BookLog
+  const [filters, setFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    academicYear: '',
+    quarter: '',
+    gradeLevel: '',
+    section: '',
+    search: ''
+  });
+
+  // Applied filter states (tracking what's currently being used)
+  const [appliedFilters, setAppliedFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    academicYear: '',
+    quarter: '',
+    gradeLevel: '',
+    section: '',
+    search: ''
+  });
+
+  // Table and data states
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [page, setPage] = useState(0);
   const [completedRecords, setCompletedRecords] = useState([]);
+  const [filteredRecords, setFilteredRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [error, setError] = useState(null);
-  const [filteredQuarter, setFilteredQuarter] = useState('');
   
-  // Teacher information
+  // Teacher information states
   const [teacherGradeLevel, setTeacherGradeLevel] = useState('');
   const [teacherSubject, setTeacherSubject] = useState('');
+  const [assignedGradeOptions, setAssignedGradeOptions] = useState([]);
+  const [availableSections, setAvailableSections] = useState([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   
-  // Add sort state
-  const [orderBy, setOrderBy] = useState('name'); // Default sort by date completed
-  const [order, setOrder] = useState('asc'); // Default sort direction (newest first)
+  // Sort states
+  const [orderBy, setOrderBy] = useState('name');
+  const [order, setOrder] = useState('asc');
+  
+  // Academic Year options
+  const academicYearOptions = ['2025-2026','2024-2025', '2023-2024', '2022-2023'];
   
   // Get user context
   const { user } = useContext(AuthContext);
+
+  // Function to fetch sections for a specific grade level
+  const fetchSectionsForGrade = async (grade) => {
+    if (!grade) {
+      setAvailableSections([]);
+      return;
+    }
+    
+    try {
+      setSectionsLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Use the exact grade format without any conversion
+      const response = await api.get(`/grade-sections/grade/${grade}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && response.data.length > 0) {
+        // Store unique sections for dropdown (remove duplicates by section name)
+        setAvailableSections([...new Map(response.data.map(item => 
+          [item.sectionName, item])).values()]);
+      } else {
+        setAvailableSections([]);
+      }
+    } catch (error) {
+      console.error('Error fetching sections for grade:', error);
+      setAvailableSections([]);
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
 
   // First fetch teacher info to get assigned grade level and subject
   useEffect(() => {
@@ -69,14 +125,31 @@ const CompletedLibraryHours = () => {
         });
         
         if (response.data) {
-          // Get teacher's grade level
+          // Handle multiple grade levels
           if (response.data.grade) {
-            // Format grade to match expected format (e.g., "2" to "Grade 2")
-            const formattedGrade = response.data.grade.includes('Grade') 
-              ? response.data.grade 
-              : `Grade ${response.data.grade}`;
+            let assignedGrades = response.data.grade;
             
-            setTeacherGradeLevel(formattedGrade);
+            // Check if multiple grades are assigned (comma-separated)
+            if (assignedGrades.includes(',')) {
+              // Split and format grade levels
+              const gradesArray = assignedGrades.split(',').map(g => {
+                const trimmedGrade = g.trim();
+                return trimmedGrade.includes('Grade') ? trimmedGrade : `Grade ${trimmedGrade}`;
+              });
+              
+              setAssignedGradeOptions(gradesArray);
+              setFilters(prev => ({...prev, gradeLevel: gradesArray[0]})); // Set first grade as default
+              setTeacherGradeLevel(gradesArray[0]);
+            } else {
+              // Single grade level
+              const formattedGrade = assignedGrades.includes('Grade') 
+                ? assignedGrades 
+                : `Grade ${assignedGrades}`;
+              
+              setAssignedGradeOptions([formattedGrade]);
+              setFilters(prev => ({...prev, gradeLevel: formattedGrade}));
+              setTeacherGradeLevel(formattedGrade);
+            }
           } else {
             setError('No grade level assigned to this teacher');
           }
@@ -98,12 +171,77 @@ const CompletedLibraryHours = () => {
     fetchTeacherInfo();
   }, [user]);
 
+  // Effect to load initial data and fetch sections when teacher info is available
+  useEffect(() => {
+    if (teacherGradeLevel && teacherSubject) {
+      // Set the initial grade level for display and fetch sections
+      fetchSectionsForGrade(teacherGradeLevel);
+      
+      // Apply initial filter to load data (runs only once)
+      setTimeout(() => {
+        setAppliedFilters(prev => ({...prev, gradeLevel: teacherGradeLevel}));
+        applyInitialFilters();
+      }, 100);
+    }
+  }, [teacherGradeLevel, teacherSubject]);
+
+  // Fetch available sections when grade level changes and default to "All Sections"
+  useEffect(() => {
+    if (filters.gradeLevel) {
+      fetchSectionsForGrade(filters.gradeLevel);
+      setFilters(prev => ({...prev, section: ''}));
+    }
+  }, [filters.gradeLevel]);
+
+  // Initial filter application - only for first load
+  const applyInitialFilters = async () => {
+    try {
+      setLoading(true);
+      
+      if (!teacherGradeLevel || !teacherSubject) {
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch completed library hours with just grade level and subject
+      await fetchCompletedLibraryHours({
+        gradeLevel: teacherGradeLevel,
+        subject: teacherSubject
+      });
+      
+    } catch (err) {
+      console.error('Error fetching initial data:', err);
+      setError('Failed to fetch library hours data. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Effect to apply sorting when order or orderBy changes
   useEffect(() => {
     if (completedRecords.length > 0) {
-      applySortAndSearch();
+      applyFiltersAndSort();
     }
-  }, [order, orderBy]);
+  }, [order, orderBy, appliedFilters.search, completedRecords]);
+
+  // Filter and sort data based on current state
+  const applyFiltersAndSort = () => {
+    let filtered = [...completedRecords];
+    
+    // Apply search filtering
+    if (appliedFilters.search) {
+      const searchLower = appliedFilters.search.toLowerCase();
+      filtered = filtered.filter(record => 
+        record.name?.toLowerCase().includes(searchLower) ||
+        record.idNumber?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply sorting
+    filtered = getSortedData(filtered);
+    
+    setFilteredRecords(filtered);
+  };
 
   // SortIndicator component for visual feedback
   const SortIndicator = ({ column }) => {
@@ -151,19 +289,7 @@ const CompletedLibraryHours = () => {
     });
   };
 
-  // Apply sort and search filter
-  const applySortAndSearch = () => {
-    // First apply the search filter
-    const searchFiltered = completedRecords.filter((record) => {
-      return record.name?.toLowerCase().includes(search.toLowerCase()) ||
-             record.idNumber?.includes(search);
-    });
-    
-    // Then apply sorting
-    return getSortedData(searchFiltered);
-  };
-
-  // Function to fetch completed library hours data
+  // Function to fetch completed library hours data with improved data processing
   const fetchCompletedLibraryHours = async (params = {}) => {
     try {
       setLoading(true);
@@ -179,33 +305,14 @@ const CompletedLibraryHours = () => {
       // Prepare query parameters
       const queryParams = new URLSearchParams();
       
-      // Always include teacher's grade level and subject
-      if (teacherGradeLevel) {
-        queryParams.append('gradeLevel', teacherGradeLevel);
+      // Add all filter parameters
+      for (const [key, value] of Object.entries(params)) {
+        if (value) {
+          queryParams.append(key, value);
+        }
       }
       
-      if (teacherSubject) {
-        queryParams.append('subject', teacherSubject);
-      }
-      
-      // Add other filter parameters
-      if (params.quarter) {
-        queryParams.append('quarter', params.quarter);
-      }
-      
-      if (params.dateFrom) {
-        queryParams.append('dateFrom', params.dateFrom);
-      }
-      
-      if (params.dateTo) {
-        queryParams.append('dateTo', params.dateTo);
-      }
-      
-      if (params.academicYear) {
-        queryParams.append('academicYear', params.academicYear);
-      }
-      
-      // Make API call to fetch completed library hours using the API utility
+      // Make API call to fetch completed library hours
       const response = await api.get(
         `/library-hours/completed?${queryParams.toString()}`,
         {
@@ -215,7 +322,74 @@ const CompletedLibraryHours = () => {
         }
       );
       
-      setCompletedRecords(response.data);
+      // Process the data to extract grade and section info
+      let processedData = response.data.map(record => {
+        // Default grade to the selected grade level
+        let grade = appliedFilters.gradeLevel || teacherGradeLevel || '';
+        let section = appliedFilters.section || '';
+        
+        // Try to extract from record data
+        if (record.gradeLevel) {
+          grade = record.gradeLevel.includes('Grade') ? record.gradeLevel : `Grade ${record.gradeLevel}`;
+        }
+        
+        if (record.section) {
+          section = record.section;
+        }
+        // If record has a combined gradeSection field
+        else if (record.gradeSection) {
+          const parts = record.gradeSection.split(/\s+/);
+          
+          // Format: "Grade 4 HAPPY"
+          if (parts.length >= 3 && parts[0].toLowerCase() === 'grade') {
+            grade = `${parts[0]} ${parts[1]}`;
+            section = parts.slice(2).join(' ');
+          }
+          // Format: "4 HAPPY" 
+          else if (parts.length >= 2) {
+            grade = parts[0].includes('Grade') ? parts[0] : `Grade ${parts[0]}`;
+            section = parts.slice(1).join(' ');
+          }
+        }
+        
+        // Use "HAPPY" as default section for Grade 4 if nothing else is available
+        if (!section && grade.includes('4')) {
+          section = "HAPPY";
+        }
+        
+        return {
+          ...record,
+          grade: grade,
+          section: section,
+          // Format date if needed
+          dateCompleted: record.dateCompleted ? new Date(record.dateCompleted).toLocaleDateString() : ''
+        };
+      });
+      
+      // Additional client-side filtering for academic years if needed
+      if (params.academicYear && processedData.length > 0) {
+        const [startYear, endYear] = params.academicYear.split('-').map(year => parseInt(year));
+        
+        processedData = processedData.filter(record => {
+            if (!record.dateCompleted) return false;
+            
+            // Parse the date
+            const date = new Date(record.dateCompleted);
+            if (isNaN(date.getTime())) return false;
+            
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1; // 0-based to 1-based
+            
+            // Academic year pattern: Jul-Dec in first year, Jan-Jun in second year
+            return (month >= 7 && month <= 12 && year === startYear) || 
+                   (month >= 1 && month <= 6 && year === endYear);
+        });
+        
+        console.log(`Filtered to ${processedData.length} records for academic year ${params.academicYear}`);
+    }
+      
+      setCompletedRecords(processedData);
+      setFilteredRecords(processedData);
     } catch (err) {
       console.error('Error fetching completed library hours:', err);
       setError('Failed to fetch completed library hours. Please try again later.');
@@ -225,68 +399,75 @@ const CompletedLibraryHours = () => {
     }
   };
 
-  // Effect to load data when teacher info is available
-  useEffect(() => {
-    if (teacherGradeLevel && teacherSubject) {
-      fetchCompletedLibraryHours();
-    }
-  }, [teacherGradeLevel, teacherSubject]);
-
-  // Handle search input change
-  const handleSearch = (e) => {
-    setSearch(e.target.value);
-    setPage(0); // Reset to first page when searching
-  };
-
-  // Date From change handler with mutual exclusivity logic
-  const handleDateFromChange = (e) => {
-    const value = e.target.value;
+  // Handle filter change
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
     
-    // If selecting a date, clear academic year
-    // And ensure dateTo is not earlier than dateFrom
-    if (value) {
+    // Handle mutual exclusivity between date fields and academic year
+    if (name === 'academicYear' && value) {
+      setFilters(prev => ({
+        ...prev,
+        academicYear: value,
+        dateFrom: '',
+        dateTo: ''
+      }));
+    } else if (name === 'dateFrom' && value) {
+      // If selecting a date, clear academic year
+      const dateTo = filters.dateTo;
       if (dateTo && new Date(value) > new Date(dateTo)) {
         // If dateFrom is later than dateTo, reset dateTo
-        setDateTo('');
+        setFilters(prev => ({
+          ...prev,
+          dateFrom: value,
+          dateTo: '',
+          academicYear: ''
+        }));
+      } else {
+        setFilters(prev => ({
+          ...prev,
+          dateFrom: value,
+          academicYear: ''
+        }));
       }
-      setAcademicYear('');
+    } else if (name === 'dateTo' && value) {
+      // If selecting a date, clear academic year
+      setFilters(prev => ({
+        ...prev,
+        dateTo: value, 
+        academicYear: ''
+      }));
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
-    
-    setDateFrom(value);
   };
 
-  // Date To change handler with mutual exclusivity logic
-  const handleDateToChange = (e) => {
-    const value = e.target.value;
-    
-    // If selecting a date, clear academic year
-    if (value) {
-      setAcademicYear('');
-    }
-    
-    setDateTo(value);
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setFilters(prev => ({
+      ...prev,
+      search: e.target.value
+    }));
   };
 
-  // Academic Year change handler with mutual exclusivity logic
-  const handleAcademicYearChange = (e) => {
-    const value = e.target.value;
-    
-    // If selecting academic year, clear date filters
-    if (value) {
-      setDateFrom('');
-      setDateTo('');
-    }
-    
-    setAcademicYear(value);
-  };
-
-  // Apply filters
+  // Apply filters - updates applied filter states and fetches data
   const handleApplyFilters = () => {
+    setIsApplyingFilters(true);
+    
+    // Update applied filters
+    setAppliedFilters({...filters});
+    setTeacherGradeLevel(filters.gradeLevel);
+    
     const filterParams = {
-      dateFrom,
-      dateTo,
-      academicYear,
-      quarter: filteredQuarter
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      academicYear: filters.academicYear,
+      quarter: filters.quarter,
+      gradeLevel: filters.gradeLevel,
+      section: filters.section,
+      subject: teacherSubject
     };
     
     // Remove empty parameters
@@ -294,24 +475,46 @@ const CompletedLibraryHours = () => {
       if (!filterParams[key]) delete filterParams[key];
     });
     
-    fetchCompletedLibraryHours(filterParams);
-    setPage(0); // Reset to first page when filtering
-  };
-
-  // Reset filters
-  const handleResetFilters = () => {
-    setDateFrom('');
-    setDateTo('');
-    setAcademicYear('');
-    setFilteredQuarter('');
+    fetchCompletedLibraryHours(filterParams)
+      .finally(() => {
+        setIsApplyingFilters(false);
+        setPage(0); // Reset to first page
+      });
     
-    fetchCompletedLibraryHours();
-    setPage(0); // Reset to first page when resetting filters
+    // Build filter description for toast
+    const filterDescriptions = [];
+    if (filters.gradeLevel) filterDescriptions.push(`Grade: ${filters.gradeLevel}`);
+    if (filters.section) filterDescriptions.push(`Section: ${filters.section}`);
+    if (filters.quarter) filterDescriptions.push(`Quarter: ${filters.quarter}`);
+    if (teacherSubject) filterDescriptions.push(`Subject: ${teacherSubject}`);
+    if (filters.dateFrom) filterDescriptions.push(`From: ${filters.dateFrom}`);
+    if (filters.dateTo) filterDescriptions.push(`To: ${filters.dateTo}`);
+    if (filters.academicYear) filterDescriptions.push(`AY: ${filters.academicYear}`);
+    
+    toast.info(`Filters applied: ${filterDescriptions.length > 0 ? filterDescriptions.join(', ') : 'None'}`);
   };
 
-  // Get filtered and sorted data
-  const filteredAndSortedRecords = applySortAndSearch();
+  // Reset filters - clears filter states and fetches data with default filters
+  const handleResetFilters = () => {
+    // Keep the grade level but reset other filters
+    const currentGradeLevel = filters.gradeLevel;
+    setFilters({
+      dateFrom: '',
+      dateTo: '',
+      academicYear: '',
+      quarter: '',
+      gradeLevel: currentGradeLevel,
+      section: '',
+      search: ''
+    });
+    
+    // Apply the cleared filters (will happen on next render)
+    setTimeout(() => {
+      handleApplyFilters();
+    }, 0);
+  };
 
+  // Pagination handlers
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -322,10 +525,20 @@ const CompletedLibraryHours = () => {
   };
   
   // Get current page records
-  const displayedRecords = filteredAndSortedRecords.slice(
+  const displayedRecords = filteredRecords.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  // Check if there are any active filters
+  const hasActiveFilters = () => {
+    return appliedFilters.dateFrom || 
+           appliedFilters.dateTo || 
+           appliedFilters.academicYear || 
+           appliedFilters.quarter || 
+           appliedFilters.search || 
+           appliedFilters.section;
+  };
 
   // Common style for sortable table headers
   const sortableHeaderStyle = {
@@ -386,7 +599,8 @@ const CompletedLibraryHours = () => {
                 fontSize: '32px'
               }}
             >
-              Completed Library Hours - {teacherGradeLevel} - {teacherSubject}
+              Completed Library Hours - {appliedFilters.gradeLevel || teacherGradeLevel} - {teacherSubject}
+              {appliedFilters.section && ` - ${appliedFilters.section}`}
             </Typography>
             <Typography 
               sx={{ 
@@ -395,9 +609,9 @@ const CompletedLibraryHours = () => {
                 textAlign: 'right',
               }}
             >
-              Total no. of completed library hours: {filteredAndSortedRecords.length}
+              Total no. of completed library hours: {filteredRecords.length}
               <br />
-              Total no. of students: {new Set(filteredAndSortedRecords.map(record => record.idNumber)).size}
+              Total no. of students: {new Set(filteredRecords.map(record => record.idNumber)).size}
             </Typography>
           </Box>
 
@@ -410,11 +624,11 @@ const CompletedLibraryHours = () => {
             }}
           >
             <TextField
-              placeholder="Type here.."
+              placeholder="Type here to search..."
               variant="outlined"
               size="small"
-              value={search}
-              onChange={handleSearch}
+              value={filters.search}
+              onChange={handleSearchChange}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
@@ -442,14 +656,74 @@ const CompletedLibraryHours = () => {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              {/* Grade Level Filter - Always visible but disabled when teacher has only one grade */}
               <TextField
+                name="gradeLevel"
+                label="Grade Level"
+                select
+                variant="outlined"
+                size="small"
+                value={filters.gradeLevel}
+                onChange={handleFilterChange}
+                disabled={assignedGradeOptions.length <= 1}
+                sx={{
+                  backgroundColor: '#fff',
+                  borderRadius: '15px',
+                  minWidth: '150px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
+                }}
+              >
+                {assignedGradeOptions.map((grade) => (
+                  <MenuItem key={grade} value={grade}>
+                    {grade}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              {/* Section Filter */}
+              <TextField
+                name="section"
+                label="Section"
+                select
+                variant="outlined"
+                size="small"
+                value={filters.section}
+                onChange={handleFilterChange}
+                disabled={sectionsLoading} // Disable while sections are loading
+                sx={{
+                  backgroundColor: '#fff',
+                  borderRadius: '15px',
+                  minWidth: '150px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
+                }}
+              >
+                <MenuItem value="">All Sections</MenuItem>
+                {sectionsLoading ? (
+                  <MenuItem disabled>Loading sections...</MenuItem>
+                ) : availableSections.length === 0 ? (
+                  <MenuItem disabled>No sections available</MenuItem>
+                ) : (
+                  availableSections.map((sectionItem) => (
+                    <MenuItem key={sectionItem.id || sectionItem.sectionName} value={sectionItem.sectionName}>
+                      {sectionItem.sectionName}
+                    </MenuItem>
+                  ))
+                )}
+              </TextField>
+              
+              <TextField
+                name="dateFrom"
                 label="Date From"
                 type="date"
                 variant="outlined"
                 size="small"
-                value={dateFrom}
-                onChange={handleDateFromChange}
-                disabled={!!academicYear} // Disable if academicYear has a value
+                value={filters.dateFrom}
+                onChange={handleFilterChange}
+                disabled={!!filters.academicYear} // Disable if academicYear has a value
                 sx={{ 
                   backgroundColor: '#fff', 
                   borderRadius: '15px',
@@ -460,15 +734,16 @@ const CompletedLibraryHours = () => {
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
+                name="dateTo"
                 label="Date To"
                 type="date"
                 variant="outlined"
                 size="small"
-                value={dateTo}
-                onChange={handleDateToChange}
-                disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
+                value={filters.dateTo}
+                onChange={handleFilterChange}
+                disabled={!!filters.academicYear || !filters.dateFrom} // Disable if academicYear has a value or dateFrom is empty
                 inputProps={{
-                  min: dateFrom || undefined // Set minimum date to dateFrom
+                  min: filters.dateFrom || undefined // Set minimum date to dateFrom
                 }}
                 sx={{ 
                   backgroundColor: '#fff', 
@@ -481,12 +756,13 @@ const CompletedLibraryHours = () => {
               />
               {/* Quarter filter */}
               <TextField
+                name="quarter"
                 label="Quarter"
                 select
                 variant="outlined"
                 size="small"
-                value={filteredQuarter}
-                onChange={(e) => setFilteredQuarter(e.target.value)}
+                value={filters.quarter}
+                onChange={handleFilterChange}
                 sx={{ backgroundColor: '#fff', borderRadius: '15px', minWidth: '150px' }}
               >
                 <MenuItem value="">All Quarters</MenuItem>
@@ -496,13 +772,14 @@ const CompletedLibraryHours = () => {
                 <MenuItem value="Fourth">Fourth</MenuItem>
               </TextField>
               <TextField
+                name="academicYear"
                 label="Academic Year"
                 select
                 variant="outlined"
                 size="small"
-                value={academicYear}
-                onChange={handleAcademicYearChange}
-                disabled={!!dateFrom || !!dateTo} // Disable if either date has a value
+                value={filters.academicYear}
+                onChange={handleFilterChange}
+                disabled={!!filters.dateFrom || !!filters.dateTo} // Disable if either date has a value
                 sx={{ 
                   backgroundColor: '#fff', 
                   borderRadius: '15px', 
@@ -513,24 +790,28 @@ const CompletedLibraryHours = () => {
                 }}
               >
                 <MenuItem value="">Select Academic Year</MenuItem>
-                <MenuItem value="2024-2025">2024-2025</MenuItem>
-                <MenuItem value="2023-2024">2023-2024</MenuItem>
-                <MenuItem value="2022-2023">2022-2023</MenuItem>
+                {academicYearOptions.map((year) => (
+                  <MenuItem key={year} value={year}>
+                    {year}
+                  </MenuItem>
+                ))}
               </TextField>
               <Button
                 variant="contained"
                 onClick={handleApplyFilters}
+                disabled={isApplyingFilters}
                 sx={{
                   backgroundColor: "#FFD700",
                   color: "#000",
                   "&:hover": { backgroundColor: "#FFC107" },
                 }}
               >
-                Filter
+                {isApplyingFilters ? "Applying..." : "Apply Filters"}
               </Button>
               <Button
                 variant="outlined"
                 onClick={handleResetFilters}
+                disabled={!hasActiveFilters() || isApplyingFilters}
                 sx={{
                   borderColor: "#FFD700",
                   color: "#000",
@@ -583,6 +864,28 @@ const CompletedLibraryHours = () => {
                       </Box>
                     </Tooltip>
                   </TableCell>
+                  {/* Added Grade Column */}
+                  <TableCell 
+                    onClick={() => handleRequestSort('grade')}
+                    sx={sortableHeaderStyle}
+                  >
+                    <Tooltip title="Sort by grade">
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        Grade <SortIndicator column="grade" />
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                  {/* Added Section Column */}
+                  <TableCell 
+                    onClick={() => handleRequestSort('section')}
+                    sx={sortableHeaderStyle}
+                  >
+                    <Tooltip title="Sort by section">
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        Section <SortIndicator column="section" />
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell 
                     onClick={() => handleRequestSort('subject')}
                     sx={sortableHeaderStyle}
@@ -618,20 +921,20 @@ const CompletedLibraryHours = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                       <CircularProgress size={32} sx={{ mr: 2 }} />
                       Loading completed library hours...
                     </TableCell>
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'error.main' }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'error.main' }}>
                       {error}
                     </TableCell>
                   </TableRow>
                 ) : displayedRecords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={7} align="center">
                       No completed library hours found matching your criteria
                     </TableCell>
                   </TableRow>
@@ -640,6 +943,8 @@ const CompletedLibraryHours = () => {
                     <TableRow key={index} hover>
                       <TableCell>{record.idNumber}</TableCell>
                       <TableCell>{record.name}</TableCell>
+                      <TableCell>{record.grade || appliedFilters.gradeLevel}</TableCell>
+                      <TableCell>{record.section || (record.grade?.includes('4') ? 'HAPPY' : '')}</TableCell>
                       <TableCell>{record.subject}</TableCell>
                       <TableCell>{record.quarter}</TableCell>
                       <TableCell>{record.dateCompleted}</TableCell>
@@ -652,7 +957,7 @@ const CompletedLibraryHours = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={filteredAndSortedRecords.length}
+              count={filteredRecords.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}

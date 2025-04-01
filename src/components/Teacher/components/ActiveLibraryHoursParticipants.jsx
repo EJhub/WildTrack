@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -25,6 +25,8 @@ import { AuthContext } from '../../AuthContext'; // Import AuthContext
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from '../../../utils/api'; // Import the API utility
+import { exportToPDF, exportToExcel } from '../../../utils/export-utils';
+
 
 // Register ChartJS components
 ChartJS.register(
@@ -40,7 +42,11 @@ const ActiveLibraryHoursParticipants = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
+  
+  // Add a pendingGradeLevel state to track selection before applying
+  const [pendingGradeLevel, setPendingGradeLevel] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
+  
   const [section, setSection] = useState('');
   const [dataView, setDataView] = useState('Monthly'); // Default to Monthly for better academic year view
   const [tempDataView, setTempDataView] = useState('Monthly'); // Temporary data view that only applies when filters are applied
@@ -53,6 +59,10 @@ const ActiveLibraryHoursParticipants = () => {
   const [teacherGradeLevel, setTeacherGradeLevel] = useState('');
   const [teacherSubject, setTeacherSubject] = useState('');
   const [teacherSection, setTeacherSection] = useState('');
+  // Add state for assigned grade options
+  const [assignedGradeOptions, setAssignedGradeOptions] = useState([]);
+  // Add sections loading state
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   
   // Loading and error states
   const [loading, setLoading] = useState(true);
@@ -63,6 +73,9 @@ const ActiveLibraryHoursParticipants = () => {
   
   // Get user context
   const { user } = useContext(AuthContext);
+
+  // Add ref for chart container to use with export
+  const chartRef = useRef(null);
 
   // Fetch teacher info
   useEffect(() => {
@@ -83,14 +96,33 @@ const ActiveLibraryHoursParticipants = () => {
         const response = await api.get(`/users/${user.idNumber}`);
         
         if (response.data) {
-          // Format grade to match expected format (e.g., "2" to "Grade 2")
+          // Handle grade level assignments
           if (response.data.grade) {
-            const formattedGrade = response.data.grade.includes('Grade') 
-              ? response.data.grade 
-              : `Grade ${response.data.grade}`;
+            let assignedGrades = response.data.grade;
             
-            setTeacherGradeLevel(formattedGrade);
-            setGradeLevel(formattedGrade);
+            // Check if multiple grades are assigned (comma-separated)
+            if (assignedGrades.includes(',')) {
+              // Split and format grade levels
+              const gradesArray = assignedGrades.split(',').map(g => {
+                const trimmedGrade = g.trim();
+                return trimmedGrade.includes('Grade') ? trimmedGrade : `Grade ${trimmedGrade}`;
+              });
+              
+              setAssignedGradeOptions(gradesArray);
+              setTeacherGradeLevel(gradesArray[0]); // Set first grade as default
+              setGradeLevel(gradesArray[0]);
+              setPendingGradeLevel(gradesArray[0]); // Initialize pending grade level
+            } else {
+              // Single grade level
+              const formattedGrade = assignedGrades.includes('Grade') 
+                ? assignedGrades 
+                : `Grade ${assignedGrades}`;
+              
+              setAssignedGradeOptions([formattedGrade]);
+              setTeacherGradeLevel(formattedGrade);
+              setGradeLevel(formattedGrade);
+              setPendingGradeLevel(formattedGrade); // Initialize pending grade level
+            }
           }
           
           // Get teacher's subject
@@ -98,11 +130,10 @@ const ActiveLibraryHoursParticipants = () => {
             setTeacherSubject(response.data.subject);
           }
           
-          // Get teacher's section if assigned
-          if (response.data.section) {
-            setTeacherSection(response.data.section);
-            setSection(response.data.section);
-          }
+          // Get teacher's section if assigned - leave blank for "All Sections" regardless of what's assigned
+          // We don't want to preselect any section, even if the teacher has one assigned
+          setTeacherSection('');
+          setSection('');
         }
       } catch (err) {
         console.error('Error fetching teacher info:', err);
@@ -139,9 +170,13 @@ const ActiveLibraryHoursParticipants = () => {
         queryParams.append('subject', teacherSubject);
       }
       
-      // Add other filter parameters
-      if (params.gradeLevel || teacherGradeLevel) {
-        queryParams.append('gradeLevel', params.gradeLevel || teacherGradeLevel);
+      // Add other filter parameters - use explicit gradeLevel parameter if provided
+      if (params.gradeLevel) {
+        queryParams.append('gradeLevel', params.gradeLevel);
+      } else if (gradeLevel) {
+        queryParams.append('gradeLevel', gradeLevel);
+      } else if (teacherGradeLevel) {
+        queryParams.append('gradeLevel', teacherGradeLevel);
       }
       
       // Handle section filtering - use explicit section parameter if provided
@@ -194,7 +229,9 @@ const ActiveLibraryHoursParticipants = () => {
       if (params.dataView && !params.academicYear) filterMsg.push(`View: ${params.dataView}`);
       
       if (filterMsg.length > 0) {
-        toast.info(`Viewing data for ${teacherGradeLevel || gradeLevel} - ${filterMsg.join(', ')}`);
+        // Use the explicit grade level or the currently set grade level
+        const displayGradeLevel = params.gradeLevel || gradeLevel || teacherGradeLevel;
+        toast.info(`Viewing data for ${displayGradeLevel} - ${filterMsg.join(', ')}`);
       }
     } catch (err) {
       console.error('Error fetching participants data:', err);
@@ -267,51 +304,86 @@ const ActiveLibraryHoursParticipants = () => {
     return months[abbr?.toUpperCase()] || -1;
   };
 
-  // Fetch available sections when grade level changes
-  useEffect(() => {
-    const fetchSections = async () => {
-      if (!gradeLevel) return;
+  // Function to fetch sections for a specific grade level
+  const fetchSectionsForGrade = async (grade) => {
+    if (!grade) {
+      setAvailableSections([]);
+      return;
+    }
+    
+    try {
+      setSectionsLoading(true);
+      const token = localStorage.getItem('token');
       
-      try {
-        const token = localStorage.getItem('token');
-        // Set token in API utility headers
-        if (token) {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const response = await api.get(`/grade-sections/grade/${gradeLevel}`);
-        
-        if (response.data && response.data.length > 0) {
-          setAvailableSections(response.data);
-          console.log(`Fetched ${response.data.length} sections for ${gradeLevel}`);
-        } else {
-          setAvailableSections([]);
-          console.log(`No sections found for ${gradeLevel}`);
-        }
-        
-        // Reset section selection when grade level changes
-        if (section && section !== '') {
-          setSection('');
-        }
-      } catch (error) {
-        console.error("Error fetching grade sections:", error);
-        toast.error("Failed to fetch sections for the selected grade");
+      // Set token in API utility headers
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await api.get(`/grade-sections/grade/${grade}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && response.data.length > 0) {
+        // Store unique sections for dropdown (remove duplicates by section name)
+        setAvailableSections([...new Map(response.data.map(item => 
+          [item.sectionName, item])).values()]);
+      } else {
         setAvailableSections([]);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching sections for grade:', error);
+      toast.error("Failed to load sections for the selected grade");
+      setAvailableSections([]);
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
+
+  // Handle grade level change - ONLY update pendingGradeLevel, not actual gradeLevel
+  const handleGradeLevelChange = (e) => {
+    const newGradeLevel = e.target.value;
+    setPendingGradeLevel(newGradeLevel);
     
-    fetchSections();
+    // Fetch sections for the new grade level (but don't apply the filter yet)
+    if (newGradeLevel) {
+      fetchSectionsForGrade(newGradeLevel);
+      
+      // Reset section selection when grade level changes
+      setSection('');
+    } else {
+      setAvailableSections([]);
+    }
+  };
+
+  // Fetch available sections when grade level changes
+  // Only do this on INITIAL load or when actual gradeLevel state changes (not pending)
+  useEffect(() => {
+    if (gradeLevel) {
+      fetchSectionsForGrade(gradeLevel);
+    }
   }, [gradeLevel]);
 
-  // Fetch data when teacher info is available
+  // Fetch data when teacher info is available and set initial applied filters
   useEffect(() => {
-    if (teacherGradeLevel && teacherSubject) {
-      // Initial data fetch with just teacher's grade level
+    if (teacherGradeLevel) {
+      // Set initial applied filters with teacher's grade level and section
+      // If teacher has an assigned section, use it; otherwise use empty string for "All Sections"
+      const initialSection = teacherSection || '';
+      
+      setAppliedFilters(prev => ({
+        ...prev,
+        gradeLevel: teacherGradeLevel,
+        section: initialSection
+      }));
+      
+      // Initial data fetch with teacher's grade level and section
       fetchParticipantsData({
-        gradeLevel: teacherGradeLevel
+        gradeLevel: teacherGradeLevel,
+        section: initialSection
       });
     }
-  }, [teacherGradeLevel, teacherSubject, fetchParticipantsData]);
+  }, [teacherGradeLevel, teacherSection, fetchParticipantsData]);
 
   // Date From change handler with mutual exclusivity logic
   const handleDateFromChange = (e) => {
@@ -356,8 +428,10 @@ const ActiveLibraryHoursParticipants = () => {
     setAcademicYear(value);
   };
 
-  // Track currently applied filters
+  // Track currently applied filters - initialize with empty values
+  // (Will be populated after teacher info is loaded)
   const [appliedFilters, setAppliedFilters] = useState({
+    gradeLevel: '', // Add gradeLevel to the applied filters state
     section: '',
     academicYear: '',
     dateRange: { from: '', to: '' },
@@ -372,20 +446,24 @@ const ActiveLibraryHoursParticipants = () => {
       viewToUse = 'Monthly';
     }
     
-    // Update applied filters state including dataView
+    // Update applied filters state including dataView and gradeLevel
     setAppliedFilters({
+      gradeLevel: pendingGradeLevel, // Store the applied grade level
       section: section,
       academicYear: academicYear,
       dateRange: { from: dateFrom, to: dateTo },
       dataView: viewToUse
     });
     
+    // NOW apply the pendingGradeLevel to the actual gradeLevel state
+    setGradeLevel(pendingGradeLevel);
+    
     // Apply the dataView to the actual state
     setDataView(viewToUse);
     
-    // Apply the filters to the data with explicit dataView parameter
+    // Apply all filters to the data with explicit parameters
     fetchParticipantsData({
-      gradeLevel,
+      gradeLevel: pendingGradeLevel, // Use the pending grade level here
       section,
       academicYear,
       dateFrom,
@@ -396,6 +474,9 @@ const ActiveLibraryHoursParticipants = () => {
 
   // Handle clear filters button click
   const handleClearFilters = () => {
+    // Reset to teacher's defaults
+    setPendingGradeLevel(teacherGradeLevel);
+    setGradeLevel(teacherGradeLevel);
     setSection('');
     setDateFrom('');
     setDateTo('');
@@ -404,6 +485,7 @@ const ActiveLibraryHoursParticipants = () => {
     setDataView('Monthly');
     
     setAppliedFilters({
+      gradeLevel: teacherGradeLevel,
       section: '',
       academicYear: '',
       dateRange: { from: '', to: '' },
@@ -412,7 +494,7 @@ const ActiveLibraryHoursParticipants = () => {
     
     // Refresh data with cleared filters and Monthly view
     fetchParticipantsData({
-      gradeLevel,
+      gradeLevel: teacherGradeLevel,
       dataView: 'Monthly'
     });
     
@@ -459,11 +541,14 @@ const ActiveLibraryHoursParticipants = () => {
     
     // Update the chart options
     setChartOptions(updatedOptions);
-  }, [appliedFilters, gradeLevel]);
+  }, [appliedFilters]);
   
   // Dynamic chart title function
   const getChartTitle = () => {
-    const parts = [`${gradeLevel}`];
+    // Use the applied grade level from appliedFilters state
+    // This ensures the title only updates when filters are applied
+    const displayGradeLevel = appliedFilters.gradeLevel || gradeLevel || teacherGradeLevel;
+    const parts = [displayGradeLevel];
     
     if (appliedFilters.section) {
       parts.push(`Section ${appliedFilters.section}`);
@@ -517,6 +602,71 @@ const ActiveLibraryHoursParticipants = () => {
       },
     },
   });
+
+  // PDF export handler function
+  const handleExportToPDF = async () => {
+    try {
+      // Create a descriptive title that includes filter information
+      const chartTitle = `Active Library Hours Participants - ${teacherSubject || 'All Subjects'}`;
+      const fileName = `active-participants-${new Date().toISOString().split('T')[0]}`;
+      
+      // Add any active filters to the title
+      const titleParts = [chartTitle];
+      if (appliedFilters.gradeLevel) titleParts.push(appliedFilters.gradeLevel);
+      if (appliedFilters.section) titleParts.push(`Section ${appliedFilters.section}`);
+      if (appliedFilters.academicYear) titleParts.push(`AY ${appliedFilters.academicYear}`);
+      
+      const fullTitle = titleParts.join(' - ');
+      
+      const success = await exportToPDF(
+        'chart-container',
+        fileName,
+        fullTitle
+      );
+      
+      if (success) {
+        toast.success(`Chart exported to PDF successfully`);
+      } else {
+        toast.error(`Failed to export chart to PDF`);
+      }
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast.error(`Error exporting to PDF: ${error.message}`);
+    }
+  };
+
+  // Excel export handler function
+  const handleExportToExcel = () => {
+    try {
+      // Create a descriptive title that includes filter information
+      const chartTitle = `Active Library Hours Participants - ${teacherSubject || 'All Subjects'}`;
+      const fileName = `active-participants-${new Date().toISOString().split('T')[0]}`;
+      
+      // Add any active filters to the title
+      const titleParts = [chartTitle];
+      if (appliedFilters.gradeLevel) titleParts.push(appliedFilters.gradeLevel);
+      if (appliedFilters.section) titleParts.push(`Section ${appliedFilters.section}`);
+      if (appliedFilters.academicYear) titleParts.push(`AY ${appliedFilters.academicYear}`);
+      
+      const fullTitle = titleParts.join(' - ');
+      
+      // For Excel export, we use the chartData directly
+      const success = exportToExcel(
+        chartData,
+        fileName,
+        fullTitle
+      );
+      
+      if (success) {
+        toast.success(`Chart exported to Excel successfully`);
+      } else {
+        toast.error(`Failed to export chart to Excel`);
+      }
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error(`Error exporting to Excel: ${error.message}`);
+    }
+  };
 
   return (
     <>
@@ -599,6 +749,7 @@ const ActiveLibraryHoursParticipants = () => {
                 <MenuItem value="2022-2023">2022-2023</MenuItem>
                 <MenuItem value="2023-2024">2023-2024</MenuItem>
                 <MenuItem value="2024-2025">2024-2025</MenuItem>
+                <MenuItem value="2025-2026">2025-2026</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -642,19 +793,29 @@ const ActiveLibraryHoursParticipants = () => {
             <FormControl sx={{ width: '180px' }}>
               <Select
                 size="small"
-                value={gradeLevel}
-                onChange={(e) => setGradeLevel(e.target.value)}
+                value={pendingGradeLevel} // Show pending selection in dropdown
+                onChange={handleGradeLevelChange}
                 sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
                 displayEmpty
-                disabled={!!teacherGradeLevel} // Disable if teacher has assigned grade
+                disabled={assignedGradeOptions.length <= 1} // Only disable if one or zero grade options
               >
-                <MenuItem value="">Choose here...</MenuItem>
-                <MenuItem value="Grade 1">Grade 1</MenuItem>
-                <MenuItem value="Grade 2">Grade 2</MenuItem>
-                <MenuItem value="Grade 3">Grade 3</MenuItem>
-                <MenuItem value="Grade 4">Grade 4</MenuItem>
-                <MenuItem value="Grade 5">Grade 5</MenuItem>
-                <MenuItem value="Grade 6">Grade 6</MenuItem>
+                {assignedGradeOptions.length > 0 ? (
+                  assignedGradeOptions.map((grade) => (
+                    <MenuItem key={grade} value={grade}>
+                      {grade}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <>
+                    <MenuItem value="">Choose here...</MenuItem>
+                    <MenuItem value="Grade 1">Grade 1</MenuItem>
+                    <MenuItem value="Grade 2">Grade 2</MenuItem>
+                    <MenuItem value="Grade 3">Grade 3</MenuItem>
+                    <MenuItem value="Grade 4">Grade 4</MenuItem>
+                    <MenuItem value="Grade 5">Grade 5</MenuItem>
+                    <MenuItem value="Grade 6">Grade 6</MenuItem>
+                  </>
+                )}
               </Select>
             </FormControl>
           </Box>
@@ -666,16 +827,29 @@ const ActiveLibraryHoursParticipants = () => {
                 size="small"
                 value={section}
                 onChange={(e) => setSection(e.target.value)}
-                sx={{ backgroundColor: '#fff', borderRadius: '15px' }}
+                sx={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '15px',
+                  "& .Mui-disabled": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  }
+                }}
                 displayEmpty
-                // Always enabled to allow section changes
+                renderValue={(selected) => selected || "All Sections"} // Explicitly render "All Sections" when value is empty
+                disabled={sectionsLoading} // Disable while sections are loading
               >
                 <MenuItem value="">All Sections</MenuItem>
-                {availableSections.map((sectionItem) => (
-                  <MenuItem key={sectionItem.id} value={sectionItem.sectionName}>
-                    {sectionItem.sectionName}
-                  </MenuItem>
-                ))}
+                {sectionsLoading ? (
+                  <MenuItem disabled>Loading sections...</MenuItem>
+                ) : availableSections.length === 0 ? (
+                  <MenuItem disabled>No sections available</MenuItem>
+                ) : (
+                  availableSections.map((sectionItem) => (
+                    <MenuItem key={sectionItem.id || sectionItem.sectionName} value={sectionItem.sectionName}>
+                      {sectionItem.sectionName}
+                    </MenuItem>
+                  ))
+                )}
               </Select>
             </FormControl>
           </Box>
@@ -707,7 +881,7 @@ const ActiveLibraryHoursParticipants = () => {
       {/* Active Filters and Context */}
       {(appliedFilters.section || appliedFilters.academicYear || 
         appliedFilters.dateRange.from || appliedFilters.dateRange.to || 
-        teacherGradeLevel || teacherSubject) && (
+        appliedFilters.gradeLevel || teacherSubject) && (
         <Box sx={{ 
           mt: 1, 
           mb: 2, 
@@ -718,9 +892,9 @@ const ActiveLibraryHoursParticipants = () => {
         }}>
           <Typography variant="subtitle2" fontWeight="bold">Active Filters and Context:</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-            {teacherGradeLevel && (
+            {appliedFilters.gradeLevel && (
               <Chip 
-                label={`Grade: ${teacherGradeLevel}`} 
+                label={`Grade: ${appliedFilters.gradeLevel}`} 
                 size="small" 
                 color="secondary" 
                 variant="filled"
@@ -812,12 +986,16 @@ const ActiveLibraryHoursParticipants = () => {
         </Box>
         
         <Typography variant="body1" sx={{ textAlign: 'center', marginBottom: 2 }}>
-          {dataView} View for {teacherGradeLevel} 
+          {dataView} View for {appliedFilters.gradeLevel || gradeLevel || teacherGradeLevel} 
           {appliedFilters.section ? ` - Section ${appliedFilters.section}` : ''}
           {appliedFilters.academicYear ? ` - Academic Year ${appliedFilters.academicYear}` : ''}
         </Typography>
         
-        <Box sx={{ height: '350px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Box 
+          id="chart-container" 
+          ref={chartRef} 
+          sx={{ height: '350px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+        >
           {loading ? (
             <CircularProgress />
           ) : error ? (
@@ -832,6 +1010,7 @@ const ActiveLibraryHoursParticipants = () => {
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, marginTop: 3 }}>
           <Button
             variant="contained"
+            onClick={handleExportToPDF}
             sx={{
               backgroundColor: '#FFD700',
               color: '#000',
@@ -845,6 +1024,7 @@ const ActiveLibraryHoursParticipants = () => {
           </Button>
           <Button
             variant="contained"
+            onClick={handleExportToExcel}
             sx={{
               backgroundColor: '#8C383E',
               color: '#fff',

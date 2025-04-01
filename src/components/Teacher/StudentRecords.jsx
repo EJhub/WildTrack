@@ -14,45 +14,93 @@ import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
-import MenuIcon from '@mui/icons-material/Menu';
 import Button from '@mui/material/Button';
 import TablePagination from '@mui/material/TablePagination';
 import { AuthContext } from '../AuthContext';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
-// Import icons for sort indicators
+import Grid from '@mui/material/Grid';
+// Import icons for sort indicators and filters
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import ClearIcon from '@mui/icons-material/Clear';
 // Import API utility
 import api from '../../utils/api';
 
 const StudentRecords = () => {
+  // Main data states
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
+
+  // Pending filter states (UI selection - not yet applied)
+  const [pendingSearch, setPendingSearch] = useState('');
+  const [pendingGradeLevel, setPendingGradeLevel] = useState('');
+  const [pendingSection, setPendingSection] = useState('');
+  const [pendingQuarter, setPendingQuarter] = useState('');
+  const [pendingProgress, setPendingProgress] = useState(''); // New progress filter
+
+  // Applied filter states (actually used in data fetching)
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [academicYear, setAcademicYear] = useState('');
+  const [selectedGradeLevel, setSelectedGradeLevel] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [quarter, setQuarter] = useState('');
+  const [progress, setProgress] = useState(''); // New progress filter state
+
+  // UI states
   const [loading, setLoading] = useState(true);
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [error, setError] = useState(null);
   const [teacherGradeLevel, setTeacherGradeLevel] = useState('');
   const [teacherSubject, setTeacherSubject] = useState('');
+  const [assignedGradeOptions, setAssignedGradeOptions] = useState([]);
+  const [availableSections, setAvailableSections] = useState([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
 
   // Pagination states
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   
-  // Add sort state
-  const [orderBy, setOrderBy] = useState('name'); // Default sort by name
-  const [order, setOrder] = useState('asc'); // Default sort direction
+  // Sorting states
+  const [orderBy, setOrderBy] = useState('name');
+  const [order, setOrder] = useState('asc');
   
   // Get current user from AuthContext
   const { user } = useContext(AuthContext);
 
-  // First fetch teacher info to get assigned grade level and subject
+  // Function to fetch sections for a specific grade level
+  const fetchSectionsForGrade = async (grade) => {
+    if (!grade) {
+      setAvailableSections([]);
+      return;
+    }
+    
+    try {
+      setSectionsLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await api.get(`/grade-sections/grade/${grade}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && response.data.length > 0) {
+        // Store unique sections for dropdown (remove duplicates by section name)
+        setAvailableSections([...new Map(response.data.map(item => 
+          [item.sectionName, item])).values()]);
+      } else {
+        setAvailableSections([]);
+      }
+    } catch (error) {
+      console.error('Error fetching sections for grade:', error);
+      setAvailableSections([]);
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
+
+  // First fetch teacher info to get assigned grade levels and subject
   useEffect(() => {
     const fetchTeacherInfo = async () => {
       if (!user || user.role !== 'Teacher' || !user.idNumber) {
@@ -68,13 +116,29 @@ const StudentRecords = () => {
         });
         
         if (response.data) {
-          // Format grade to match expected format (e.g., "2" to "Grade 2")
+          // Handle multiple grade levels
           if (response.data.grade) {
-            const formattedGrade = response.data.grade.includes('Grade') 
-              ? response.data.grade 
-              : `Grade ${response.data.grade}`;
+            let assignedGrades = response.data.grade;
             
-            setTeacherGradeLevel(formattedGrade);
+            // Check if multiple grades are assigned (comma-separated)
+            if (assignedGrades.includes(',')) {
+              // Split and format grade levels
+              const gradesArray = assignedGrades.split(',').map(g => {
+                const trimmedGrade = g.trim();
+                return trimmedGrade.includes('Grade') ? trimmedGrade : `Grade ${trimmedGrade}`;
+              });
+              
+              setAssignedGradeOptions(gradesArray);
+              setPendingGradeLevel(gradesArray[0]); // Set first grade as default in pending state
+            } else {
+              // Single grade level
+              const formattedGrade = assignedGrades.includes('Grade') 
+                ? assignedGrades 
+                : `Grade ${assignedGrades}`;
+              
+              setAssignedGradeOptions([formattedGrade]);
+              setPendingGradeLevel(formattedGrade);
+            }
           }
           
           // Set the teacher's subject
@@ -93,67 +157,245 @@ const StudentRecords = () => {
     fetchTeacherInfo();
   }, [user]);
 
-  // Fetch students only after we have the teacher's subject
+  // Initial data loading effect - only runs once after teacher info is loaded
   useEffect(() => {
-    const fetchStudents = async () => {
-      if (!teacherSubject) return; // Only fetch if we have the teacher's subject
+    if (pendingGradeLevel && teacherSubject && !selectedGradeLevel) {
+      // Set the initial grade level for display and fetch sections
+      setTeacherGradeLevel(pendingGradeLevel);
+      fetchSectionsForGrade(pendingGradeLevel);
       
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
+      // Apply initial filter to load data (runs only once)
+      setTimeout(() => {
+        setSelectedGradeLevel(pendingGradeLevel);
+        applyInitialFilters();
+      }, 100);
+    }
+  }, [pendingGradeLevel, teacherSubject]);
+
+  // Fetch available sections when grade level changes and default to "All Sections"
+  useEffect(() => {
+    if (pendingGradeLevel) {
+      // Fetch sections and then check if we should apply "All Sections"
+      const fetchAndApplySections = async () => {
+        await fetchSectionsForGrade(pendingGradeLevel);
         
-        // Fetch only students with the teacher's subject
-        const response = await api.get(`/students`, {
-          params: {
-            role: 'Student',
-            gradeLevel: teacherGradeLevel,
-            subject: teacherSubject,
-            quarter: quarter || null // Add quarter filter if set
-          },
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // After sections are fetched, set to "All Sections" by default
+        setPendingSection('');
+      };
+      
+      fetchAndApplySections();
+    }
+  }, [pendingGradeLevel]);
+
+  // Initial filter application - only for first load
+  const applyInitialFilters = async () => {
+    try {
+      setLoading(true);
+      
+      if (!pendingGradeLevel || !teacherSubject) {
+        setLoading(false);
+        return;
+      }
+      
+      const token = localStorage.getItem('token');
+      
+      // Fetch students with just grade level and subject
+      const response = await api.get(`/students`, {
+        params: {
+          role: 'Student',
+          gradeLevel: pendingGradeLevel,
+          subject: teacherSubject
+        },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const formattedStudents = response.data.map((student) => {
+        // Split grade and section for separate display
+        let grade = '';
+        let section = '';
         
-        // Process the student data
-        const formattedStudents = response.data.map((student) => ({
+        if (student.grade && student.section) {
+          grade = student.grade;
+          section = student.section;
+        } else if (student.gradeSection) {
+          // Try to parse from combined gradeSection field (e.g., "Grade 4 HAPPY")
+          const gradeSectionParts = student.gradeSection.split(/\s+/);
+          if (gradeSectionParts.length >= 2) {
+            // Check if first part contains "Grade"
+            if (gradeSectionParts[0].toLowerCase() === 'grade') {
+              grade = `${gradeSectionParts[0]} ${gradeSectionParts[1]}`;
+              section = gradeSectionParts.slice(2).join(' ');
+            } else {
+              grade = gradeSectionParts[0];
+              section = gradeSectionParts.slice(1).join(' ');
+            }
+          } else {
+            grade = student.gradeSection;
+            section = '';
+          }
+        }
+        
+        return {
           idNumber: student.idNumber,
           name: `${student.firstName} ${student.lastName}`,
+          grade: grade,
+          section: section,
           gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
-          subject: teacherSubject, // Always use the teacher's subject
+          subject: teacherSubject,
           quarter: student.quarter || '',
           progress: student.progress || 'Not started',
-        }));
+        };
+      });
 
-        setStudents(formattedStudents);
-        
-        // Apply default sorting to the initial data
-        const sortedData = getSortedData(formattedStudents);
-        setFilteredStudents(sortedData);
-        
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching students:', err);
-        setError('Failed to fetch student records. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudents();
-  }, [teacherSubject, teacherGradeLevel, quarter]);
-
-  // Effect to reapply sorting when order or orderBy changes
-  useEffect(() => {
-    if (filteredStudents.length > 0) {
-      const sortedData = getSortedData(filteredStudents);
+      setStudents(formattedStudents);
+      
+      // Apply default sorting
+      const sortedData = getSortedData(formattedStudents);
       setFilteredStudents(sortedData);
+      
+    } catch (err) {
+      console.error('Error fetching initial student data:', err);
+      setError('Failed to fetch student records. Please try again later.');
+    } finally {
+      setLoading(false);
     }
-  }, [order, orderBy]);
+  };
+
+  // Handle grade level change
+  const handleGradeLevelChange = (e) => {
+    const newGradeLevel = e.target.value;
+    setPendingGradeLevel(newGradeLevel);
+    
+    // Immediately fetch sections for the new grade level
+    if (newGradeLevel) {
+      fetchSectionsForGrade(newGradeLevel);
+      
+      // Reset pending section when grade changes to "All Sections"
+      setPendingSection('');
+    } else {
+      setAvailableSections([]);
+    }
+  };
+
+  // Apply filters function
+  const applyFilters = async () => {
+    try {
+      setLoading(true);
+      setIsApplyingFilters(true); // Flag to prevent automatic refresh
+      
+      const token = localStorage.getItem('token');
+      
+      // Update all active filter states from pending states
+      setSelectedGradeLevel(pendingGradeLevel);
+      setTeacherGradeLevel(pendingGradeLevel); // Update display state
+      setSelectedSection(pendingSection);
+      setQuarter(pendingQuarter);
+      setSearch(pendingSearch);
+      setProgress(pendingProgress);
+      
+      // Build query parameters for API call - only include parameters supported by the API
+      const params = {
+        role: 'Student',
+        gradeLevel: pendingGradeLevel,
+        subject: teacherSubject
+      };
+      
+      // Add quarter filter - API supports this
+      if (pendingQuarter) params.quarter = pendingQuarter;
+      
+      // Make the API call with supported filters only
+      const response = await api.get(`/students`, {
+        params: params,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Process the student data
+      const formattedStudents = response.data.map((student) => ({
+        idNumber: student.idNumber,
+        name: `${student.firstName} ${student.lastName}`,
+        grade: student.grade || '',
+        section: student.section || '',
+        gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
+        subject: teacherSubject,
+        quarter: student.quarter || '',
+        progress: student.progress || 'Not started',
+      }));
+
+      // Client-side filtering for section (since backend doesn't support section filter)
+      let filteredResults = formattedStudents;
+      if (pendingSection) {
+        filteredResults = filteredResults.filter(
+          (student) => student.section === pendingSection
+        );
+      }
+      
+      // Apply progress filter if present
+      if (pendingProgress) {
+        filteredResults = filteredResults.filter(
+          (student) => student.progress === pendingProgress
+        );
+      }
+      
+      // Then apply search filter if present
+      if (pendingSearch) {
+        filteredResults = filteredResults.filter(
+          (student) =>
+            student.name.toLowerCase().includes(pendingSearch.toLowerCase()) || 
+            student.idNumber.toLowerCase().includes(pendingSearch.toLowerCase())
+        );
+      }
+      
+      setStudents(formattedStudents);
+      
+      // Apply sorting to the filtered results
+      const sortedData = getSortedData(filteredResults);
+      setFilteredStudents(sortedData);
+      
+      setPage(0); // Reset to first page when filtering
+      
+      // Build filter description for display
+      const filterDescriptions = [];
+      if (pendingGradeLevel) filterDescriptions.push(`Grade: ${pendingGradeLevel}`);
+      if (pendingSection) filterDescriptions.push(`Section: ${pendingSection}`);
+      if (pendingQuarter) filterDescriptions.push(`Quarter: ${pendingQuarter}`);
+      if (teacherSubject) filterDescriptions.push(`Subject: ${teacherSubject}`);
+      if (pendingProgress) filterDescriptions.push(`Progress: ${pendingProgress}`);
+      
+      console.log(`Filters applied: ${filterDescriptions.length > 0 ? filterDescriptions.join(', ') : 'None'}`);
+      
+    } catch (err) {
+      console.error('Error applying filters:', err);
+      setError('Failed to fetch student records. Please try again later.');
+    } finally {
+      setLoading(false);
+      setIsApplyingFilters(false);
+    }
+  };
+
+  // Clear filters function - now immediately applies changes
+  const clearFilters = () => {
+    // Keep the pending grade level but reset other pending filters
+    setPendingSection('');
+    setPendingQuarter('');
+    setPendingProgress('');
+    setPendingSearch('');
+    
+    // Set up a small delay to ensure state updates have processed
+    setTimeout(() => {
+      // Apply the cleared filters immediately
+      applyFilters();
+    }, 0);
+  };
 
   // Function to handle sort requests
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+    
+    // Re-sort the current data
+    const sortedData = getSortedData(filteredStudents, property, isAsc ? 'desc' : 'asc');
+    setFilteredStudents(sortedData);
   };
 
   // SortIndicator component for visual feedback
@@ -167,29 +409,27 @@ const StudentRecords = () => {
   };
 
   // Sorting function
-  const getSortedData = (data) => {
-    if (!orderBy) return data;
+  const getSortedData = (data, sortOrderBy = orderBy, sortOrder = order) => {
+    if (!sortOrderBy) return data;
     
     return [...data].sort((a, b) => {
-      // Handle different data types appropriately
-      
       // Handle null values
-      if (a[orderBy] === null && b[orderBy] === null) return 0;
-      if (a[orderBy] === null) return order === 'asc' ? -1 : 1;
-      if (b[orderBy] === null) return order === 'asc' ? 1 : -1;
+      if (a[sortOrderBy] === null && b[sortOrderBy] === null) return 0;
+      if (a[sortOrderBy] === null) return sortOrder === 'asc' ? -1 : 1;
+      if (b[sortOrderBy] === null) return sortOrder === 'asc' ? 1 : -1;
       
       // For string values (most columns)
-      if (['idNumber', 'name', 'gradeSection', 'subject', 'quarter'].includes(orderBy)) {
-        const aValue = String(a[orderBy]).toLowerCase();
-        const bValue = String(b[orderBy]).toLowerCase();
+      if (['idNumber', 'name', 'grade', 'section', 'subject', 'quarter'].includes(sortOrderBy)) {
+        const aValue = String(a[sortOrderBy]).toLowerCase();
+        const bValue = String(b[sortOrderBy]).toLowerCase();
         
-        return order === 'asc'
+        return sortOrder === 'asc'
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
       
       // Special handling for progress column
-      if (orderBy === 'progress') {
+      if (sortOrderBy === 'progress') {
         // Define a priority order for progress statuses
         const progressPriority = {
           'Not started': 1,
@@ -200,34 +440,16 @@ const StudentRecords = () => {
         const aValue = progressPriority[a.progress] || 0;
         const bValue = progressPriority[b.progress] || 0;
         
-        return order === 'asc'
+        return sortOrder === 'asc'
           ? aValue - bValue
           : bValue - aValue;
       }
       
       // Default comparison for any other columns
-      return order === 'asc'
-        ? (a[orderBy] < b[orderBy] ? -1 : 1)
-        : (b[orderBy] < a[orderBy] ? -1 : 1);
+      return sortOrder === 'asc'
+        ? (a[sortOrderBy] < b[sortOrderBy] ? -1 : 1)
+        : (b[sortOrderBy] < a[sortOrderBy] ? -1 : 1);
     });
-  };
-
-  // Search functionality with sorting preserved
-  const handleSearch = (event) => {
-    const value = event.target.value.toLowerCase();
-    setSearch(value);
-    
-    const filtered = students.filter(
-      (student) =>
-        student.name.toLowerCase().includes(value) || 
-        student.idNumber.toLowerCase().includes(value)
-    );
-    
-    // Apply current sort to search results
-    const sortedData = getSortedData(filtered);
-    setFilteredStudents(sortedData);
-    
-    setPage(0); // Reset to first page when searching
   };
 
   // Pagination handlers
@@ -240,86 +462,16 @@ const StudentRecords = () => {
     setPage(0);
   };
 
-  // Date From change handler with mutual exclusivity logic
-  const handleDateFromChange = (e) => {
-    const value = e.target.value;
-    
-    // If selecting a date, clear academic year
-    // And ensure dateTo is not earlier than dateFrom
-    if (value) {
-      if (dateTo && new Date(value) > new Date(dateTo)) {
-        // If dateFrom is later than dateTo, reset dateTo
-        setDateTo('');
-      }
-      setAcademicYear('');
-    }
-    
-    setDateFrom(value);
-  };
-
-  // Date To change handler with mutual exclusivity logic
-  const handleDateToChange = (e) => {
-    const value = e.target.value;
-    
-    // If selecting a date, clear academic year
-    if (value) {
-      setAcademicYear('');
-    }
-    
-    setDateTo(value);
-  };
-
-  // Academic Year change handler with mutual exclusivity logic
-  const handleAcademicYearChange = (e) => {
-    const value = e.target.value;
-    
-    // If selecting academic year, clear date filters
-    if (value) {
-      setDateFrom('');
-      setDateTo('');
-    }
-    
-    setAcademicYear(value);
-  };
-
-  // Filter functionality with sorting preserved
-  const handleFilter = () => {
-    // Apply quarter and date filters
-    const filtered = students.filter((student) => {
-      const matchesQuarter = quarter ? student.quarter === quarter : true;
-      const matchesDateFrom = dateFrom ? new Date(student.date) >= new Date(dateFrom) : true;
-      const matchesDateTo = dateTo ? new Date(student.date) <= new Date(dateTo) : true;
-      const matchesAcademicYear = academicYear ? student.academicYear === academicYear : true;
-      return matchesQuarter && matchesDateFrom && matchesDateTo && matchesAcademicYear;
-    });
-    
-    // Apply current sort to filtered results
-    const sortedData = getSortedData(filtered);
-    setFilteredStudents(sortedData);
-    
-    setPage(0); // Reset to first page when filtering
-  };
-
-  // Reset filters but maintain sorting
-  const handleResetFilters = () => {
-    setQuarter('');
-    setDateFrom('');
-    setDateTo('');
-    setAcademicYear('');
-    setSearch('');
-    
-    // Apply current sort to all data
-    const sortedData = getSortedData(students);
-    setFilteredStudents(sortedData);
-    
-    setPage(0); // Reset to first page when resetting filters
-  };
-
   // Get displayed rows based on pagination
   const displayedRows = filteredStudents.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  // Check if there are any active filters
+  const hasActiveFilters = () => {
+    return selectedSection || quarter || progress || search;
+  };
 
   // Common style for sortable table headers
   const sortableHeaderStyle = {
@@ -372,7 +524,7 @@ const StudentRecords = () => {
               marginBottom: 3
             }}
           >
-            Student Records - {teacherGradeLevel} - {teacherSubject || "Loading..."}
+            Student Records - {selectedGradeLevel} {selectedSection ? `- Section ${selectedSection}` : ''} - {teacherSubject || "Loading..."}
           </Typography>
 
           {/* Search Bar */}
@@ -387,8 +539,8 @@ const StudentRecords = () => {
               placeholder="Search by name or ID..."
               variant="outlined"
               size="small"
-              value={search}
-              onChange={handleSearch}
+              value={pendingSearch}
+              onChange={(e) => setPendingSearch(e.target.value)}
               sx={{
                 backgroundColor: '#fff',
                 borderRadius: '15px',
@@ -416,44 +568,64 @@ const StudentRecords = () => {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              {/* Grade Level Filter - Always visible but disabled when teacher has only one grade */}
               <TextField
-                name="dateFrom"
-                type="date"
+                name="gradeLevel"
+                label="Grade Level"
+                select
+                variant="outlined"
                 size="small"
-                label="Date From"
-                value={dateFrom}
-                onChange={handleDateFromChange}
-                disabled={!!academicYear} // Disable if academicYear has a value
-                InputLabelProps={{ shrink: true }}
+                value={pendingGradeLevel}
+                onChange={handleGradeLevelChange}
+                disabled={assignedGradeOptions.length <= 1}
                 sx={{
                   backgroundColor: '#fff',
                   borderRadius: '15px',
+                  minWidth: '150px',
                   "& .Mui-disabled": {
                     backgroundColor: "rgba(0, 0, 0, 0.05)",
                   }
                 }}
-              />
-              
+              >
+                {assignedGradeOptions.map((grade) => (
+                  <MenuItem key={grade} value={grade}>
+                    {grade}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              {/* Section Filter */}
               <TextField
-                name="dateTo"
-                type="date"
+                name="section"
+                label="Section"
+                select
+                variant="outlined"
                 size="small"
-                label="Date To"
-                value={dateTo}
-                onChange={handleDateToChange}
-                disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
-                inputProps={{
-                  min: dateFrom || undefined // Set minimum date to dateFrom
-                }}
-                InputLabelProps={{ shrink: true }}
+                value={pendingSection}
+                onChange={(e) => setPendingSection(e.target.value)}
+                disabled={sectionsLoading} // Disable while sections are loading
                 sx={{
                   backgroundColor: '#fff',
                   borderRadius: '15px',
+                  minWidth: '150px',
                   "& .Mui-disabled": {
                     backgroundColor: "rgba(0, 0, 0, 0.05)",
                   }
                 }}
-              />
+              >
+                <MenuItem value="">All Sections</MenuItem>
+                {sectionsLoading ? (
+                  <MenuItem disabled>Loading sections...</MenuItem>
+                ) : availableSections.length === 0 ? (
+                  <MenuItem disabled>No sections available</MenuItem>
+                ) : (
+                  availableSections.map((sectionItem) => (
+                    <MenuItem key={sectionItem.id || sectionItem.sectionName} value={sectionItem.sectionName}>
+                      {sectionItem.sectionName}
+                    </MenuItem>
+                  ))
+                )}
+              </TextField>
 
               {/* Quarter Filter */}
               <TextField
@@ -462,8 +634,8 @@ const StudentRecords = () => {
                 select
                 variant="outlined"
                 size="small"
-                value={quarter}
-                onChange={(e) => setQuarter(e.target.value)}
+                value={pendingQuarter}
+                onChange={(e) => setPendingQuarter(e.target.value)}
                 sx={{
                   backgroundColor: '#fff',
                   borderRadius: '15px',
@@ -477,45 +649,44 @@ const StudentRecords = () => {
                 <MenuItem value="Fourth">Fourth</MenuItem>
               </TextField>
               
+              {/* Progress Filter - New */}
               <TextField
-                name="academicYear"
-                label="Academic Year"
+                name="progress"
+                label="Progress"
                 select
                 variant="outlined"
                 size="small"
-                value={academicYear}
-                onChange={handleAcademicYearChange}
-                disabled={!!dateFrom || !!dateTo} // Disable if either date has a value
+                value={pendingProgress}
+                onChange={(e) => setPendingProgress(e.target.value)}
                 sx={{
                   backgroundColor: '#fff',
                   borderRadius: '15px',
                   minWidth: '150px',
-                  "& .Mui-disabled": {
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  }
                 }}
               >
-                <MenuItem value="">Select Academic Year</MenuItem>
-                <MenuItem value="2023-2024">2023-2024</MenuItem>
-                <MenuItem value="2022-2023">2022-2023</MenuItem>
-                <MenuItem value="2021-2022">2021-2022</MenuItem>
+                <MenuItem value="">All Progress</MenuItem>
+                <MenuItem value="Not started">Not Started</MenuItem>
+                <MenuItem value="In-progress">In Progress</MenuItem>
+                <MenuItem value="Completed">Completed</MenuItem>
               </TextField>
               
               <Button
                 variant="contained"
-                onClick={handleFilter}
+                onClick={applyFilters}
+                disabled={isApplyingFilters}
                 sx={{
                   backgroundColor: "#FFD700",
                   color: "#000",
                   "&:hover": { backgroundColor: "#FFC107" },
                 }}
               >
-                Filter
+                {isApplyingFilters ? "Applying..." : "Apply Filters"}
               </Button>
               
               <Button
                 variant="outlined"
-                onClick={handleResetFilters}
+                onClick={clearFilters}
+                disabled={!hasActiveFilters() || isApplyingFilters}
                 sx={{
                   borderColor: "#FFD700",
                   color: "#000",
@@ -530,6 +701,7 @@ const StudentRecords = () => {
             </Box>
           </Box>
 
+          {/* Table Container */}
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
               <CircularProgress />
@@ -543,16 +715,16 @@ const StudentRecords = () => {
               sx={{
                 borderRadius: '15px',
                 boxShadow: 3,
-                overflow: 'visible', // Changed from 'auto' to 'visible'
+                overflow: 'visible',
                 marginTop: 3,
-                marginBottom: 5, // Added bottom margin
+                marginBottom: 5,
                 backgroundColor: "rgba(255, 255, 255, 0.8)",
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column',
               }}
             >
-              <Table sx={{ flexGrow: 1 }}> {/* Removed stickyHeader */}
+              <Table sx={{ flexGrow: 1 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell 
@@ -576,12 +748,22 @@ const StudentRecords = () => {
                       </Tooltip>
                     </TableCell>
                     <TableCell 
-                      onClick={() => handleRequestSort('gradeSection')}
+                      onClick={() => handleRequestSort('grade')}
                       sx={sortableHeaderStyle}
                     >
-                      <Tooltip title="Sort by grade & section">
+                      <Tooltip title="Sort by grade">
                         <Box sx={{ display: "flex", alignItems: "center" }}>
-                          Grade & Section <SortIndicator column="gradeSection" />
+                          Grade <SortIndicator column="grade" />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleRequestSort('section')}
+                      sx={sortableHeaderStyle}
+                    >
+                      <Tooltip title="Sort by section">
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          Section <SortIndicator column="section" />
                         </Box>
                       </Tooltip>
                     </TableCell>
@@ -620,7 +802,7 @@ const StudentRecords = () => {
                 <TableBody>
                   {displayedRows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
+                      <TableCell colSpan={7} align="center">
                         No student records found matching your criteria
                       </TableCell>
                     </TableRow>
@@ -629,7 +811,8 @@ const StudentRecords = () => {
                       <TableRow key={index} hover>
                         <TableCell>{student.idNumber}</TableCell>
                         <TableCell>{student.name}</TableCell>
-                        <TableCell>{student.gradeSection}</TableCell>
+                        <TableCell>{student.grade || selectedGradeLevel}</TableCell>
+                        <TableCell>{student.section || "HAPPY"}</TableCell>
                         <TableCell>{student.subject}</TableCell>
                         <TableCell>{student.quarter}</TableCell>
                         <TableCell>
@@ -662,13 +845,13 @@ const StudentRecords = () => {
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 sx={{
                   paddingTop: 2,
-                  paddingBottom: 2, // Added bottom padding
+                  paddingBottom: 2,
                   backgroundColor: "transparent",
                   fontWeight: "bold",
                   display: "flex",
                   justifyContent: "center",
                   width: "100%",
-                  position: "relative", // Ensure visibility
+                  position: "relative",
                 }}
               />
             </TableContainer>
