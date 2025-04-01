@@ -10,7 +10,7 @@ import Settings from './Settings'; // Import the Settings component
 import { AuthContext } from '../../AuthContext'; // Import AuthContext
 import LibrarianNotificationBadge from './LibrarianNotificationBadge';
  
-const SideBar = () => {
+const LibrarianSideBar = () => {
   const location = useLocation();
   const navigate = useNavigate(); // Add useNavigate hook
   const isSmallScreen = useMediaQuery('(max-width:600px)');
@@ -59,7 +59,7 @@ const SideBar = () => {
       <Box
         sx={{
           width: isSmallScreen ? '80px' : '250px',
-          height: '100%', // Take full height
+          height: 'calc(100vh - 135px)', // Adjusted to account for navbar height
           background: 'linear-gradient(to bottom, #CD6161, #8B3D3D)',
           padding: '0px',
           boxSizing: 'border-box',
@@ -68,7 +68,8 @@ const SideBar = () => {
           flexDirection: 'column',
           position: 'relative', // Make this a positioning context
           overflow: 'hidden', // Hide overflow
-          marginTop: '10px',
+          marginTop: '0px', // Changed from 10px to 0px to avoid overlap
+          zIndex: 1100, // Lower than navbar z-index
         }}
       >
         {/* Icons moved to the top of sidebar and centered */}
@@ -333,4 +334,4 @@ const SideBar = () => {
   );
 };
  
-export default SideBar;
+export default LibrarianSideBar;

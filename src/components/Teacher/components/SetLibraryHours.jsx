@@ -29,6 +29,24 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
 
   const [loading, setLoading] = useState(false);
   const [gradeOptions, setGradeOptions] = useState([]);
+  const [assignedGradeLevels, setAssignedGradeLevels] = useState([]);
+
+  // Parse default grade level into array if it's a comma-separated string
+  useEffect(() => {
+    if (defaultGradeLevel) {
+      // Convert to array if it's a string with commas
+      const gradesArray = typeof defaultGradeLevel === 'string' 
+        ? defaultGradeLevel.split(',').map(g => g.trim())
+        : [defaultGradeLevel];
+      
+      setAssignedGradeLevels(gradesArray);
+      
+      // If only one grade is assigned, set it as the default
+      if (gradesArray.length === 1) {
+        setFormData(prev => ({ ...prev, gradeLevel: gradesArray[0] }));
+      }
+    }
+  }, [defaultGradeLevel]);
 
   // Set defaults when component mounts or when defaults change
   useEffect(() => {
@@ -39,15 +57,16 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
     
     if (open) {
       setFormData(prev => ({ 
-        ...prev, 
-        gradeLevel: defaultGradeLevel || '', 
+        ...prev,
+        // Only set default grade if there's exactly one assigned grade
+        gradeLevel: assignedGradeLevels.length === 1 ? assignedGradeLevels[0] : prev.gradeLevel,
         subject: defaultSubject || 'English',
         month: nextMonth.getMonth() + 1,
         day: nextMonth.getDate(),
         year: nextMonth.getFullYear()
       }));
     }
-  }, [defaultGradeLevel, defaultSubject, open]);
+  }, [defaultSubject, open, assignedGradeLevels]);
 
   // Fetch grade levels when dialog opens
   useEffect(() => {
@@ -61,7 +80,15 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
         
         const gradesResponse = await api.get('/grade-sections/all');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
-        setGradeOptions(uniqueGrades);
+        
+        // Filter to only include grades that are assigned to the teacher
+        if (assignedGradeLevels.length > 0) {
+          setGradeOptions(uniqueGrades.filter(grade => 
+            assignedGradeLevels.some(assignedGrade => grade === assignedGrade)
+          ));
+        } else {
+          setGradeOptions(uniqueGrades);
+        }
       } catch (error) {
         console.error('Error fetching grade levels:', error);
         toast.error('Failed to load grade levels');
@@ -71,7 +98,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
     if (open) {
       fetchGradeLevels();
     }
-  }, [open]);
+  }, [open, assignedGradeLevels]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -127,7 +154,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
       
       setFormData({
         minutes: '',
-        gradeLevel: defaultGradeLevel || '',
+        gradeLevel: assignedGradeLevels.length === 1 ? assignedGradeLevels[0] : '',
         subject: defaultSubject || 'English',
         quarter: '',
         month: nextMonth.getMonth() + 1,
@@ -203,7 +230,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
               onChange={handleInputChange}
               sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
               required
-              disabled={!!defaultGradeLevel} // Disable if default is provided
+              disabled={assignedGradeLevels.length === 1} // Disable only if exactly one grade is assigned
             >
               <MenuItem value="">Select Grade</MenuItem>
               {gradeOptions.map((grade) => (

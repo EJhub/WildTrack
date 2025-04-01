@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import api from '../../utils/api'; // Import the API utility
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import AcademicYearTable from './components/AcademicYearTable';
 import AddAcademicYear from './components/AddAcademicYear';
 import AddGradeSection from './components/AddGradeSection';
 import GradeSectionTable from './components/GradeSectionTable';
+import api from '../../utils/api';
 import {
   Box,
   Table,
@@ -58,7 +58,16 @@ const ManageStudent = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // First fetch all students using the API utility
+        // Get token from localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+        
+        // Set authorization header for all requests
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // First fetch all students
         const response = await api.get('/students/all');
         const studentsResult = response.data;
         
@@ -68,19 +77,21 @@ const ManageStudent = () => {
             // Check if this student has initialized requirements
             const progressResponse = await api.get(`/library-progress/${student.idNumber}`);
             
-            const progressData = progressResponse.data;
-            
-            // Only display subjects if the student has requirements and they're not empty
-            if (progressData && progressData.length > 0) {
-              // Extract only the subjects that have actual requirements
-              // Group by subject to remove duplicates
-              const actualSubjects = [...new Set(progressData.map(req => req.subject))];
+            if (progressResponse.status === 200) {
+              const progressData = progressResponse.data;
               
-              if (actualSubjects.length > 0) {
-                return {
-                  ...student,
-                  subject: actualSubjects.join(', ')
-                };
+              // Only display subjects if the student has requirements and they're not empty
+              if (progressData && progressData.length > 0) {
+                // Extract only the subjects that have actual requirements
+                // Group by subject to remove duplicates
+                const actualSubjects = [...new Set(progressData.map(req => req.subject))];
+                
+                if (actualSubjects.length > 0) {
+                  return {
+                    ...student,
+                    subject: actualSubjects.join(', ')
+                  };
+                }
               }
             }
             
@@ -140,9 +151,10 @@ const ManageStudent = () => {
 
   const handleDeleteConfirmation = async () => {
     try {
-      // Use the API utility for delete request
-      await api.delete(`/students/${studentToDelete.id}`);
+      const token = localStorage.getItem("token");
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
+      await api.delete(`/students/${studentToDelete.id}`);
       setData((prevData) => prevData.filter((student) => student.id !== studentToDelete.id));
       setIsDeleteConfirmationOpen(false);
     } catch (error) {
@@ -238,7 +250,6 @@ const ManageStudent = () => {
                     : currentView === 'gradeSection'
                     ? 'Search grade level...'
                     : 'Search by name or ID...'
-                    
                 }
                 size="small"
                 value={
@@ -274,16 +285,14 @@ const ManageStudent = () => {
                 variant="outlined"
                 onClick={() => setCurrentView(currentView === 'academic' ? 'students' : 'academic')}
                 sx={{
-                  color: currentView === 'academic' ? 'black' : 'black',
-                  backgroundColor: currentView === 'academic' ? '#FFEB3B' : '#F8C400',
-                  border: '1px solid #F8C400',
+                  color: currentView === 'academic' ? '#800000' : '#800000',
+                  backgroundColor: currentView === 'academic' ? '#FFEB3B' : 'white',
+                  border: '1px solid #800000',
                   fontWeight: 'bold',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                  fontSize: '11px', // Added font size here
                   height: '40px',
                   '&:hover': {
-                    backgroundColor: '#FFDF16',
-
+                    backgroundColor: '#FFEB3B',
+                    color: '#800000',
                   },
                 }}
               >
@@ -294,16 +303,14 @@ const ManageStudent = () => {
                 variant="outlined"
                 onClick={() => setCurrentView(currentView === 'gradeSection' ? 'students' : 'gradeSection')}
                 sx={{
-                  color: currentView === 'academic' ? 'black' : 'black',
-                  backgroundColor: currentView === 'academic' ? '#FFEB3B' : '#F8C400',
-                  border: '1px solid #F8C400',
+                  color: currentView === 'gradeSection' ? '#800000' : '#800000',
+                  backgroundColor: currentView === 'gradeSection' ? '#FFEB3B' : 'white',
+                  border: '1px solid #800000',
                   fontWeight: 'bold',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                  fontSize: '11px', // Added font size here
                   height: '40px',
                   '&:hover': {
-                    backgroundColor: '#FFDF16',
-
+                    backgroundColor: '#FFEB3B',
+                    color: '#800000',
                   },
                 }}
               >
@@ -313,29 +320,28 @@ const ManageStudent = () => {
 
             {currentView === 'students' && (
               <Button
-              variant="outlined"
-              onClick={handleOpenForm}
-              sx={{
-                color: '#FFEB3B',
-                backgroundColor: '#800000',
-                border: '1px solid #800000',
-                borderRadius: '50px',
-                height: '40px',
-                fontWeight: 'bold',
-                fontSize: '11px', // Added font size here
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: 2,
-                '&:hover': {
-                  backgroundColor: '#940000',
+                variant="outlined"
+                onClick={handleOpenForm}
+                sx={{
                   color: '#FFEB3B',
-                },
-              }}
-            >
-              <AddIcon sx={{ marginRight: 1 }} />
-              Add Student
-            </Button>
+                  backgroundColor: '#800000',
+                  border: '1px solid #800000',
+                  borderRadius: '50px',
+                  height: '40px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: 2,
+                  '&:hover': {
+                    backgroundColor: '#940000',
+                    color: '#FFEB3B',
+                  },
+                }}
+              >
+                <AddIcon sx={{ marginRight: 1 }} />
+                Add Student
+              </Button>
             )}
 
             {currentView === 'academic' && (
@@ -349,7 +355,6 @@ const ManageStudent = () => {
                   borderRadius: '50px',
                   height: '40px',
                   fontWeight: 'bold',
-                  fontSize: '11px', // Added font size here
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -376,7 +381,6 @@ const ManageStudent = () => {
                   borderRadius: '50px',
                   height: '40px',
                   fontWeight: 'bold',
-                  fontSize: '11px', // Added font size here
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -411,19 +415,19 @@ const ManageStudent = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
                         ID Number
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
                         Name
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
                         GRADE & SECTION
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
                         LIBRARY HOUR ASSOCIATED SUBJECT
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
+                      <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFEB3B' }}>
                         ACTION
                       </TableCell>
                     </TableRow>
@@ -463,14 +467,14 @@ const ManageStudent = () => {
                             <Button
                               variant="outlined"
                               sx={{
-                                color: 'black',
-                                backgroundColor: '#FFDF16',
-                                fontSize: '11px',
+                                color: '#800000',
+                                backgroundColor: '#F5B400',
                                 border: '1px solid #FFEB3B',
                                 marginRight: 1,
                                 fontWeight: 'bold',
                                 '&:hover': {
                                   backgroundColor: '#FFEB3B',
+                                  color: '#800000',
                                 },
                               }}
                               onClick={() => {
@@ -483,14 +487,13 @@ const ManageStudent = () => {
                             <Button
                               variant="outlined"
                               sx={{
-                                color: 'white',
-                                backgroundColor: '#8C383E',
-                                border: '1px solid #8C383E',
+                                color: '#800000',
+                                backgroundColor: '#F5B400',
+                                border: '1px solid #FFEB3B',
                                 fontWeight: 'bold',
-                                fontSize: '11px',
                                 '&:hover': {
-                                  backgroundColor: '#8B0000',
-
+                                  backgroundColor: '#FFEB3B',
+                                  color: '#800000',
                                 },
                               }}
                               onClick={() => {

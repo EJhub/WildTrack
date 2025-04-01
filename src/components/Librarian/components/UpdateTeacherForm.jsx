@@ -1,4 +1,4 @@
-// Modified UpdateTeacherForm.js with name and ID validation
+// Modified UpdateTeacherForm.js with multi-select for grades and sections
 import React, { useState, useEffect } from 'react';
 import { 
   Box, 
@@ -15,7 +15,13 @@ import {
   DialogContent,
   DialogActions,
   DialogContentText,
-  Paper
+  Paper,
+  Select,
+  MenuItem,
+  Chip,
+  FormControl,
+  InputLabel,
+  OutlinedInput
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyIcon from '@mui/icons-material/Key';
@@ -23,7 +29,19 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import api from '../../../utils/api'; // Import the API utility
 import ConfirmUpdateDialog from './ConfirmUpdateDialog';
 
-const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
+// Menu props for select dropdowns
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
+const UpdateTeacherForm = ({ teacherData, onClose, onUpdate, open }) => {
   // Add validation functions
   const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
   const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
@@ -34,8 +52,8 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
     lastName: '',
     idNumber: '',
     subject: '',
-    grade: '',
-    section: '',
+    grade: [], // Changed to array for multi-select
+    section: [], // Changed to array for multi-select
     role: 'Teacher',
   });
 
@@ -60,6 +78,9 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
   const [sectionOptions, setSectionOptions] = useState([]);
   const [formVisible, setFormVisible] = useState(true);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  
+  // New state for grade-section mapping
+  const [gradeSectionMapping, setGradeSectionMapping] = useState([]);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -70,58 +91,83 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
   useEffect(() => {
     if (teacherData) {
       setFormVisible(true);
+      // Convert comma-separated strings to arrays
+      const gradeArray = teacherData.grade ? teacherData.grade.split(',') : [];
+      const sectionArray = teacherData.section ? teacherData.section.split(',') : [];
+      
       setFormData({
         firstName: teacherData.firstName || '',
         middleName: teacherData.middleName || '',
         lastName: teacherData.lastName || '',
         idNumber: teacherData.idNumber || '',
         subject: teacherData.subject || '',
-        grade: teacherData.grade || '',
-        section: teacherData.section || '',
+        grade: gradeArray,
+        section: sectionArray,
         role: teacherData.role || 'Teacher',
       });
     }
   }, [teacherData]);
 
+  // Fetch grade options and grade-section mapping when component mounts
   useEffect(() => {
-    const fetchGradeOptions = async () => {
+    const fetchGradeAndSectionData = async () => {
       try {
         const gradesResponse = await api.get('/grade-sections/all');
         const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
         setGradeOptions(uniqueGrades);
+        
+        // Store the complete mapping for later filtering
+        setGradeSectionMapping(gradesResponse.data);
       } catch (error) {
-        console.error('Error fetching grades:', error);
+        console.error('Error fetching grades and sections:', error);
         setSnackbar({
           open: true,
-          message: 'Failed to fetch grade options',
+          message: 'Failed to fetch grade and section options',
           severity: 'error',
         });
       }
     };
 
-    fetchGradeOptions();
+    fetchGradeAndSectionData();
   }, []);
 
+  // Update sections when grades change
   useEffect(() => {
-    const fetchSectionOptions = async () => {
-      if (formData.grade) {
-        try {
-          const sectionsResponse = await api.get(`/grade-sections/grade/${formData.grade}`);
-          const sections = sectionsResponse.data.map(section => section.sectionName);
-          setSectionOptions(sections);
-        } catch (error) {
-          console.error('Error fetching sections:', error);
-          setSnackbar({
-            open: true,
-            message: 'Failed to fetch section options',
-            severity: 'error',
-          });
+    if (formData.grade.length > 0 && gradeSectionMapping.length > 0) {
+      // Filter sections that belong to the selected grades
+      const relevantSections = gradeSectionMapping
+        .filter(item => formData.grade.includes(item.gradeLevel))
+        .map(item => item.sectionName);
+      
+      // Remove duplicates
+      const uniqueSections = [...new Set(relevantSections)];
+      setSectionOptions(uniqueSections);
+      
+      // Clean up section selection if needed
+      if (formData.section.length > 0) {
+        const validSections = formData.section.filter(section => 
+          uniqueSections.includes(section)
+        );
+        
+        // If any invalid sections were removed, update formData
+        if (validSections.length !== formData.section.length) {
+          setFormData(prev => ({
+            ...prev,
+            section: validSections
+          }));
         }
       }
-    };
-
-    fetchSectionOptions();
-  }, [formData.grade]);
+    } else {
+      // Clear sections when no grade is selected
+      setSectionOptions([]);
+      if (formData.section.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          section: []
+        }));
+      }
+    }
+  }, [formData.grade, gradeSectionMapping]);
 
   // Validate name fields
   useEffect(() => {
@@ -198,20 +244,21 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
           [name]: value
         }));
       }
-    }
-    // Special handling for grade change
-    else if (name === 'grade') {
-      setFormData(prevData => ({
-        ...prevData,
-        [name]: value,
-        section: ''
-      }));
     } else {
       setFormData(prevData => ({
         ...prevData,
         [name]: value
       }));
     }
+  };
+  
+  // New handler for multi-select changes
+  const handleMultiSelectChange = (event) => {
+    const { name, value } = event.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
   };
 
   // Handle open reset password dialog
@@ -286,16 +333,18 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
       'firstName',
       'lastName',
       'idNumber',
-      'subject',
-      'grade',
-      'section'
+      'subject'
     ];
     
     const allFieldsFilled = requiredFields.every(field => 
-      formData[field] && formData[field].trim() !== ''
+      formData[field] && formData[field].toString().trim() !== ''
     );
     
-    return namesValid && idNumberValid && allFieldsFilled;
+    // Check for grade and section selection
+    const gradeSelected = formData.grade && formData.grade.length > 0;
+    const sectionSelected = formData.section && formData.section.length > 0;
+    
+    return namesValid && idNumberValid && allFieldsFilled && gradeSelected && sectionSelected;
   };
 
   // Initial submit handler that validates and opens the dialog
@@ -327,14 +376,15 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
       setLoading(true);
       
       // Update teacher information
+      // Convert arrays to comma-separated strings for API
       const payload = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         middleName: formData.middleName,
         idNumber: formData.idNumber,
         subject: formData.subject,
-        grade: formData.grade,
-        section: formData.section,
+        grade: formData.grade.join(','),
+        section: formData.section.join(','),
         role: formData.role,
       };
 
@@ -499,71 +549,76 @@ const UpdateTeacherForm = ({ teacherData, onClose, onUpdate }) => {
 
             <Grid container spacing={2}>
               <Grid item xs={6}>
-                <TextField
-                  name="grade"
-                  label="Grade Level"
-                  select
-                  value={formData.grade}
-                  onChange={handleInputChange}
-                  fullWidth
-                  required
-                  variant="outlined"
-                  SelectProps={{
-                    native: true,
-                  }}
-                  InputLabelProps={{ 
-                    shrink: true, 
-                    style: { 
-                      position: 'absolute', 
-                      top: -10, 
-                      left: -10, 
-                      backgroundColor: 'white', 
-                      padding: '0 5px', 
-                      zIndex: 1 
-                    } 
-                  }}
-                >
-                  <option value="">Select Grade</option>
-                  {gradeOptions.map((grade) => (
-                    <option key={grade} value={grade}>
-                      {grade}
-                    </option>
-                  ))}
-                </TextField>
+                {/* Grade Level Multi-Select */}
+                <FormControl fullWidth>
+                  <InputLabel id="grade-multiple-chip-label">Grade Level</InputLabel>
+                  <Select
+                    labelId="grade-multiple-chip-label"
+                    id="grade-multiple-chip"
+                    multiple
+                    name="grade"
+                    value={formData.grade || []}
+                    onChange={handleMultiSelectChange}
+                    input={<OutlinedInput id="select-multiple-chip" label="Grade Level" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} />
+                        ))}
+                      </Box>
+                    )}
+                    MenuProps={MenuProps}
+                  >
+                    {gradeOptions.map((grade) => (
+                      <MenuItem
+                        key={grade}
+                        value={grade}
+                      >
+                        {grade}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={6}>
-                <TextField
-                  name="section"
-                  label="Section"
-                  select
-                  value={formData.section}
-                  onChange={handleInputChange}
-                  fullWidth
-                  required
-                  variant="outlined"
-                  disabled={!formData.grade}
-                  SelectProps={{
-                    native: true,
-                  }}
-                  InputLabelProps={{ 
-                    shrink: true, 
-                    style: { 
-                      position: 'absolute', 
-                      top: -10, 
-                      left: -10, 
-                      backgroundColor: 'white', 
-                      padding: '0 5px', 
-                      zIndex: 1 
-                    } 
-                  }}
-                >
-                  <option value="">Select Section</option>
-                  {sectionOptions.map((section) => (
-                    <option key={section} value={section}>
-                      {section}
-                    </option>
-                  ))}
-                </TextField>
+                {/* Section Multi-Select */}
+                <FormControl fullWidth disabled={!formData.grade || formData.grade.length === 0}>
+                  <InputLabel id="section-multiple-chip-label">Section</InputLabel>
+                  <Select
+                    labelId="section-multiple-chip-label"
+                    id="section-multiple-chip"
+                    multiple
+                    name="section"
+                    value={formData.section || []}
+                    onChange={handleMultiSelectChange}
+                    input={<OutlinedInput id="select-multiple-chip" label="Section" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} />
+                        ))}
+                      </Box>
+                    )}
+                    MenuProps={MenuProps}
+                  >
+                    {sectionOptions.length > 0 ? (
+                      sectionOptions.map((section) => (
+                        <MenuItem
+                          key={section}
+                          value={section}
+                        >
+                          {section}
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem disabled value="">
+                        {!formData.grade || formData.grade.length === 0 
+                          ? "Select grade(s) first" 
+                          : "No sections available for selected grade(s)"}
+                      </MenuItem>
+                    )}
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
 
