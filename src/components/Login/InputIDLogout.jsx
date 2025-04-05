@@ -16,6 +16,27 @@ import {
 import LoginNavBar from "./component/AppBar";
 import api from "../../utils/api"; // Changed from axios to the custom API utility
 
+// Format time in Philippine timezone (UTC+8)
+const formatPHTime = (date) => {
+  return date.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+};
+
+// Format date in Philippine timezone (UTC+8)
+const formatPHDate = (date) => {
+  return date.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
 function InputIDLogout() {
   const [idInput, setIdInput] = useState("");
   const [studentDetails, setStudentDetails] = useState({
@@ -62,8 +83,8 @@ function InputIDLogout() {
       const { student } = response.data;
 
       const currentTime = new Date();
-      const timeOut = response.data.timeOut || currentTime.toLocaleTimeString();
-      const date = response.data.date || currentTime.toLocaleDateString();
+      const timeOut = response.data.timeOut || formatPHTime(currentTime);
+      const date = response.data.date || formatPHDate(currentTime);
 
       // Create student details object
       const newStudentDetails = {
