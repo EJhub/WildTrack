@@ -70,6 +70,29 @@ const StudentRecords = () => {
   // Get current user from AuthContext
   const { user } = useContext(AuthContext);
 
+  // Helper function to properly determine progress status
+  const determineProgress = (student) => {
+    // First check if the progress is explicitly provided by the backend
+    if (student.progress) {
+      // Backend already provided a status, use that
+      return student.progress;
+    }
+    
+    // Check if the student has an active timeIn session
+    if (student.hasActiveSession) {
+      return 'In-progress';
+    }
+    
+    // Otherwise calculate based on the data
+    if (student.isCompleted) {
+      return 'Completed';
+    } else if (student.minutesRendered && student.minutesRendered > 0) {
+      return 'In-progress';
+    } else {
+      return 'Not started';
+    }
+  };
+
   // Function to fetch sections for a specific grade level
   const fetchSectionsForGrade = async (grade) => {
     if (!grade) {
@@ -235,15 +258,22 @@ const StudentRecords = () => {
           }
         }
         
+        // Calculate the proper progress status
+        const progressStatus = determineProgress(student);
+        
         return {
           idNumber: student.idNumber,
           name: `${student.firstName} ${student.lastName}`,
           grade: grade,
           section: section,
-          gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
+          gradeSection: student.gradeSection || `${grade} ${section}` || 'N/A',
           subject: teacherSubject,
           quarter: student.quarter || '',
-          progress: student.progress || 'Not started',
+          progress: progressStatus,
+          minutesRendered: student.minutesRendered || 0,
+          requiredMinutes: student.requiredMinutes || 0,
+          hasActiveSession: student.hasActiveSession || false,
+          isCompleted: student.isCompleted || false
         };
       });
 
@@ -310,16 +340,26 @@ const StudentRecords = () => {
       });
       
       // Process the student data
-      const formattedStudents = response.data.map((student) => ({
-        idNumber: student.idNumber,
-        name: `${student.firstName} ${student.lastName}`,
-        grade: student.grade || '',
-        section: student.section || '',
-        gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
-        subject: teacherSubject,
-        quarter: student.quarter || '',
-        progress: student.progress || 'Not started',
-      }));
+      const formattedStudents = response.data.map((student) => {
+        // Determine the proper progress status
+        const progressStatus = determineProgress(student);
+        
+        return {
+          idNumber: student.idNumber,
+          name: `${student.firstName} ${student.lastName}`,
+          grade: student.grade || '',
+          section: student.section || '',
+          gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
+          subject: student.subject || teacherSubject,
+          quarter: student.quarter || '',
+          progress: progressStatus,
+          // Store raw values for reference
+          minutesRendered: student.minutesRendered || 0,
+          requiredMinutes: student.requiredMinutes || 0,
+          hasActiveSession: student.hasActiveSession || false,
+          isCompleted: student.isCompleted || false
+        };
+      });
 
       // Client-side filtering for section (since backend doesn't support section filter)
       let filteredResults = formattedStudents;

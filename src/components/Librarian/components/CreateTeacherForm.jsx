@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   TextField,
@@ -11,24 +11,14 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Collapse,
-  Paper,
-  Select,
   MenuItem,
   Chip,
   FormControl,
   InputLabel,
+  Select,
   OutlinedInput
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import InfoIcon from '@mui/icons-material/Info';
-import WarningIcon from '@mui/icons-material/Warning';
 import api from '../../../utils/api'; // Import the API utility
 import SuccessDialog from './SuccessDialog'; // Import the success dialog component
 
@@ -43,137 +33,126 @@ const MenuProps = {
   },
 };
 
-const CreateTeacherForm = ({ open, onClose }) => {
-  // Add validation functions
-  const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
-  const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
+// Validation functions defined outside component to prevent recreation
+const isLettersOnly = (text) => /^[A-Za-z\s]+$/.test(text);
+const isValidIdNumber = (id) => /^[0-9-]+$/.test(id);
 
-  const [formData, setFormData] = useState({
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    password: '',
-    confirmPassword: '',
-    role: 'Teacher',
-    subject: '',
-    grade: [], // Changed to array for multi-select
-    section: [], // Changed to array for multi-select
-    idNumber: '',
-  });
+// Initial form state defined outside component
+const initialFormData = {
+  firstName: '',
+  middleName: '',
+  lastName: '',
+  idNumber: '',
+  subject: '',
+  grade: [],
+  section: [],
+  role: 'Teacher',
+};
+
+// Initial errors state defined outside component
+const initialNameErrors = {
+  firstName: '',
+  middleName: '',
+  lastName: '',
+  idNumber: ''
+};
+
+const CreateTeacherForm = ({ open, onClose }) => {
+  // Use refs to prevent unnecessary re-renders
+  const formDataRef = useRef(initialFormData);
+  const [formData, setFormData] = useState(initialFormData);
   
   // Subject options
   const subjectOptions = ['English', 'Filipino'];
   
-  // Form validation states
+  // Form validation state
   const [formValid, setFormValid] = useState(false);
   
-  // Password validation states
-  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
-  const [passwordValidation, setPasswordValidation] = useState({
-    minLength: false,
-    hasUpperCase: false,
-    hasLowerCase: false,
-    hasNumber: false,
-    hasSpecial: false
-  });
-  
-  // State to track if password validation passes
-  const [isPasswordValid, setIsPasswordValid] = useState(false);
-  const [passwordsMatch, setPasswordsMatch] = useState(true);
+  // State to track if ID number exists
   const [idNumberExists, setIdNumberExists] = useState(false);
 
-  // Add validation errors for name fields and ID Number
-  const [nameErrors, setNameErrors] = useState({
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    idNumber: ''
-  });
+  // Validation errors
+  const [nameErrors, setNameErrors] = useState(initialNameErrors);
 
-  // Add state to store teacher name for success message
+  // Success dialog data
   const [teacherName, setTeacherName] = useState({ firstName: '', lastName: '' });
-  const [loading, setLoading] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState('');
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  
+  // Data fetching state
   const [gradeOptions, setGradeOptions] = useState([]);
   const [sectionOptions, setSectionOptions] = useState([]);
-  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
-
+  const [gradeSectionMapping, setGradeSectionMapping] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Flag to track if form has been initialized
+  const initRef = useRef(false);
+  
+  // Snackbar state
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: '',
   });
 
-  // Ensure form state is always synchronized with parent open prop
+  // Initialize form when opened
   useEffect(() => {
-    if (!open) {
-      // Reset form state completely if parent says we're closed
-      resetForm();
-      setLoading(false);
-      setShowPasswordRequirements(false);
-      setPasswordsMatch(true);
+    if (open && !initRef.current) {
+      initRef.current = true;
+      
+      // Reset form data
+      formDataRef.current = initialFormData;
+      setFormData(initialFormData);
+      
+      // Reset errors
+      setNameErrors(initialNameErrors);
       setIdNumberExists(false);
-      setNameErrors({
-        firstName: '',
-        middleName: '',
-        lastName: '',
-        idNumber: ''
+      
+      // Reset validation
+      setFormValid(false);
+      
+      // Fetch data
+      fetchGradeData();
+    } else if (!open) {
+      // Reset initialization flag when dialog closes
+      initRef.current = false;
+    }
+  }, [open]);
+
+  // Fetch grade data once when form opens
+  const fetchGradeData = async () => {
+    try {
+      const gradesResponse = await api.get('/grade-sections/active');
+      
+      if (!gradesResponse || !gradesResponse.data) {
+        setSnackbar({
+          open: true,
+          message: 'Failed to fetch grade data - empty response',
+          severity: 'error',
+        });
+        return;
+      }
+      
+      const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
+      
+      // Use functional updates to avoid dependency on current state
+      setGradeOptions(uniqueGrades);
+      setGradeSectionMapping(gradesResponse.data);
+    } catch (error) {
+      console.error('Error fetching grades:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to fetch grade options',
+        severity: 'error',
       });
     }
-  }, [open]);
+  };
 
-  // Validate form whenever form data changes
+  // Update sections when grade changes - this is the only automatic state update
   useEffect(() => {
-    validateForm();
-  }, [formData, isPasswordValid, passwordsMatch, idNumberExists, nameErrors]);
-
-  // Fetch grade options when modal opens
-  useEffect(() => {
-    const fetchGradeOptions = async () => {
-      try {
-        const gradesResponse = await api.get('/grade-sections/active');
-        const uniqueGrades = [...new Set(gradesResponse.data.map(item => item.gradeLevel))];
-        setGradeOptions(uniqueGrades);
-      } catch (error) {
-        console.error('Error fetching grades:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to fetch grade options',
-          severity: 'error',
-        });
-      }
-    };
-
-    if (open) {
-      fetchGradeOptions();
-    }
-  }, [open]);
-
-  // Store the complete grade-section mapping
-  const [gradeSectionMapping, setGradeSectionMapping] = useState([]);
-
-  // Fetch all grade-section data when form opens
-  useEffect(() => {
-    const fetchGradeSectionData = async () => {
-      try {
-        const response = await api.get('/grade-sections/active');
-        setGradeSectionMapping(response.data);
-      } catch (error) {
-        console.error('Error fetching grade-section data:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to fetch grade and section data',
-          severity: 'error',
-        });
-      }
-    };
-
-    if (open) {
-      fetchGradeSectionData();
-    }
-  }, [open]);
-
-  // Update available sections when grades change
-  useEffect(() => {
+    // Skip if form isn't initialized yet
+    if (!initRef.current) return;
+    
     if (formData.grade.length > 0 && gradeSectionMapping.length > 0) {
       // Filter sections that belong to the selected grades
       const relevantSections = gradeSectionMapping
@@ -182,290 +161,173 @@ const CreateTeacherForm = ({ open, onClose }) => {
       
       // Remove duplicates
       const uniqueSections = [...new Set(relevantSections)];
+      
+      // Update sections
       setSectionOptions(uniqueSections);
       
-      // Clear section selection if none of the selected sections belong to the selected grades
+      // Update sections in form data if needed
       if (formData.section.length > 0) {
         const validSections = formData.section.filter(section => uniqueSections.includes(section));
         if (validSections.length !== formData.section.length) {
+          // Only update if needed to avoid infinite loop
           setFormData(prev => ({
             ...prev,
             section: validSections
           }));
         }
       }
-    } else {
+    } else if (formData.grade.length === 0) {
       // Clear sections when no grade is selected
       setSectionOptions([]);
-      setFormData(prev => ({
-        ...prev,
-        section: []
-      }));
+      if (formData.section.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          section: []
+        }));
+      }
     }
   }, [formData.grade, gradeSectionMapping]);
 
-  // Validate password whenever it changes
-  useEffect(() => {
-    validatePassword(formData.password);
-  }, [formData.password]);
-
-  // Check if passwords match whenever either password field changes
-  useEffect(() => {
-    if (formData.confirmPassword) {
-      setPasswordsMatch(formData.password === formData.confirmPassword);
-    } else {
-      setPasswordsMatch(true); // Don't show error if confirm field is empty
-    }
-  }, [formData.password, formData.confirmPassword]);
-
-  // Validate name fields
-  useEffect(() => {
-    validateNameFields();
-  }, [formData.firstName, formData.middleName, formData.lastName]);
-
-  // Validate ID number field
-  useEffect(() => {
-    validateIdNumber();
-  }, [formData.idNumber]);
-
-  // Validate name fields
-  const validateNameFields = () => {
-    const errors = { ...nameErrors };
+  // Input change handlers
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let updatedValue = value;
+    let isValid = true;
     
-    // First name validation
-    if (formData.firstName && !isLettersOnly(formData.firstName)) {
+    // Apply validation based on field type
+    if (['firstName', 'middleName', 'lastName'].includes(name)) {
+      isValid = value === '' || isLettersOnly(value);
+    } else if (name === 'idNumber') {
+      isValid = value === '' || isValidIdNumber(value);
+      if (isValid) {
+        // Reset ID number exists error
+        setIdNumberExists(false);
+      }
+    }
+    
+    // Only update if input is valid
+    if (isValid) {
+      setFormData(prev => ({ ...prev, [name]: updatedValue }));
+      
+      // Clear error for this field if it exists
+      if (nameErrors[name]) {
+        setNameErrors(prev => ({ ...prev, [name]: '' }));
+      }
+    }
+    
+    // Validate form after input change
+    validateForm({ ...formData, [name]: updatedValue });
+  };
+
+  // Multi-select change handler
+  const handleMultiSelectChange = (event) => {
+    const { name, value } = event.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Validate form after selection change
+    validateForm({ ...formData, [name]: value });
+  };
+
+  // Validate form and update validation state
+  const validateForm = (data = formData) => {
+    const currentData = data || formData;
+    const errors = { ...initialNameErrors };
+    
+    // Validate name fields
+    if (currentData.firstName && !isLettersOnly(currentData.firstName)) {
       errors.firstName = "First name should contain letters only";
-    } else {
-      errors.firstName = '';
     }
     
-    // Middle name validation (if provided)
-    if (formData.middleName && !isLettersOnly(formData.middleName)) {
+    if (currentData.middleName && !isLettersOnly(currentData.middleName)) {
       errors.middleName = "Middle name should contain letters only";
-    } else {
-      errors.middleName = '';
     }
     
-    // Last name validation
-    if (formData.lastName && !isLettersOnly(formData.lastName)) {
+    if (currentData.lastName && !isLettersOnly(currentData.lastName)) {
       errors.lastName = "Last name should contain letters only";
-    } else {
-      errors.lastName = '';
     }
     
+    // Validate ID Number
+    if (currentData.idNumber && !isValidIdNumber(currentData.idNumber)) {
+      errors.idNumber = "ID Number should contain only numbers and dashes";
+    }
+    
+    // Update error state if needed
     setNameErrors(errors);
-    return !errors.firstName && !errors.middleName && !errors.lastName;
-  };
-
-  // Validate ID Number
-  const validateIdNumber = () => {
-    let error = '';
     
-    if (formData.idNumber && !isValidIdNumber(formData.idNumber)) {
-      error = "ID Number should contain only numbers and dashes";
-    }
+    // Check required fields
+    const requiredFields = ['firstName', 'lastName', 'idNumber', 'subject'];
+    const allFieldsFilled = requiredFields.every(field => 
+      currentData[field] && currentData[field].toString().trim() !== ''
+    );
     
-    setNameErrors(prev => ({
-      ...prev,
-      idNumber: error
-    }));
+    const gradeSelected = currentData.grade && currentData.grade.length > 0;
+    const sectionSelected = currentData.section && currentData.section.length > 0;
+    const noErrors = !errors.firstName && !errors.middleName && !errors.lastName && !errors.idNumber;
+    const idValid = !idNumberExists;
     
-    return !error;
-  };
-
-  // Validate if all required fields are filled and valid
-  const validateForm = () => {
-    const requiredFields = [
-      'firstName',
-      'lastName',
-      'idNumber',
-      'password',
-      'confirmPassword',
-      'subject'
-    ];
-    
-    const allFieldsFilled = requiredFields.every(field => formData[field] && formData[field].toString().trim() !== '');
-    const gradeSelected = formData.grade && formData.grade.length > 0;
-    const sectionSelected = formData.section && formData.section.length > 0;
-    const namesValid = validateNameFields();
-    const idNumberValid = validateIdNumber() && !idNumberExists;
-    const isValid = allFieldsFilled && isPasswordValid && passwordsMatch && namesValid && idNumberValid && gradeSelected && sectionSelected;
-    
+    const isValid = allFieldsFilled && gradeSelected && sectionSelected && noErrors && idValid;
     setFormValid(isValid);
+    
     return isValid;
   };
 
-  const validatePassword = (password) => {
-    const validations = {
-      minLength: password.length >= 8,
-      hasUpperCase: /[A-Z]/.test(password),
-      hasLowerCase: /[a-z]/.test(password),
-      hasNumber: /[0-9]/.test(password),
-      hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
-    };
-    
-    setPasswordValidation(validations);
-    const valid = Object.values(validations).every(Boolean);
-    setIsPasswordValid(valid);
-    return valid;
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    // Validation for name fields (letters only)
-    if (['firstName', 'middleName', 'lastName'].includes(name)) {
-      // Allow only letters and spaces
-      if (value === '' || isLettersOnly(value)) {
-        setFormData(prevData => ({
-          ...prevData,
-          [name]: value
-        }));
-      }
-      // Invalid input is ignored
-    }
-    // Validation for ID number (numbers and dashes only)
-    else if (name === 'idNumber') {
-      if (value === '' || isValidIdNumber(value)) {
-        setFormData(prevData => ({
-          ...prevData,
-          [name]: value
-        }));
-        // Reset ID number exists error when user changes the ID
-        setIdNumberExists(false);
-      }
-    } else {
-      setFormData(prevData => ({
-        ...prevData,
-        [name]: value
-      }));
-    }
-  };
-
-  // Handle multi-select change for grade and section
-  const handleMultiSelectChange = (event) => {
-    const { name, value } = event.target;
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
-  };
-
-  const handlePasswordFocus = () => {
-    setShowPasswordRequirements(true);
-  };
-
-  const handlePasswordBlur = () => {
-    // Don't hide requirements if password field has input but requirements aren't met
-    if (!formData.password || isPasswordValid) {
-      setShowPasswordRequirements(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      password: '',
-      confirmPassword: '',
-      role: 'Teacher',
-      subject: '',
-      grade: [],
-      section: [],
-      idNumber: '',
-    });
-    
-    // Reset validation states
-    setIsPasswordValid(false);
-    setPasswordsMatch(true);
-    setIdNumberExists(false);
-    setFormValid(false);
-    setNameErrors({
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      idNumber: ''
-    });
-  };
-
+  // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Additional validation before submission
+    // Final validation before submission
     if (!validateForm()) {
       return;
     }
 
     try {
       setLoading(true);
-      // Format selected grades and sections as comma-separated strings
+      
+      // Format data for API
       const dataToSubmit = { 
         ...formData,
         grade: formData.grade.join(','),
         section: formData.section.join(',')
       };
       
-      // Remove confirmPassword before sending to the server
-      delete dataToSubmit.confirmPassword;
-      
       const response = await api.post('/teachers/register', dataToSubmit);
-      if (response.status === 200) {
-        // Store the teacher name before resetting the form
-        setTeacherName({
+      
+      // Prepare success data
+      const teacherData = {
+        name: {
           firstName: formData.firstName,
           lastName: formData.lastName
-        });
-        
-        // Explicitly close the form first - this is important
-        onClose();
-        
-        // Then show the success dialog
-        setTimeout(() => {
-          setSuccessDialogOpen(true);
-        }, 100);
-      }
+        },
+        password: response.data.temporaryPassword || ''
+      };
+      
+      // Close form
+      onClose();
+      
+      // Show success dialog after a slight delay
+      setTimeout(() => {
+        setTeacherName(teacherData.name);
+        setTemporaryPassword(teacherData.password);
+        setSuccessDialogOpen(true);
+      }, 100);
     } catch (error) {
       console.error('Error creating teacher:', error.response?.data);
       
-      // Handle specific error messages from the backend
-      if (error.response && error.response.data && error.response.data.error) {
+      // Handle specific error cases
+      if (error.response?.data?.error) {
         const errorMsg = error.response.data.error;
         
-        // Handle ID Number already exists error
         if (errorMsg.includes("ID Number already exists")) {
           setIdNumberExists(true);
-          document.getElementById('idNumber')?.focus();
-        } 
-        // Handle name validation errors
-        else if (errorMsg.includes("First name should contain")) {
+        } else if (errorMsg.includes("First name should contain")) {
           setNameErrors(prev => ({...prev, firstName: errorMsg}));
-          document.getElementById('firstName')?.focus();
-        }
-        else if (errorMsg.includes("Middle name should contain")) {
+        } else if (errorMsg.includes("Middle name should contain")) {
           setNameErrors(prev => ({...prev, middleName: errorMsg}));
-          document.getElementById('middleName')?.focus();
-        }
-        else if (errorMsg.includes("Last name should contain")) {
+        } else if (errorMsg.includes("Last name should contain")) {
           setNameErrors(prev => ({...prev, lastName: errorMsg}));
-          document.getElementById('lastName')?.focus();
-        }
-        else if (errorMsg.includes("ID Number should contain")) {
+        } else if (errorMsg.includes("ID Number should contain")) {
           setNameErrors(prev => ({...prev, idNumber: errorMsg}));
-          document.getElementById('idNumber')?.focus();
-        }
-        // Handle password validation error
-        else if (errorMsg.includes("Password")) {
-          setShowPasswordRequirements(true);
-          document.getElementById('password')?.focus();
-          setSnackbar({
-            open: true,
-            message: errorMsg,
-            severity: 'error',
-          });
-        } 
-        // Handle other errors
-        else {
+        } else {
           setSnackbar({
             open: true,
             message: errorMsg,
@@ -488,43 +350,11 @@ const CreateTeacherForm = ({ open, onClose }) => {
   const handleSuccessDialogClose = () => {
     setSuccessDialogOpen(false);
     setLoading(false);
-    // No need to call onClose() here as form is already closed
   };
 
-  const getPasswordFeedback = () => {
-    if (!formData.password) return null;
-    
-    if (!isPasswordValid) {
-      return (
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            mt: 1, 
-            color: 'error.main',
-            fontSize: '0.75rem'
-          }}
-        >
-          <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Password doesn't meet all requirements
-        </Box>
-      );
-    }
-    
-    return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          mt: 1, 
-          color: 'success.main',
-          fontSize: '0.75rem'
-        }}
-      >
-        <CheckCircleIcon fontSize="small" sx={{ mr: 0.5 }} />
-        Password meets all requirements
-      </Box>
-    );
+  // Handle snackbar close
+  const handleSnackbarClose = () => {
+    setSnackbar({ open: false, message: '', severity: '' });
   };
 
   return (
@@ -608,74 +438,6 @@ const CreateTeacherForm = ({ open, onClose }) => {
               helperText={idNumberExists ? "ID Number already exists" : nameErrors.idNumber}
             />
 
-            <Grid container spacing={2} sx={{ mt: 0 }}>
-              <Grid item xs={6}>
-                <TextField
-                  label="Password"
-                  name="password"
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  onFocus={handlePasswordFocus}
-                  onBlur={handlePasswordBlur}
-                  variant="outlined"
-                  fullWidth
-                  required
-                  sx={{ mt: 2 }}
-                />
-                {getPasswordFeedback()}
-                <Collapse in={showPasswordRequirements}>
-                  <Paper elevation={0} sx={{ mt: 1, p: 1, bgcolor: 'background.paper', border: '1px solid #e0e0e0' }}>
-                    <Typography variant="caption" component="div" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <InfoIcon fontSize="small" sx={{ mr: 0.5, color: 'info.main' }} />
-                      Password requirements:
-                    </Typography>
-                    <List dense disablePadding>
-                      {[
-                        { id: 'minLength', label: 'At least 8 characters' },
-                        { id: 'hasUpperCase', label: 'At least one uppercase letter' },
-                        { id: 'hasLowerCase', label: 'At least one lowercase letter' },
-                        { id: 'hasNumber', label: 'At least one number' },
-                        { id: 'hasSpecial', label: 'At least one special character' }
-                      ].map((req) => (
-                        <ListItem key={req.id} disablePadding sx={{ py: 0 }}>
-                          <ListItemIcon sx={{ minWidth: 24 }}>
-                            {passwordValidation[req.id] ? 
-                              <CheckCircleIcon fontSize="small" sx={{ color: 'success.main' }} /> : 
-                              <CancelIcon fontSize="small" sx={{ color: 'error.main' }} />
-                            }
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary={req.label} 
-                            primaryTypographyProps={{ 
-                              variant: 'caption',
-                              color: passwordValidation[req.id] ? 'success.main' : 'error.main'
-                            }} 
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Paper>
-                </Collapse>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Confirm Password"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                  fullWidth
-                  required
-                  sx={{ mt: 2 }}
-                  error={!passwordsMatch && formData.confirmPassword !== ''}
-                  helperText={!passwordsMatch && formData.confirmPassword !== '' ? "Passwords do not match" : null}
-                />
-              </Grid>
-            </Grid>
-
             <TextField
               label="Role"
               name="role"
@@ -697,26 +459,12 @@ const CreateTeacherForm = ({ open, onClose }) => {
               required
               variant="outlined"
               sx={{ mt: 2 }}
-              SelectProps={{
-                native: true,
-              }}
-              InputLabelProps={{ 
-                shrink: true, 
-                style: { 
-                  position: 'absolute', 
-                  top: -10, 
-                  left: -10, 
-                  backgroundColor: 'white', 
-                  padding: '0 5px', 
-                  zIndex: 1 
-                } 
-              }}
             >
-              <option value="">Select Subject</option>
+              <MenuItem value="">Select Subject</MenuItem>
               {subjectOptions.map((subject) => (
-                <option key={subject} value={subject}>
+                <MenuItem key={subject} value={subject}>
                   {subject}
-                </option>
+                </MenuItem>
               ))}
             </TextField>
 
@@ -812,21 +560,22 @@ const CreateTeacherForm = ({ open, onClose }) => {
             </Box>
           </form>
         </DialogContent>
-
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={() => setSnackbar({ open: false, message: '', severity: '' })}
-        >
-          <Alert
-            onClose={() => setSnackbar({ open: false, message: '', severity: '' })}
-            severity={snackbar.severity}
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
       </Dialog>
+
+      {/* Separate Snackbar component */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       {/* Success Dialog - completely separate from the form */}
       {successDialogOpen && (
@@ -834,7 +583,8 @@ const CreateTeacherForm = ({ open, onClose }) => {
           open={successDialogOpen}
           onClose={handleSuccessDialogClose}
           title="Added Successfully"
-          message={`Teacher ${teacherName.firstName} ${teacherName.lastName} added successfully. You can now manage their details.`}
+          message={`Teacher ${teacherName.firstName} ${teacherName.lastName} added successfully.`}
+          temporaryPassword={temporaryPassword}
         />
       )}
     </>

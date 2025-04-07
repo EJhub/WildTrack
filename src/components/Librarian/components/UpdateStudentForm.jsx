@@ -386,7 +386,7 @@ const UpdateStudentForm = ({ open, onClose, user, onUpdate }) => {
             boxShadow: 24,
             p: 4,
             borderRadius: '8px',
-            zIndex: 1000,
+            zIndex: 1300,
             border: '1px solid #CCC',
             maxHeight: '90vh',
             overflowY: 'auto',

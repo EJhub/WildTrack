@@ -10,18 +10,14 @@ import {
   Typography,
   Paper,
   TextField,
-  IconButton,
   InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   TablePagination,
   Alert,
   CircularProgress,
-  Button
+  Button,
+  Tooltip
 } from '@mui/material';
-import { Search as SearchIcon, FilterList as FilterListIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Info as InfoIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 // Import API utility
 import api from '../../../utils/api';
@@ -29,40 +25,16 @@ import api from '../../../utils/api';
 const ActivityLogView = ({ currentView, setCurrentView }) => {
   // States for activity logs
   const [activityLogs, setActivityLogs] = useState([]);
+  const [filteredLogs, setFilteredLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // States for search/filtering
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [academicYear, setAcademicYear] = useState('2023-2024');
+  // States for search
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTeacher, setSelectedTeacher] = useState('');
-  const [teachers, setTeachers] = useState([]);
   
   // Pagination States
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [page, setPage] = useState(0);
-
-  // Fetch teachers for the dropdown
-  useEffect(() => {
-    const fetchTeachers = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-        
-        const response = await api.get('/teachers/all', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setTeachers(response.data);
-      } catch (error) {
-        console.error('Error fetching teachers:', error);
-      }
-    };
-    
-    fetchTeachers();
-  }, []);
 
   const fetchActivityLogs = async () => {
     try {
@@ -76,35 +48,61 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
         return;
       }
       
-      // Prepare the request params
-      const params = {};
-      if (academicYear) params.academicYear = academicYear;
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
-      if (searchQuery) params.query = searchQuery;
-      if (selectedTeacher) params.userId = selectedTeacher;
-      
+      // Make the API call - we'll apply filtering client-side
       const response = await api.get('/activity-logs', {
         headers: { 
           Authorization: `Bearer ${token}` 
-        },
-        params: params
+        }
       });
       
       setActivityLogs(response.data);
+      // Initialize filtered logs with all logs
+      filterLogs(response.data, searchQuery);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
       setError(`Failed to load activity logs: ${error.response?.data?.message || error.message}`);
       toast.error("Failed to load activity logs");
+      setFilteredLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // Filter logs based on search query
+  const filterLogs = (logs, query) => {
+    if (!query.trim()) {
+      setFilteredLogs(logs);
+      return;
+    }
+    
+    const lowercaseQuery = query.toLowerCase().trim();
+    
+    const filtered = logs.filter((log) => {
+      // Format date for searching
+      const formattedDate = formatDate(log.timestamp).toLowerCase();
+      
+      // Check if any field contains the search query
+      return (
+        (log.userIdNumber && log.userIdNumber.toLowerCase().includes(lowercaseQuery)) ||
+        (log.userName && log.userName.toLowerCase().includes(lowercaseQuery)) ||
+        formattedDate.includes(lowercaseQuery)
+      );
+    });
+    
+    setFilteredLogs(filtered);
+    // Reset to first page when search results change
+    setPage(0);
+  };
+
+  // Initial data fetch
   useEffect(() => {
     fetchActivityLogs();
-    // Don't auto-refetch when filters change since we want manual filter application
-  }, []); 
+  }, []);
+
+  // Apply filtering whenever search query changes
+  useEffect(() => {
+    filterLogs(activityLogs, searchQuery);
+  }, [searchQuery, activityLogs]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -119,64 +117,9 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
     setSearchQuery(event.target.value);
   };
 
-  // Handler for Date From with mutual exclusivity
-  const handleDateFromChange = (e) => {
-    const value = e.target.value;
-    
-    // If selecting a date, clear academic year
-    // And ensure dateTo is not earlier than dateFrom
-    if (value) {
-      if (dateTo && new Date(value) > new Date(dateTo)) {
-        // If dateFrom is later than dateTo, reset dateTo
-        setDateTo('');
-      }
-      setAcademicYear('');
-    }
-    
-    setDateFrom(value);
-  };
-
-  // Handler for Date To with mutual exclusivity
-  const handleDateToChange = (e) => {
-    const value = e.target.value;
-    
-    // Clear academic year if date is set
-    if (value) {
-      setAcademicYear('');
-    }
-    
-    setDateTo(value);
-  };
-
-  // Handler for Academic Year with mutual exclusivity
-  const handleAcademicYearChange = (e) => {
-    const value = e.target.value;
-    
-    // Clear date range if academic year is set
-    if (value) {
-      setDateFrom('');
-      setDateTo('');
-    }
-    
-    setAcademicYear(value);
-  };
-
-  // Apply search and filters with validation
-  const applyFilters = () => {
-    // Validate date range if both dates are provided
-    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
-      toast.error('Date From must be before or equal to Date To');
-      return;
-    }
-    
+  // Refresh functionality
+  const handleRefresh = () => {
     fetchActivityLogs();
-  };
-
-  // Handle Enter key press in search field
-  const handleKeyPress = (event) => {
-    if (event.key === 'Enter') {
-      applyFilters();
-    }
   };
 
   // Format the date for display
@@ -192,18 +135,22 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
     });
   };
 
-  // Format teacher name for display in dropdown
-  const formatTeacherName = (teacher) => {
-    if (!teacher) return '';
-    
-    if (teacher.middleName && teacher.middleName.trim() !== '') {
-      return `${teacher.firstName} ${teacher.middleName.charAt(0)}. ${teacher.lastName}`;
-    }
-    return `${teacher.firstName} ${teacher.lastName}`;
-  };
-
   // Get the logs for the current page
-  const paginatedLogs = activityLogs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const paginatedLogs = filteredLogs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  // Helper for activity description
+  const getActivityDescription = (activity) => {
+    switch (activity) {
+      case 'LIBRARY_HOURS_CREATED':
+        return 'Created Library Hours';
+      case 'LIBRARY_HOURS_APPROVED':
+        return 'Approved Library Hours';
+      case 'LIBRARY_HOURS_REJECTED':
+        return 'Rejected Library Hours';
+      default:
+        return activity;
+    }
+  };
 
   return (
     <>
@@ -219,27 +166,59 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
         }}
       >
         {/* Left side - Search Bar */}
-        <TextField
-          variant="outlined"
-          placeholder="Search activity logs..."
-          size="small"
-          value={searchQuery}
-          onChange={handleSearch}
-          onKeyPress={handleKeyPress}
-          sx={{
-            backgroundColor: '#fff',
-            borderRadius: '15px',
-            flexGrow: 1,
-            maxWidth: { xs: '100%', sm: '400px' }
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+          <TextField
+            variant="outlined"
+            placeholder="Search activity logs..."
+            size="small"
+            value={searchQuery}
+            onChange={handleSearch}
+            sx={{
+              backgroundColor: '#fff',
+              borderRadius: '15px',
+              maxWidth: { xs: '100%', sm: '400px' },
+              width: '100%'
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Tooltip title="Search by ID Number, Name, or Date & Time" arrow>
+                    <InfoIcon fontSize="small" color="action" />
+                  </Tooltip>
+                </InputAdornment>
+              ),
+            }}
+          />
+          {loading ? (
+            <Typography variant="body2" color="text.secondary">
+              Loading...
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              {filteredLogs.length} {filteredLogs.length === 1 ? 'result' : 'results'}
+            </Typography>
+          )}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleRefresh}
+            sx={{
+              color: '#800000',
+              borderColor: '#800000',
+              '&:hover': {
+                backgroundColor: '#f5f5f5',
+                borderColor: '#800000',
+              }
+            }}
+          >
+            Refresh
+          </Button>
+        </Box>
 
         {/* Right side - Toggle Buttons */}
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -258,7 +237,7 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
               },
             }}
           >
-            Activity Log
+            ACTIVITY LOG
           </Button>
 
           <Button
@@ -276,113 +255,9 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
               },
             }}
           >
-            Teachers
+            TEACHERS
           </Button>
         </Box>
-      </Box>
-
-      {/* Filters Section */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          marginRight: '100px',
-          flexWrap: { xs: 'wrap', md: 'nowrap' },
-          marginBottom: 3,
-        }}
-      >
-        <TextField
-          label="Date From"
-          type="date"
-          value={dateFrom}
-          onChange={handleDateFromChange}
-          disabled={!!academicYear} // Disable if academicYear has a value
-          sx={{ 
-            backgroundColor: '#fff', 
-            borderRadius: '15px', 
-            flexGrow: 1, 
-            maxWidth: '200px',
-            '& .Mui-disabled': {
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              opacity: 0.7
-            }
-          }}
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
-
-        <TextField
-          label="Date To"
-          type="date"
-          value={dateTo}
-          onChange={handleDateToChange}
-          disabled={!!academicYear || !dateFrom} // Disable if academicYear has a value or dateFrom is empty
-          inputProps={{
-            min: dateFrom || undefined // Set minimum date to dateFrom
-          }}
-          sx={{ 
-            backgroundColor: '#fff', 
-            borderRadius: '15px', 
-            flexGrow: 1, 
-            maxWidth: '200px',
-            '& .Mui-disabled': {
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              opacity: 0.7
-            }
-          }}
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
-
-        <FormControl sx={{ 
-          backgroundColor: '#fff', 
-          borderRadius: '15px', 
-          minWidth: '200px',
-          '& .Mui-disabled': {
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
-            opacity: 0.7
-          }
-        }}>
-          <InputLabel>Academic Year</InputLabel>
-          <Select
-            value={academicYear}
-            onChange={handleAcademicYearChange}
-            label="Academic Year"
-            size="small"
-            disabled={!!dateFrom || !!dateTo} // Disable if either date filter has a value
-          >
-            <MenuItem value="">All Years</MenuItem>
-            <MenuItem value="2023-2024">2023-2024</MenuItem>
-            <MenuItem value="2024-2025">2024-2025</MenuItem>
-            <MenuItem value="2025-2026">2025-2026</MenuItem>
-            <MenuItem value="2026-2027">2026-2027</MenuItem>
-          </Select>
-        </FormControl>
-        
-        {/* New Teacher Filter */}
-        <FormControl sx={{ backgroundColor: '#fff', borderRadius: '15px', minWidth: '200px' }}>
-          <InputLabel>Teacher</InputLabel>
-          <Select
-            value={selectedTeacher}
-            onChange={(e) => setSelectedTeacher(e.target.value)}
-            label="Teacher"
-            size="small"
-          >
-            <MenuItem value="">All Teachers</MenuItem>
-            {teachers.filter(t => t.role === 'Teacher').map((teacher) => (
-              <MenuItem key={teacher.id} value={teacher.id}>
-                {formatTeacherName(teacher)}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <IconButton onClick={applyFilters} color="primary">
-          <FilterListIcon sx={{ fontSize: 24 }} />
-        </IconButton>
       </Box>
 
       {/* Error Message */}
@@ -398,29 +273,23 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
-                Log ID
+                ID NUMBER
               </TableCell>
               <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
-                Date & Time
+                NAME
               </TableCell>
               <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
-                Name
+                ACTIVITY
               </TableCell>
               <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
-                Role
-              </TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
-                Activity
-              </TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: '#000', backgroundColor: '#FFD700' }}>
-                Description
+                DATE & TIME
               </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={4} align="center">
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
                     <CircularProgress size={24} sx={{ mr: 1 }} />
                     Loading activity logs...
@@ -429,31 +298,26 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
               </TableRow>
             ) : paginatedLogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
-                  No activity logs found.
+                <TableCell colSpan={4} align="center">
+                  {searchQuery ? 'No activity logs match your search.' : 'No activity logs found.'}
                 </TableCell>
               </TableRow>
             ) : (
               paginatedLogs.map((log, index) => (
                 <TableRow
-                  key={log.id}
+                  key={log.id || index}
                   hover
                   sx={{
                     backgroundColor: index % 2 === 0 ? '#FFF8E1' : '#ffffff',
                     '&:hover': { backgroundColor: '#FFB300' },
                   }}
                 >
-                  <TableCell>{log.id}</TableCell>
-                  <TableCell>{formatDate(log.timestamp)}</TableCell>
+                  <TableCell>{log.userIdNumber}</TableCell>
                   <TableCell>{log.userName}</TableCell>
-                  <TableCell>{log.userRole}</TableCell>
                   <TableCell>
-                    {log.activity === 'LIBRARY_HOURS_CREATED' ? 'Created Library Hours' :
-                     log.activity === 'LIBRARY_HOURS_APPROVED' ? 'Approved Library Hours' :
-                     log.activity === 'LIBRARY_HOURS_REJECTED' ? 'Rejected Library Hours' :
-                     log.activity}
+                    {log.description || getActivityDescription(log.activity)}
                   </TableCell>
-                  <TableCell>{log.description}</TableCell>
+                  <TableCell>{formatDate(log.timestamp)}</TableCell>
                 </TableRow>
               ))
             )}
@@ -466,7 +330,7 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={activityLogs.length}
+          count={filteredLogs.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

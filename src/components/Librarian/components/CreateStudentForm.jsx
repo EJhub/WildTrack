@@ -9,18 +9,9 @@ import {
   IconButton,
   Typography,
   Grid,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Collapse,
-  Paper
+  MenuItem
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import InfoIcon from '@mui/icons-material/Info';
-import WarningIcon from '@mui/icons-material/Warning';
 import api from '../../../utils/api'; // Import the API utility
 import SuccessDialog from './SuccessDialog';
 
@@ -30,8 +21,6 @@ const CreateStudentForm = ({ open, onClose }) => {
     lastName: "",
     middleName: "",
     idNumber: "",
-    password: "",
-    confirmPassword: "",
     grade: "",
     section: "",
     academicYear: "",
@@ -41,17 +30,12 @@ const CreateStudentForm = ({ open, onClose }) => {
   // Form validation states
   const [formValid, setFormValid] = useState(false);
   const [errors, setErrors] = useState({});
-  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
-  const [passwordValidation, setPasswordValidation] = useState({
-    minLength: false,
-    hasUpperCase: false,
-    hasLowerCase: false,
-    hasNumber: false,
-    hasSpecial: false
-  });
-
-  // Store student name for success message
+  
+  // Store student name and password for success message
   const [studentName, setStudentName] = useState({ firstName: '', lastName: '' });
+  const [temporaryPassword, setTemporaryPassword] = useState('');
+  
+  // Other state
   const [gradeOptions, setGradeOptions] = useState([]);
   const [sectionOptions, setSectionOptions] = useState([]);
   const [academicYearOptions, setAcademicYearOptions] = useState([]);
@@ -84,7 +68,6 @@ const CreateStudentForm = ({ open, onClose }) => {
       resetForm();
       setIsLoading(false);
       setErrors({});
-      setShowPasswordRequirements(false);
     }
   }, [open]);
 
@@ -134,24 +117,6 @@ const CreateStudentForm = ({ open, onClose }) => {
 
     fetchSectionOptions();
   }, [formData.grade]);
-
-  // Validate password whenever it changes
-  useEffect(() => {
-    validatePassword(formData.password);
-  }, [formData.password]);
-
-  // Validate password confirmation
-  useEffect(() => {
-    if (formData.confirmPassword && formData.password !== formData.confirmPassword) {
-      setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
-    } else {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.confirmPassword;
-        return newErrors;
-      });
-    }
-  }, [formData.password, formData.confirmPassword]);
 
   // Validate name fields
   useEffect(() => {
@@ -210,8 +175,6 @@ const CreateStudentForm = ({ open, onClose }) => {
       'firstName',
       'lastName',
       'idNumber',
-      'password',
-      'confirmPassword',
       'grade',
       'section',
       'academicYear'
@@ -223,37 +186,6 @@ const CreateStudentForm = ({ open, onClose }) => {
     
     setFormValid(isValid);
     return isValid;
-  };
-
-  const validatePassword = (password) => {
-    const validations = {
-      minLength: password.length >= 8,
-      hasUpperCase: /[A-Z]/.test(password),
-      hasLowerCase: /[a-z]/.test(password),
-      hasNumber: /[0-9]/.test(password),
-      hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
-    };
-    
-    setPasswordValidation(validations);
-    
-    // Check if all validations pass
-    const isPasswordValid = Object.values(validations).every(Boolean);
-    
-    if (password && !isPasswordValid) {
-      setErrors(prev => ({ ...prev, password: "Password doesn't meet all requirements" }));
-    } else {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.password;
-        return newErrors;
-      });
-    }
-    
-    return isPasswordValid;
-  };
-
-  const isPasswordValid = () => {
-    return Object.values(passwordValidation).every(Boolean);
   };
 
   const handleInputChange = (e) => {
@@ -294,25 +226,12 @@ const CreateStudentForm = ({ open, onClose }) => {
     }
   };
 
-  const handlePasswordFocus = () => {
-    setShowPasswordRequirements(true);
-  };
-
-  const handlePasswordBlur = () => {
-    // Don't hide requirements if password field has input but requirements aren't met
-    if (!formData.password || isPasswordValid()) {
-      setShowPasswordRequirements(false);
-    }
-  };
-
   const resetForm = () => {
     setFormData({
       firstName: "",
       lastName: "",
       middleName: "",
       idNumber: "",
-      password: "",
-      confirmPassword: "",
       grade: "",
       section: "",
       academicYear: "",
@@ -320,42 +239,14 @@ const CreateStudentForm = ({ open, onClose }) => {
     });
     setErrors({});
     setFormValid(false);
+    setTemporaryPassword('');
   };
 
-  const getPasswordFeedback = () => {
-    if (!formData.password) return null;
-    
-    if (!isPasswordValid()) {
-      return (
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            mt: 1, 
-            color: 'error.main',
-            fontSize: '0.75rem'
-          }}
-        >
-          <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Password doesn't meet all requirements
-        </Box>
-      );
-    }
-    
-    return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          mt: 1, 
-          color: 'success.main',
-          fontSize: '0.75rem'
-        }}
-      >
-        <CheckCircleIcon fontSize="small" sx={{ mr: 0.5 }} />
-        Password meets all requirements
-      </Box>
-    );
+  // Store data directly from the response and show dialog
+  const showSuccessWithData = (studentData) => {
+    setStudentName(studentData.name);
+    setTemporaryPassword(studentData.password);
+    setSuccessDialogOpen(true);
   };
 
   const handleSubmit = async (e) => {
@@ -373,25 +264,32 @@ const CreateStudentForm = ({ open, onClose }) => {
         lastName: formData.lastName,
         middleName: formData.middleName,
         idNumber: formData.idNumber,
-        password: formData.password,
         grade: formData.grade,
         section: formData.section,
         academicYear: formData.academicYear,
         role: formData.role
       });
 
-      // Store student name before resetting form
-      setStudentName({
-        firstName: formData.firstName,
-        lastName: formData.lastName
-      });
+      // Debug: Log the API response
+      console.log("Student registration response:", response.data);
+      
+      // Store data directly for use in success dialog
+      const studentData = {
+        name: {
+          firstName: formData.firstName,
+          lastName: formData.lastName
+        },
+        // Extract password explicitly from response
+        password: response.data.temporaryPassword || ''
+      };
 
-      // Explicitly close the form first
+      // Close form first
       onClose();
       
-      // Show the success dialog after a brief delay
+      // Show success dialog with direct data (avoids state timing issues)
       setTimeout(() => {
-        setSuccessDialogOpen(true);
+        console.log("Showing success dialog with password:", studentData.password);
+        showSuccessWithData(studentData);
       }, 100);
       
     } catch (error) {
@@ -401,11 +299,7 @@ const CreateStudentForm = ({ open, onClose }) => {
         const errorMessage = error.response.data.error;
         
         // Handle specific errors
-        if (errorMessage.includes("Password")) {
-          setErrors(prev => ({ ...prev, password: errorMessage }));
-          setShowPasswordRequirements(true);
-          document.getElementById('password')?.focus();
-        } else if (errorMessage.includes("ID Number already exists")) {
+        if (errorMessage.includes("ID Number already exists")) {
           setErrors(prev => ({ ...prev, idNumber: "ID Number already exists" }));
           document.getElementById('idNumber')?.focus();
         } else if (errorMessage.includes("First name should contain")) {
@@ -518,74 +412,6 @@ const CreateStudentForm = ({ open, onClose }) => {
             />
 
             <Grid container spacing={2} sx={{ mt: 0 }}>
-              <Grid item xs={6}>
-                <TextField
-                  id="password"
-                  name="password"
-                  label="Password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  onFocus={handlePasswordFocus}
-                  onBlur={handlePasswordBlur}
-                  fullWidth
-                  required
-                  variant="outlined"
-                  error={!!errors.password}
-                  helperText={errors.password}
-                />
-                {getPasswordFeedback()}
-                <Collapse in={showPasswordRequirements}>
-                  <Paper elevation={0} sx={{ mt: 1, p: 1, bgcolor: 'background.paper', border: '1px solid #e0e0e0' }}>
-                    <Typography variant="caption" component="div" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <InfoIcon fontSize="small" sx={{ mr: 0.5, color: 'info.main' }} />
-                      Password requirements:
-                    </Typography>
-                    <List dense disablePadding>
-                      {[
-                        { id: 'minLength', label: 'At least 8 characters' },
-                        { id: 'hasUpperCase', label: 'At least one uppercase letter' },
-                        { id: 'hasLowerCase', label: 'At least one lowercase letter' },
-                        { id: 'hasNumber', label: 'At least one number' },
-                        { id: 'hasSpecial', label: 'At least one special character' }
-                      ].map((req) => (
-                        <ListItem key={req.id} disablePadding sx={{ py: 0 }}>
-                          <ListItemIcon sx={{ minWidth: 24 }}>
-                            {passwordValidation[req.id] ? 
-                              <CheckCircleIcon fontSize="small" sx={{ color: 'success.main' }} /> : 
-                              <CancelIcon fontSize="small" sx={{ color: 'error.main' }} />
-                            }
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary={req.label} 
-                            primaryTypographyProps={{ 
-                              variant: 'caption',
-                              color: passwordValidation[req.id] ? 'success.main' : 'error.main'
-                            }} 
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Paper>
-                </Collapse>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  name="confirmPassword"
-                  label="Confirm Password"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  fullWidth
-                  required
-                  variant="outlined"
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword}
-                />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={2} sx={{ mt: 0 }}>
               <Grid item xs={4}>
                 <TextField
                   name="grade"
@@ -596,26 +422,13 @@ const CreateStudentForm = ({ open, onClose }) => {
                   fullWidth
                   required
                   variant="outlined"
-                  SelectProps={{
-                    native: true,
-                  }}
-                  InputLabelProps={{ 
-                    shrink: true, 
-                    style: { 
-                      position: 'absolute', 
-                      top: -10, 
-                      left: -10, 
-                      backgroundColor: 'white', 
-                      padding: '0 5px', 
-                      zIndex: 1 
-                    } 
-                  }}
+                  sx={{ mt: 2 }}
                 >
-                  <option value="">Select Grade</option>
+                  <MenuItem value="">Select Grade</MenuItem>
                   {gradeOptions.map((grade) => (
-                    <option key={grade} value={grade}>
+                    <MenuItem key={grade} value={grade}>
                       {grade}
-                    </option>
+                    </MenuItem>
                   ))}
                 </TextField>
               </Grid>
@@ -630,26 +443,13 @@ const CreateStudentForm = ({ open, onClose }) => {
                   required
                   variant="outlined"
                   disabled={!formData.grade}
-                  SelectProps={{
-                    native: true,
-                  }}
-                  InputLabelProps={{ 
-                    shrink: true, 
-                    style: { 
-                      position: 'absolute', 
-                      top: -10, 
-                      left: -10, 
-                      backgroundColor: 'white', 
-                      padding: '0 5px', 
-                      zIndex: 1 
-                    } 
-                  }}
+                  sx={{ mt: 2 }}
                 >
-                  <option value="">Select Section</option>
+                  <MenuItem value="">Select Section</MenuItem>
                   {sectionOptions.map((section) => (
-                    <option key={section} value={section}>
+                    <MenuItem key={section} value={section}>
                       {section}
-                    </option>
+                    </MenuItem>
                   ))}
                 </TextField>
               </Grid>
@@ -664,22 +464,9 @@ const CreateStudentForm = ({ open, onClose }) => {
                   required
                   disabled
                   variant="outlined"
-                  SelectProps={{
-                    native: true,
-                  }}
-                  InputLabelProps={{ 
-                    shrink: true, 
-                    style: { 
-                      position: 'absolute', 
-                      top: -10, 
-                      left: -10, 
-                      backgroundColor: 'white', 
-                      padding: '0 5px', 
-                      zIndex: 1 
-                    } 
-                  }}
+                  sx={{ mt: 2 }}
                 >
-                  <option value="Student">Student</option>
+                  <MenuItem value="Student">Student</MenuItem>
                 </TextField>
               </Grid>
             </Grid>
@@ -694,26 +481,12 @@ const CreateStudentForm = ({ open, onClose }) => {
               required
               variant="outlined"
               sx={{ mt: 2 }}
-              SelectProps={{
-                native: true,
-              }}
-              InputLabelProps={{ 
-                shrink: true, 
-                style: { 
-                  position: 'absolute', 
-                  top: -10, 
-                  left: -10, 
-                  backgroundColor: 'white', 
-                  padding: '0 5px', 
-                  zIndex: 1 
-                } 
-              }}
             >
-              <option value="">Select Academic Year</option>
+              <MenuItem value="">Select Academic Year</MenuItem>
               {academicYearOptions.map((year) => (
-                <option key={year} value={year}>
+                <MenuItem key={year} value={year}>
                   {year}
-                </option>
+                </MenuItem>
               ))}
             </TextField>
 
@@ -727,7 +500,6 @@ const CreateStudentForm = ({ open, onClose }) => {
                   color: '#000',
                   '&:hover': { backgroundColor: '#FFC107' },
                   width: '200px'
-                  
                 }}
               >
                 {loading ? 'Submitting...' : 'Submit'}
@@ -743,7 +515,8 @@ const CreateStudentForm = ({ open, onClose }) => {
           open={successDialogOpen}
           onClose={handleSuccessDialogClose}
           title="Added Successfully"
-          message={`Student ${studentName.firstName} ${studentName.lastName} added successfully. You can now manage their details.`}
+          message={`Student ${studentName.firstName} ${studentName.lastName} has been added successfully.`}
+          temporaryPassword={temporaryPassword}
         />
       )}
     </>

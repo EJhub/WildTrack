@@ -19,8 +19,9 @@ import {
   IconButton,
   InputAdornment,
   TablePagination,
+  Tooltip,
 } from '@mui/material';
-import { Menu as MenuIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Menu as MenuIcon, Search as SearchIcon, Info as InfoIcon } from '@mui/icons-material';
 import CreateTeacherForm from './components/CreateTeacherForm';
 import UpdateTeacherForm from './components/UpdateTeacherForm';
 import AddIcon from '@mui/icons-material/Add';
@@ -33,6 +34,7 @@ const LibrarianManageTeacher = () => {
   const resetPasswordUserId = queryParams.get('resetPasswordUserId');
   
   const [teachers, setTeachers] = useState([]);
+  const [filteredTeachers, setFilteredTeachers] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false); // Modal for adding teacher
   const [isUpdateFormOpen, setIsUpdateFormOpen] = useState(false); // Modal for updating teacher
   const [currentTeacher, setCurrentTeacher] = useState(null); // Store teacher data for updating
@@ -40,33 +42,71 @@ const LibrarianManageTeacher = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Modal state for delete confirmation
   const [currentView, setCurrentView] = useState('Teachers'); // Add currentView state
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
   
   // Pagination States
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [page, setPage] = useState(0);
 
+  // Fetch all teachers data
   const getTeachers = async () => {
     try {
-      const response = await api.get('/teachers/all', {
-        params: {
-          query: searchQuery
-        },
-      });
-      setTeachers(response.data);
+      setLoading(true);
+      const response = await api.get('/teachers/all');
+      const teachersData = response.data;
+      setTeachers(teachersData);
+      
+      // Apply initial filtering
+      filterTeachers(teachersData, searchQuery);
       
       // If there's a resetPasswordUserId param, find and open that teacher's form
       if (resetPasswordUserId) {
         const teacherId = parseInt(resetPasswordUserId, 10);
-        const teacher = response.data.find(t => t.id === teacherId);
+        const teacher = teachersData.find(t => t.id === teacherId);
         if (teacher) {
           setCurrentTeacher(teacher);
           setIsUpdateFormOpen(true);
         }
       }
+      setLoading(false);
     } catch (error) {
       console.error('There was an error fetching teachers:', error);
+      setLoading(false);
     }
   };
+
+  // Filter teachers based on search query across multiple fields
+  const filterTeachers = (teachersList, query) => {
+    if (!query.trim()) {
+      setFilteredTeachers(teachersList);
+      return;
+    }
+    
+    const lowercaseQuery = query.toLowerCase().trim();
+    
+    const filtered = teachersList.filter((teacher) => {
+      // Format teacher name for searching
+      const fullName = formatTeacherName(teacher).toLowerCase();
+      
+      // Check if any field contains the search query
+      return (
+        (teacher.idNumber && teacher.idNumber.toLowerCase().includes(lowercaseQuery)) ||
+        fullName.includes(lowercaseQuery) ||
+        (teacher.grade && teacher.grade.toLowerCase().includes(lowercaseQuery)) ||
+        (teacher.section && teacher.section.toLowerCase().includes(lowercaseQuery)) ||
+        (teacher.subject && teacher.subject.toLowerCase().includes(lowercaseQuery))
+      );
+    });
+    
+    setFilteredTeachers(filtered);
+    // Reset to first page when search results change
+    setPage(0);
+  };
+
+  // Apply filtering whenever search query changes
+  useEffect(() => {
+    filterTeachers(teachers, searchQuery);
+  }, [searchQuery, teachers]);
 
   useEffect(() => {
     if (currentView === 'Teachers') {
@@ -109,7 +149,11 @@ const LibrarianManageTeacher = () => {
     try {
       if (teacherToDelete) {
         await api.delete(`/teachers/${teacherToDelete.id}`);
-        setTeachers(teachers.filter((teacher) => teacher.id !== teacherToDelete.id)); // Remove teacher from state
+        // Update both teachers and filtered teachers lists
+        const updatedTeachers = teachers.filter((t) => t.id !== teacherToDelete.id);
+        setTeachers(updatedTeachers);
+        filterTeachers(updatedTeachers, searchQuery);
+        
         setTeacherToDelete(null); // Clear selected teacher
         setIsDeleteModalOpen(false); // Close delete modal
       }
@@ -131,12 +175,6 @@ const LibrarianManageTeacher = () => {
     setSearchQuery(event.target.value);
   };
 
-  const handleKeyPress = (event) => {
-    if (event.key === 'Enter') {
-      getTeachers();
-    }
-  };
-
   // Function to format teacher's full name with middle name
   const formatTeacherName = (teacher) => {
     if (!teacher) return '';
@@ -151,7 +189,7 @@ const LibrarianManageTeacher = () => {
   };
 
   // Get the teachers for the current page
-  const paginatedTeachers = teachers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const paginatedTeachers = filteredTeachers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <>
@@ -192,7 +230,7 @@ const LibrarianManageTeacher = () => {
               textAlign: 'left',
             }}
           >
-            {currentView === "Teachers" ? "Manage Teacher Activity" : "Activity Log"}
+            {currentView === "Teachers" ? "Manage Teacher" : "Manage Teachers Activity"}
           </Typography>
 
           {currentView === "Activity Log" ? (
@@ -223,7 +261,6 @@ const LibrarianManageTeacher = () => {
                     size="small"
                     value={searchQuery}
                     onChange={handleSearch}
-                    onKeyPress={handleKeyPress}
                     sx={{
                       backgroundColor: '#fff',
                       borderRadius: '15px',
@@ -236,8 +273,24 @@ const LibrarianManageTeacher = () => {
                           <SearchIcon />
                         </InputAdornment>
                       ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Tooltip title="Search by ID Number, Name, Grade Level, Section, or Subject" arrow>
+                            <InfoIcon fontSize="small" color="action" />
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
                     }}
                   />
+                  {loading ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Loading...
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      {filteredTeachers.length} {filteredTeachers.length === 1 ? 'result' : 'results'}
+                    </Typography>
+                  )}
                 </Box>
 
                 {/* Right side with toggle buttons */}
@@ -348,10 +401,16 @@ const LibrarianManageTeacher = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {paginatedTeachers.length === 0 ? (
+                    {loading ? (
                       <TableRow>
                         <TableCell colSpan={6} align="center">
-                          No teachers found.
+                          Loading teachers...
+                        </TableCell>
+                      </TableRow>
+                    ) : paginatedTeachers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          {searchQuery ? 'No teachers found matching your search.' : 'No teachers found.'}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -415,7 +474,7 @@ const LibrarianManageTeacher = () => {
                 <TablePagination
                   rowsPerPageOptions={[5, 10, 25]}
                   component="div"
-                  count={teachers.length}
+                  count={filteredTeachers.length}
                   rowsPerPage={rowsPerPage}
                   page={page}
                   onPageChange={handleChangePage}
