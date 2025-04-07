@@ -32,12 +32,21 @@ const GradeRow = ({
   onArchiveGrade, 
   onArchiveSection,
   onAddSection,
-  onUpdateSection
+  onUpdateSection,
+  searchTerm = '',
+  isGradeFiltered = true
 }) => {
   const [open, setOpen] = useState(false);
   const [isAddSectionModalOpen, setIsAddSectionModalOpen] = useState(false);
   const [viewSectionModalOpen, setViewSectionModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
+
+  // If there's a search term, automatically expand rows
+  useEffect(() => {
+    if (searchTerm && isGradeFiltered) {
+      setOpen(true);
+    }
+  }, [searchTerm, isGradeFiltered]);
 
   const handleOpenAddSectionModal = () => {
     setIsAddSectionModalOpen(true);
@@ -64,6 +73,21 @@ const GradeRow = ({
     setViewSectionModalOpen(false);
     setSelectedSection(null);
   };
+
+  // Filter sections based on search term
+  const filteredSections = sections.filter(section => {
+    if (!searchTerm) return true;
+    
+    const term = searchTerm.toLowerCase().trim();
+    return (
+      section.sectionName.toLowerCase().includes(term) ||
+      (section.advisor && section.advisor.toLowerCase().includes(term)) ||
+      (section.status && section.status.toLowerCase().includes(term))
+    );
+  });
+
+  // Determine if this row matches search criteria
+  const hasMatchingSections = filteredSections.length > 0;
 
   return (
     <>
@@ -140,8 +164,8 @@ const GradeRow = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sections && sections.length > 0 ? (
-                    sections.map((section) => (
+                  {filteredSections.length > 0 ? (
+                    filteredSections.map((section) => (
                       <TableRow key={section.id}>
                         <TableCell>{section.sectionName}</TableCell>
                         <TableCell>{section.advisor}</TableCell>
@@ -192,7 +216,7 @@ const GradeRow = ({
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
-                        No sections available
+                        {searchTerm ? 'No sections match your search criteria.' : 'No sections available'}
                       </TableCell>
                     </TableRow>
                   )}
@@ -215,11 +239,12 @@ const GradeRow = ({
 };
 
 // Main GradeSectionTable Component
-const GradeSectionTable = () => {
+const GradeSectionTable = ({ searchTerm = '' }) => {
   const [gradeSections, setGradeSections] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filteredGrades, setFilteredGrades] = useState([]);
 
   const fetchGradeSections = async () => {
     try {
@@ -267,6 +292,7 @@ const GradeSectionTable = () => {
       });
 
       setGradeSections(groupedData);
+      filterGrades(groupedData, searchTerm);
     } catch (error) {
       console.error('Error fetching grade sections:', error);
       setError(error.message || 'Failed to fetch grade sections');
@@ -275,9 +301,43 @@ const GradeSectionTable = () => {
     }
   };
 
+  // Filter grades based on search term
+  const filterGrades = (grades, term) => {
+    if (!term) {
+      setFilteredGrades(grades);
+      return;
+    }
+    
+    const lowercaseTerm = term.toLowerCase().trim();
+    
+    // Find grades that match directly
+    const directlyMatchingGrades = grades.filter(grade => 
+      grade.grade.toLowerCase().includes(lowercaseTerm) ||
+      grade.status.toLowerCase().includes(lowercaseTerm)
+    );
+    
+    // Find grades that have sections matching the search term
+    const gradesWithMatchingSections = grades.filter(grade => 
+      !directlyMatchingGrades.includes(grade) && // Skip already included grades
+      grade.sections.some(section => 
+        section.sectionName.toLowerCase().includes(lowercaseTerm) ||
+        (section.advisor && section.advisor.toLowerCase().includes(lowercaseTerm)) ||
+        section.status.toLowerCase().includes(lowercaseTerm)
+      )
+    );
+    
+    // Combine both types of matches
+    setFilteredGrades([...directlyMatchingGrades, ...gradesWithMatchingSections]);
+  };
+
   useEffect(() => {
     fetchGradeSections();
   }, []);
+
+  // Update filtered grades when search term changes
+  useEffect(() => {
+    filterGrades(gradeSections, searchTerm);
+  }, [searchTerm, gradeSections]);
 
   const handleArchiveGrade = async (gradeLevel) => {
     try {
@@ -320,8 +380,8 @@ const GradeSectionTable = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+        <CircularProgress size={60} thickness={4} sx={{ color: '#800000' }} />
       </Box>
     );
   }
@@ -335,8 +395,15 @@ const GradeSectionTable = () => {
   }
 
   return (
-    <Box sx={{ width: '100%' }}>
-      <TableContainer component={Paper}>
+    <Box sx={{ width: '100%', mb: 10 }}>
+      {/* Search result count */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          {filteredGrades.length} {filteredGrades.length === 1 ? 'grade level' : 'grade levels'} found
+        </Typography>
+      </Box>
+
+      <TableContainer component={Paper} sx={{ borderRadius: '15px', boxShadow: 3 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#FFD700' }}>
@@ -348,16 +415,26 @@ const GradeSectionTable = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {gradeSections.map((grade) => (
-              <GradeRow 
-                key={grade.grade}
-                {...grade}
-                onArchiveGrade={handleArchiveGrade}
-                onArchiveSection={handleArchiveSection}
-                onAddSection={handleAddSection}
-                onUpdateSection={handleUpdateSection}
-              />
-            ))}
+            {filteredGrades.length > 0 ? (
+              filteredGrades.map((grade) => (
+                <GradeRow 
+                  key={grade.grade}
+                  {...grade}
+                  onArchiveGrade={handleArchiveGrade}
+                  onArchiveSection={handleArchiveSection}
+                  onAddSection={handleAddSection}
+                  onUpdateSection={handleUpdateSection}
+                  searchTerm={searchTerm}
+                  isGradeFiltered={grade.grade.toLowerCase().includes(searchTerm.toLowerCase())}
+                />
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} align="center">
+                  {searchTerm ? 'No grade levels match your search criteria.' : 'No grade levels found.'}
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
