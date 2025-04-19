@@ -2,7 +2,7 @@ import StudentLibraryHours from "./Student/StudentLibraryHoursDashboard";
 
 import TeacherDashboard from "./Teacher/TeacherDashboard";
 import LibrarianDashboard from "./Librarian/LibrarianDashboard";
-import BookLog from "./Student/StudentBookLog";
+import Journal from "./Student/StudentJournal";
 import InputIDLogin from "./Login/InputIDLogin";
 import InputIDLogout from "./Login/InputIDLogout";
 import ForgotPassword from "./Login/ForgotPassword";
@@ -49,7 +49,7 @@ export default function TheRoutes() {
             <Route path="/ResetPassword" element={<ForgotPassword />} />
             <Route path="/studentDashboard/TimeRemaining" element={<ProtectedRoute><StudentLibraryHours /></ProtectedRoute> } />
             <Route path="/studentDashboard/TimeRemaining/Addbook" element={<ProtectedRoute><StudentLibraryHours /> </ProtectedRoute>} />
-            <Route path="/studentDashboard/booklog" element={<ProtectedRoute><BookLog /></ProtectedRoute>} />
+            <Route path="/studentDashboard/journal" element={<ProtectedRoute><Journal /></ProtectedRoute>} />
             <Route path="/studentDashboard/personalInfo" element={<ProtectedRoute><StudentPersonalInfo /></ProtectedRoute>} />
 
             <Route path="/studentDashboard/StudentAnalyticsAndReports" element={<ProtectedRoute><StudentAnalyticsAndReports/></ProtectedRoute>} />
