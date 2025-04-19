@@ -17,6 +17,10 @@ import {
   InputAdornment,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -37,11 +41,15 @@ const StudentLibraryHours = () => {
   const [open, setOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [filteredHours, setFilteredHours] = useState([]);
-  const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", academicYear: "" });
+  const [filters, setFilters] = useState({ dateFrom: "", dateTo: "" });
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [academicYearOptions, setAcademicYearOptions] = useState([]);
+  
+  // Summary dialog state
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [selectedSummary, setSelectedSummary] = useState({ bookTitle: "", summary: "" });
+  
   // Sort state
   const [orderBy, setOrderBy] = useState("date"); // Default sort by date
   const [order, setOrder] = useState("asc"); // Default sort direction (ascending)
@@ -85,6 +93,24 @@ const StudentLibraryHours = () => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
+  };
+
+  // Handler for book title click to show summary
+  const handleBookTitleClick = (entry) => {
+    if (entry.bookTitle && entry.summary) {
+      setSelectedSummary({
+        bookTitle: entry.bookTitle,
+        summary: entry.summary
+      });
+      setSummaryDialogOpen(true);
+    } else {
+      toast.info("No summary available for this book.");
+    }
+  };
+  
+  // Handler to close summary dialog
+  const handleCloseSummaryDialog = () => {
+    setSummaryDialogOpen(false);
   };
 
   // Sorting function with improved type handling
@@ -203,27 +229,12 @@ const StudentLibraryHours = () => {
         return;
       }
       
-      // Fetch academic years
-      const token = localStorage.getItem("token");
-      
-      try {
-        const academicYearsResponse = await api.get('/academic-years/all', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
-        setAcademicYearOptions(formattedAcademicYears);
-      } catch (error) {
-        console.error('Error fetching academic years:', error);
-        // Don't show error toast for this - non-critical
-      }
-
       // Fetch library hours using user ID from AuthContext
       const fetchLibraryHours = async () => {
         try {
           // Use user.idNumber from AuthContext instead of URL params
           const idNumber = user.idNumber;
+          const token = localStorage.getItem("token");
 
           if (!token || !idNumber) {
             toast.error("User information not available.");
@@ -307,19 +318,14 @@ const StudentLibraryHours = () => {
           : entry
       );
       setLibraryHours(updatedLibraryHours);
-      // Filtering and sorting will be applied by useEffect
       
-      // Step 2: Also add to book log if we have the required data
-      if (bookDetails.rating && bookDetails.dateRead && bookDetails.academicYear) {
+      // Step 2: If summary is provided, update the library hours record with the summary
+      if (bookDetails.summary) {
         try {
-          const encodedIdNumber = encodeURIComponent(user.idNumber);
-          
           await api.put(
-            `/booklog/${bookDetails.id}/add-to-booklog/${encodedIdNumber}`,
+            `/library-hours/${emptyEntry.id}/add-summary`,
             {
-              dateRead: bookDetails.dateRead,
-              rating: bookDetails.rating,
-              academicYear: bookDetails.academicYear,
+              summary: bookDetails.summary
             },
             {
               headers: {
@@ -328,10 +334,52 @@ const StudentLibraryHours = () => {
             }
           );
           
-          toast.success(`Book "${bookDetails.title}" assigned and added to your book log!`);
-        } catch (bookLogError) {
-          console.error("Error adding to book log:", bookLogError);
-          toast.warning(`Book assigned but couldn't add to book log: ${bookLogError.message}`);
+          // Update the entry with the summary
+          const finalUpdatedLibraryHours = updatedLibraryHours.map((entry) =>
+            entry.id === emptyEntry.id
+              ? { ...entry, summary: bookDetails.summary }
+              : entry
+          );
+          setLibraryHours(finalUpdatedLibraryHours);
+          
+        } catch (summaryError) {
+          console.error("Error adding summary to library hours:", summaryError);
+          toast.warning(`Book assigned but couldn't add summary: ${summaryError.message}`);
+        }
+      }
+      
+      // Step 3: Also add to journal if we have the required data
+      if (bookDetails.rating && bookDetails.dateRead) {
+        try {
+          const encodedIdNumber = encodeURIComponent(user.idNumber);
+          
+          const journalPayload = {
+            dateRead: bookDetails.dateRead,
+            rating: bookDetails.rating
+          };
+          
+          // Add comment if provided
+          if (bookDetails.comment) {
+            journalPayload.comment = bookDetails.comment;
+          }
+          
+          await api.put(
+            `/journals/${bookDetails.id}/add-to-journal/${encodedIdNumber}`,
+            journalPayload,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          
+          let successMessage = `Book "${bookDetails.title}" assigned successfully and added to journal!`;
+         
+          
+          toast.success(successMessage);
+        } catch (journalError) {
+          console.error("Error adding to journal:", journalError);
+          toast.warning(`Book assigned but couldn't add to journal: ${journalError.message}`);
         }
       } else {
         toast.success(`Book "${bookDetails.title}" assigned successfully!`);
@@ -353,23 +401,16 @@ const StudentLibraryHours = () => {
     // Create a new filter state based on which filter is being changed
     let newFilters;
     
-    if (name === 'academicYear' && value) {
-      // If selecting academic year, clear date filters
-      newFilters = { dateFrom: "", dateTo: "", academicYear: value };
-    } else if (name === 'dateFrom' && value) {
+    if (name === 'dateFrom' && value) {
       // If changing dateFrom
-      // Clear academic year
       // And ensure dateTo is not earlier than dateFrom
       const dateTo = filters.dateTo;
       if (dateTo && new Date(value) > new Date(dateTo)) {
         // If dateFrom is later than dateTo, reset dateTo
-        newFilters = { ...filters, academicYear: "", dateFrom: value, dateTo: "" };
+        newFilters = { ...filters, dateFrom: value, dateTo: "" };
       } else {
-        newFilters = { ...filters, academicYear: "", dateFrom: value };
+        newFilters = { ...filters, dateFrom: value };
       }
-    } else if (name === 'dateTo' && value) {
-      // If changing dateTo, just clear academic year
-      newFilters = { ...filters, academicYear: "", dateTo: value };
     } else {
       // If clearing a filter, just update that specific field
       newFilters = { ...filters, [name]: value };
@@ -381,11 +422,11 @@ const StudentLibraryHours = () => {
   // Combined function to apply filters and sorting
   const applyFiltersAndSort = () => {
     // Step 1: Apply filters
-    const { dateFrom, dateTo, academicYear } = filters;
+    const { dateFrom, dateTo } = filters;
     
     let filtered = libraryHours;
 
-    if (dateFrom || dateTo || (academicYear && academicYear !== "")) {
+    if (dateFrom || dateTo) {
       filtered = libraryHours.filter((entry) => {
         try {
           // Extract only the date part from the entry's timeIn for proper comparison
@@ -411,22 +452,7 @@ const StudentLibraryHours = () => {
             (!fromDate || entryDate >= fromDate) && 
             (!toDate || entryDate <= toDate);
           
-          // Check if academic year matches if specified - using new year-based logic
-          let matchesYear = true;
-          if (academicYear && academicYear !== "") {
-            // Parse the academic year range (e.g., "2025-2026")
-            const years = academicYear.split("-");
-            if (years.length === 2) {
-              const startYear = parseInt(years[0]);
-              const endYear = parseInt(years[1]);
-              const entryYear = entryDate.getFullYear();
-              
-              // Match if entry year is either the start or end year
-              matchesYear = (entryYear === startYear || entryYear === endYear);
-            }
-          }
-          
-          return matchesDate && matchesYear;
+          return matchesDate;
         } catch (error) {
           console.error("Error comparing dates:", error);
           return true; // Include entry if date comparison fails
@@ -440,7 +466,8 @@ const StudentLibraryHours = () => {
         (entry) =>
           entry.bookTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           new Date(entry.timeIn).toLocaleDateString().includes(searchQuery) ||
-          new Date(entry.timeIn).toLocaleTimeString().includes(searchQuery)
+          new Date(entry.timeIn).toLocaleTimeString().includes(searchQuery) ||
+          entry.summary?.toLowerCase().includes(searchQuery.toLowerCase()) // Keep search in summary
       );
     }
     
@@ -460,8 +487,7 @@ const StudentLibraryHours = () => {
   const resetFilters = () => {
     setFilters({
       dateFrom: "",
-      dateTo: "",
-      academicYear: ""
+      dateTo: ""
     });
     
     // Reset to original data but maintain sort order
@@ -485,7 +511,8 @@ const StudentLibraryHours = () => {
       (entry) =>
         entry.bookTitle?.toLowerCase().includes(query) ||
         new Date(entry.timeIn).toLocaleDateString().includes(query) ||
-        new Date(entry.timeIn).toLocaleTimeString().includes(query)
+        new Date(entry.timeIn).toLocaleTimeString().includes(query) ||
+        entry.summary?.toLowerCase().includes(query) // Keep search in summary
     );
     
     // Apply current sort to search results
@@ -702,13 +729,9 @@ const StudentLibraryHours = () => {
                 value={filters.dateFrom}
                 onChange={handleFilterChange}
                 InputLabelProps={{ shrink: true }}
-                disabled={!!filters.academicYear} // Disable if academicYear has a value
                 sx={{
                   backgroundColor: "#fff",
                   borderRadius: "15px",
-                  "& .Mui-disabled": {
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  }
                 }}
               />
               <TextField
@@ -722,7 +745,7 @@ const StudentLibraryHours = () => {
                 inputProps={{
                   min: filters.dateFrom || undefined // Set minimum date to dateFrom
                 }}
-                disabled={!!filters.academicYear || !filters.dateFrom} // Disable if academicYear has a value or dateFrom is empty
+                disabled={!filters.dateFrom} // Disable if dateFrom is empty
                 sx={{
                   backgroundColor: "#fff",
                   borderRadius: "15px",
@@ -731,29 +754,6 @@ const StudentLibraryHours = () => {
                   }
                 }}
               />
-              <Select
-                name="academicYear"
-                value={filters.academicYear}
-                onChange={handleFilterChange}
-                displayEmpty
-                size="small"
-                disabled={!!filters.dateFrom || !!filters.dateTo} // Disable if either date has a value
-                sx={{
-                  backgroundColor: "#fff",
-                  borderRadius: "15px",
-                  minWidth: "150px",
-                  "& .Mui-disabled": {
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  }
-                }}
-              >
-                <MenuItem value="">Select Academic Year</MenuItem>
-                {academicYearOptions.map((year, index) => (
-                  <MenuItem key={index} value={year}>
-                    {year}
-                  </MenuItem>
-                ))}
-              </Select>
               <Button
                 variant="contained"
                 onClick={applyFilters}
@@ -876,7 +876,29 @@ const StudentLibraryHours = () => {
                     <TableRow key={entry.id}>
                       <TableCell>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
                       <TableCell>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
-                      <TableCell>{entry.bookTitle ? entry.bookTitle : "--"}</TableCell>
+                      <TableCell>
+                        {entry.bookTitle ? (
+                          <Button
+                            onClick={() => handleBookTitleClick(entry)}
+                            color="primary"
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: entry.summary ? "bold" : "normal",
+                              "&:hover": {
+                                textDecoration: "underline",
+                                backgroundColor: "transparent",
+                              },
+                              padding: "0",
+                              justifyContent: "flex-start",
+                            }}
+                          >
+                            {entry.bookTitle}
+                            
+                          </Button>
+                        ) : (
+                          "--"
+                        )}
+                      </TableCell>
                       <TableCell>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
                       <TableCell>{calculateMinutes(entry.timeIn, entry.timeOut)}</TableCell>
                     </TableRow>
@@ -895,18 +917,92 @@ const StudentLibraryHours = () => {
               onRowsPerPageChange={handleChangeRowsPerPage}
               sx={{
                 paddingTop: 2,
-                paddingBottom: 2, // Add bottom padding
+                paddingBottom: 2,
                 backgroundColor: "transparent",
                 fontWeight: "bold",
                 display: "flex",
                 justifyContent: "center",
                 width: "100%",
-                position: "relative", // Ensure visibility
+                position: "relative",
               }}
             />
           </TableContainer>
         </Box>
       </Box>
+
+      {/* Summary Dialog */}
+      <Dialog
+        open={summaryDialogOpen}
+        onClose={handleCloseSummaryDialog}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          "& .MuiPaper-root": {
+            borderRadius: "15px",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            textAlign: "center",
+            fontWeight: "bold",
+            fontSize: "25px",
+            backgroundColor: "#FFDF16",
+            color: "#000",
+          }}
+        >
+          What I Learned: {selectedSummary.bookTitle}
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            backgroundColor: "#FFDF16",
+            padding: "30px",
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              padding: "16px",
+              backgroundColor: "#fff",
+              borderRadius: "10px",
+              minHeight: "200px",
+            }}
+          >
+            <Typography
+              sx={{
+                whiteSpace: "pre-wrap", // Preserve line breaks
+                color: "#000",
+              }}
+            >
+              {selectedSummary.summary}
+            </Typography>
+          </Paper>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            justifyContent: "center",
+            backgroundColor: "#FFDF16",
+            padding: 2,
+          }}
+        >
+          <Button
+            onClick={handleCloseSummaryDialog}
+            variant="contained"
+            sx={{
+              borderRadius: "10px",
+              width: "120px",
+              backgroundColor: "#A44444",
+              color: "#fff",
+              "&:hover": {
+                backgroundColor: "#BB5252",
+              },
+            }}
+          >
+            CLOSE
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <AddBook
         open={open}

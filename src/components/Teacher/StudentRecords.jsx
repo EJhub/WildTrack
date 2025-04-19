@@ -29,6 +29,8 @@ import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import ClearIcon from '@mui/icons-material/Clear';
 // Import API utility
 import api from '../../utils/api';
+// Import the new StudentDetailModal component
+import StudentDetailModal from './components/StudentDetailModal';
 
 const StudentRecords = () => {
   // Main data states
@@ -67,6 +69,10 @@ const StudentRecords = () => {
   const [orderBy, setOrderBy] = useState('name');
   const [order, setOrder] = useState('asc');
   
+  // Student detail modal states
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  
   // Get current user from AuthContext
   const { user } = useContext(AuthContext);
 
@@ -91,6 +97,21 @@ const StudentRecords = () => {
     } else {
       return 'Not started';
     }
+  };
+
+  // Handler for opening student detail modal
+  const handleOpenStudentDetail = (student) => {
+    setSelectedStudent(student);
+    setDetailModalOpen(true);
+  };
+  
+  // Handler for closing student detail modal
+  const handleCloseStudentDetail = () => {
+    setDetailModalOpen(false);
+    // Don't clear selectedStudent immediately to prevent UI flicker during modal close animation
+    setTimeout(() => {
+      setSelectedStudent(null);
+    }, 300);
   };
 
   // Function to fetch sections for a specific grade level
@@ -848,7 +869,17 @@ const StudentRecords = () => {
                     </TableRow>
                   ) : (
                     displayedRows.map((student, index) => (
-                      <TableRow key={index} hover>
+                      <TableRow 
+                        key={index} 
+                        hover
+                        onClick={() => handleOpenStudentDetail(student)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                          }
+                        }}
+                      >
                         <TableCell>{student.idNumber}</TableCell>
                         <TableCell>{student.name}</TableCell>
                         <TableCell>{student.grade || selectedGradeLevel}</TableCell>
@@ -898,6 +929,13 @@ const StudentRecords = () => {
           )}
         </Box>
       </Box>
+      
+      {/* Student Detail Modal */}
+      <StudentDetailModal
+        open={detailModalOpen}
+        handleClose={handleCloseStudentDetail}
+        student={selectedStudent}
+      />
     </>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
-import AddBookLog from "./components/AddbookLog";
+import AddEntry from "./components/AddEntry";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Table from "@mui/material/Table";
@@ -15,8 +15,6 @@ import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import TablePagination from "@mui/material/TablePagination";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -25,22 +23,27 @@ import { AuthContext } from "../AuthContext";
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
-import api from "../../utils/api"; // Import the API utility instead of axios
+import api from "../../utils/api";
+// Import for activity filter dropdown
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
+import InputLabel from '@mui/material/InputLabel';
 
-const BookLog = () => {
-  const [bookLogs, setBookLogs] = useState([]);
-  const [filteredLogs, setFilteredLogs] = useState([]);
+const Journal = () => {
+  const [journals, setJournals] = useState([]);
+  const [filteredJournals, setFilteredJournals] = useState([]);
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
-    academicYear: "",
+    activity: "" // Add activity filter
   });
-  const [academicYearOptions, setAcademicYearOptions] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [addBookLogOpen, setAddBookLogOpen] = useState(false);
+  const [addJournalOpen, setAddJournalOpen] = useState(false);
   const [registeredBooks, setRegisteredBooks] = useState([]);
+  const [nextEntryNumber, setNextEntryNumber] = useState("1");
   const [loading, setLoading] = useState(true);
   
   // Add sort state
@@ -60,10 +63,11 @@ const BookLog = () => {
 
   // New useEffect to apply default sorting when data is loaded
   useEffect(() => {
-    if (bookLogs.length > 0) {
+    if (journals.length > 0) {
       applyFiltersAndSort();
+      calculateNextEntryNumber();
     }
-  }, [bookLogs, sortConfig]);
+  }, [journals, sortConfig]);
 
   const fetchInitialData = async () => {
     try {
@@ -79,23 +83,15 @@ const BookLog = () => {
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
-
-      try {
-        const academicYearsResponse = await api.get('/academic-years/all');
-        const formattedAcademicYears = academicYearsResponse.data.map(year => `${year.startYear}-${year.endYear}`);
-        setAcademicYearOptions(formattedAcademicYears);
-      } catch (error) {
-        console.error('Error fetching academic years:', error);
-      }
       
-      await fetchBookLogs();
+      await fetchJournals();
       await fetchRegisteredBooks();
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchBookLogs = async () => {
+  const fetchJournals = async () => {
     try {
       if (!user || !user.idNumber) {
         console.error("User ID not available");
@@ -107,16 +103,16 @@ const BookLog = () => {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await api.get(`/booklog/user/${user.idNumber}`);
+      const response = await api.get(`/journals/user/${user.idNumber}`);
 
-      setBookLogs(response.data);
+      setJournals(response.data);
       // Don't set filtered logs here, will be done by applyFiltersAndSort
     } catch (error) {
       console.error(
-        "Error fetching book logs:",
+        "Error fetching journals:",
         error.response?.data || error.message
       );
-      alert(error.response?.data || "Failed to fetch book logs.");
+      alert(error.response?.data || "Failed to fetch journals.");
     }
   };
 
@@ -134,17 +130,13 @@ const BookLog = () => {
     
     let newFilters;
     
-    if (name === 'academicYear' && value) {
-      newFilters = { dateFrom: "", dateTo: "", academicYear: value };
-    } else if (name === 'dateFrom' && value) {
+    if (name === 'dateFrom' && value) {
       const dateTo = filters.dateTo;
       if (dateTo && new Date(value) > new Date(dateTo)) {
-        newFilters = { ...filters, academicYear: "", dateFrom: value, dateTo: "" };
+        newFilters = { ...filters, dateFrom: value, dateTo: "" };
       } else {
-        newFilters = { ...filters, academicYear: "", dateFrom: value };
+        newFilters = { ...filters, dateFrom: value };
       }
-    } else if (name === 'dateTo' && value) {
-      newFilters = { ...filters, academicYear: "", dateTo: value };
     } else {
       newFilters = { ...filters, [name]: value };
     }
@@ -180,8 +172,15 @@ const BookLog = () => {
         return sortConfig.direction === 'asc' 
           ? a[sortConfig.key] - b[sortConfig.key] 
           : b[sortConfig.key] - a[sortConfig.key];
+      } else if (sortConfig.key === 'entryNo') {
+        // Number comparison for entry numbers
+        const numA = parseInt(a[sortConfig.key] || '0');
+        const numB = parseInt(b[sortConfig.key] || '0');
+        return sortConfig.direction === 'asc' 
+          ? numA - numB 
+          : numB - numA;
       } else {
-        // String comparison (title, author, accessionNumber)
+        // String comparison (title, author, details, comment, etc.)
         const valueA = (a[sortConfig.key] || '').toLowerCase();
         const valueB = (b[sortConfig.key] || '').toLowerCase();
         return sortConfig.direction === 'asc'
@@ -191,12 +190,13 @@ const BookLog = () => {
     });
   };
 
-  // Modified to include sorting
+  // Modified to include activity filtering
   const applyFiltersAndSort = () => {
-    const { dateFrom, dateTo, academicYear } = filters;
+    const { dateFrom, dateTo, activity } = filters;
     
-    let filtered = bookLogs;
+    let filtered = journals;
 
+    // Date From filter
     if (dateFrom) {
       const fromDate = new Date(dateFrom);
       fromDate.setHours(0, 0, 0, 0);
@@ -206,6 +206,7 @@ const BookLog = () => {
       });
     }
 
+    // Date To filter
     if (dateTo) {
       const toDate = new Date(dateTo);
       toDate.setHours(23, 59, 59, 999);
@@ -215,28 +216,19 @@ const BookLog = () => {
       });
     }
 
-    if (academicYear && academicYear !== "") {
-      const years = academicYear.split("-");
-      if (years.length === 2) {
-        const startYear = parseInt(years[0]);
-        const endYear = parseInt(years[1]);
-        
-        filtered = filtered.filter(log => {
-          const logDate = new Date(log.dateRead);
-          const logYear = logDate.getFullYear();
-          
-          return (logYear === startYear || logYear === endYear);
-        });
-      } else {
-        filtered = filtered.filter(log => log.academicYear === academicYear);
-      }
+    // Activity filter
+    if (activity) {
+      filtered = filtered.filter(log => log.activity === activity);
     }
 
+    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (log) =>
           log.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          log.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          log.details?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          log.comment?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          log.activity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           new Date(log.dateRead).toLocaleDateString().includes(searchQuery)
       );
     }
@@ -244,7 +236,7 @@ const BookLog = () => {
     // Apply sorting after filtering
     const sortedData = getSortedData(filtered);
     
-    setFilteredLogs(sortedData);
+    setFilteredJournals(sortedData);
     setPage(0);
   };
 
@@ -257,15 +249,15 @@ const BookLog = () => {
     setFilters({
       dateFrom: "",
       dateTo: "",
-      academicYear: "",
+      activity: "" // Reset activity filter too
     });
     
     if (searchQuery) {
       handleSearchChange({ target: { value: searchQuery } });
     } else {
       // Apply just the sorting to the unfiltered data
-      const sortedData = getSortedData(bookLogs);
-      setFilteredLogs(sortedData);
+      const sortedData = getSortedData(journals);
+      setFilteredJournals(sortedData);
     }
     setPage(0);
   };
@@ -275,17 +267,19 @@ const BookLog = () => {
     setSearchQuery(query);
 
     // Apply search and maintain current sorting
-    let filtered = bookLogs.filter(
+    let filtered = journals.filter(
       (log) =>
         log.title?.toLowerCase().includes(query) ||
-        log.author?.toLowerCase().includes(query) ||
+        log.details?.toLowerCase().includes(query) ||
+        log.comment?.toLowerCase().includes(query) ||
+        log.activity?.toLowerCase().includes(query) ||
         new Date(log.dateRead).toLocaleDateString().includes(query)
     );
     
     // Apply sorting to search results
     filtered = getSortedData(filtered);
     
-    setFilteredLogs(filtered);
+    setFilteredJournals(filtered);
     setPage(0);
   };
 
@@ -298,7 +292,7 @@ const BookLog = () => {
     setPage(0);
   };
 
-  const displayedLogs = filteredLogs.slice(
+  const displayedJournals = filteredJournals.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -324,15 +318,39 @@ const BookLog = () => {
     );
   };
 
-  const handleAddBookLogOpen = () => {
-    setAddBookLogOpen(true);
+  const handleAddJournalOpen = () => {
+    // Calculate next entry number before opening the form
+    calculateNextEntryNumber();
+    setAddJournalOpen(true);
+  };
+  
+  // Function to calculate the next entry number based on existing journal entries
+  const calculateNextEntryNumber = () => {
+    if (journals.length === 0) {
+      setNextEntryNumber("1");
+      return;
+    }
+    
+    // Find the highest entry number in the existing journals
+    const highestEntryNo = journals.reduce((highest, journal) => {
+      const currentEntryNo = parseInt(journal.entryNo || "0");
+      return currentEntryNo > highest ? currentEntryNo : highest;
+    }, 0);
+    
+    // Set the next entry number as the highest + 1
+    setNextEntryNumber(String(highestEntryNo + 1));
+  };
+  
+  // Function to get the next entry number for the form
+  const getNextEntryNumber = () => {
+    return nextEntryNumber;
   };
 
-  const handleAddBookLogClose = () => {
-    setAddBookLogOpen(false);
+  const handleAddJournalClose = () => {
+    setAddJournalOpen(false);
   };
 
-  const handleAddBookLogSubmit = async (bookLog) => {
+  const handleAddJournalSubmit = async (journal) => {
     try {
       if (!user || !user.idNumber) {
         alert("User information not available.");
@@ -345,26 +363,55 @@ const BookLog = () => {
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
-  
-      const response = await api.put(
-        `/booklog/${bookLog.id}/add-to-booklog/${encodedIdNumber}`,
-        {
-          dateRead: bookLog.dateRead,
-          rating: bookLog.rating,
-          academicYear: bookLog.academicYear,
-        }
-      );
+
+      let response;
+      
+      // Handle different types of journal entries
+      if (journal.activity === "Read Book" && journal.id) {
+        // For book reading
+        response = await api.put(
+          `/journals/${journal.id}/add-to-journal/${encodedIdNumber}`,
+          {
+            dateRead: journal.dateRead,
+            rating: journal.rating,
+            comment: journal.comment
+          }
+        );
+      } else if (journal.activity === "Used Computer") {
+        // For computer usage - removed bookTitle field
+        response = await api.post(
+          `/journals/computer-usage/${encodedIdNumber}`,
+          {
+            purpose: journal.details,
+            rating: journal.rating,
+            comment: journal.comment
+          }
+        );
+      } else if (journal.activity === "Read Periodical") {
+        // For periodical reading - removed bookTitle field
+        response = await api.post(
+          `/journals/periodical/${encodedIdNumber}`,
+          {
+            periodicalTitle: journal.details,
+            rating: journal.rating,
+            comment: journal.comment
+          }
+        );
+      } else {
+        alert("Invalid journal entry type");
+        return;
+      }
   
       if (response.status === 200) {
-        alert(response.data.message);
-        await fetchBookLogs(); // Will trigger sort via useEffect
+        alert("Journal entry added successfully!");
+        await fetchJournals(); // Will trigger sort via useEffect
       } else {
         console.error("Unexpected status:", response.status, response.data);
         alert("Unexpected error occurred.");
       }
     } catch (error) {
       console.error("Caught error:", error.response || error.message || error);
-      alert(error.response?.data?.error || "Failed to add book to book log.");
+      alert(error.response?.data?.error || "Failed to add journal entry.");
     }
   };
 
@@ -384,7 +431,7 @@ const BookLog = () => {
             }}
           >
             <CircularProgress />
-            <Typography sx={{ ml: 2 }}>Loading book logs...</Typography>
+            <Typography sx={{ ml: 2 }}>Loading journals...</Typography>
           </Box>
         </Box>
       </>
@@ -441,7 +488,7 @@ const BookLog = () => {
                 marginTop: "15px",
               }}
             >
-              Book Log
+              Journal
             </Typography>
           </Box>
 
@@ -484,7 +531,8 @@ const BookLog = () => {
               marginBottom: 2,
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+              {/* Date From filter */}
               <TextField
                 name="dateFrom"
                 type="date"
@@ -493,15 +541,13 @@ const BookLog = () => {
                 value={filters.dateFrom}
                 onChange={handleFilterChange}
                 InputLabelProps={{ shrink: true }}
-                disabled={!!filters.academicYear}
                 sx={{
                   backgroundColor: "#fff",
                   borderRadius: "15px",
-                  "& .Mui-disabled": {
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  }
                 }}
               />
+              
+              {/* Date To filter */}
               <TextField
                 name="dateTo"
                 type="date"
@@ -513,7 +559,7 @@ const BookLog = () => {
                 inputProps={{
                   min: filters.dateFrom || undefined
                 }}
-                disabled={!!filters.academicYear || !filters.dateFrom}
+                disabled={!filters.dateFrom}
                 sx={{
                   backgroundColor: "#fff",
                   borderRadius: "15px",
@@ -522,29 +568,35 @@ const BookLog = () => {
                   }
                 }}
               />
-              <Select
-                name="academicYear"
-                value={filters.academicYear}
-                onChange={handleFilterChange}
-                displayEmpty
-                size="small"
-                disabled={!!filters.dateFrom || !!filters.dateTo}
-                sx={{
+              
+              {/* New Activity filter */}
+              <FormControl 
+                size="small" 
+                sx={{ 
+                  minWidth: 180,
                   backgroundColor: "#fff",
                   borderRadius: "15px",
-                  minWidth: "150px",
-                  "& .Mui-disabled": {
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  }
                 }}
               >
-                <MenuItem value="">Select Academic Year</MenuItem>
-                {academicYearOptions.map((year, index) => (
-                  <MenuItem key={index} value={year}>
-                    {year}
+                <InputLabel id="activity-filter-label">Activity</InputLabel>
+                <Select
+                  labelId="activity-filter-label"
+                  id="activity-filter"
+                  name="activity"
+                  value={filters.activity}
+                  label="Activity"
+                  onChange={handleFilterChange}
+                >
+                  <MenuItem value="">
+                    <em>All Activities</em>
                   </MenuItem>
-                ))}
-              </Select>
+                  <MenuItem value="Read Book">Read Book</MenuItem>
+                  <MenuItem value="Used Computer">Used Computer</MenuItem>
+                  <MenuItem value="Read Periodical">Read Periodical</MenuItem>
+                </Select>
+              </FormControl>
+              
+              {/* Filter and Reset buttons */}
               <Button
                 variant="contained"
                 onClick={applyFilters}
@@ -571,16 +623,18 @@ const BookLog = () => {
                 Reset
               </Button>
             </Box>
+            
+            {/* Add Journal button */}
             <Button
               variant="contained"
-              onClick={handleAddBookLogOpen}
+              onClick={handleAddJournalOpen}
               sx={{
                 backgroundColor: "#FFD700",
                 color: "#000",
                 "&:hover": { backgroundColor: "#FFC107" },
               }}
             >
-              Add Book Log
+              Add Journal
             </Button>
           </Box>
 
@@ -602,21 +656,7 @@ const BookLog = () => {
               <TableHead>
                 <TableRow>
                   <TableCell 
-                    onClick={() => handleSort('title')}
-                    sx={{ 
-                      fontWeight: "bold", 
-                      backgroundColor: "#8C383E", 
-                      color: "#fff",
-                      cursor: "pointer", // Show cursor pointer on hover
-                      '&:hover': {
-                        backgroundColor: "#9C484E" // Lighter shade on hover
-                      }
-                    }}
-                  >
-                    Book Title <SortIndicator column="title" />
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => handleSort('author')}
+                    onClick={() => handleSort('entryNo')}
                     sx={{ 
                       fontWeight: "bold", 
                       backgroundColor: "#8C383E", 
@@ -624,24 +664,11 @@ const BookLog = () => {
                       cursor: "pointer",
                       '&:hover': {
                         backgroundColor: "#9C484E"
-                      }
+                      },
+                      width: "80px"
                     }}
                   >
-                    Author <SortIndicator column="author" />
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => handleSort('accessionNumber')}
-                    sx={{ 
-                      fontWeight: "bold", 
-                      backgroundColor: "#8C383E", 
-                      color: "#fff",
-                      cursor: "pointer",
-                      '&:hover': {
-                        backgroundColor: "#9C484E"
-                      }
-                    }}
-                  >
-                    Accession Number <SortIndicator column="accessionNumber" />
+                    ENTRY NO. <SortIndicator column="entryNo" />
                   </TableCell>
                   <TableCell 
                     onClick={() => handleSort('dateRead')}
@@ -652,13 +679,29 @@ const BookLog = () => {
                       cursor: "pointer",
                       '&:hover': {
                         backgroundColor: "#9C484E"
-                      }
+                      },
+                      width: "120px"
                     }}
                   >
-                    Date Read <SortIndicator column="dateRead" />
+                    DATE <SortIndicator column="dateRead" />
                   </TableCell>
                   <TableCell 
-                    onClick={() => handleSort('rating')}
+                    onClick={() => handleSort('activity')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer",
+                      '&:hover': {
+                        backgroundColor: "#9C484E"
+                      },
+                      width: "150px"
+                    }}
+                  >
+                    ACTIVITY <SortIndicator column="activity" />
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('details')}
                     sx={{ 
                       fontWeight: "bold", 
                       backgroundColor: "#8C383E", 
@@ -669,25 +712,55 @@ const BookLog = () => {
                       }
                     }}
                   >
-                    Rating <SortIndicator column="rating" />
+                    DETAILS <SortIndicator column="details" />
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('comment')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer",
+                      '&:hover': {
+                        backgroundColor: "#9C484E"
+                      }
+                    }}
+                  >
+                    COMMENTS <SortIndicator column="comment" />
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleSort('rating')}
+                    sx={{ 
+                      fontWeight: "bold", 
+                      backgroundColor: "#8C383E", 
+                      color: "#fff",
+                      cursor: "pointer",
+                      '&:hover': {
+                        backgroundColor: "#9C484E"
+                      },
+                      width: "120px"
+                    }}
+                  >
+                    RATING <SortIndicator column="rating" />
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {displayedLogs.length === 0 ? (
+                {displayedJournals.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      No book logs found matching your criteria
+                    <TableCell colSpan={6} align="center">
+                      No journals found matching your criteria
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayedLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{log.title}</TableCell>
-                      <TableCell>{log.author}</TableCell>
-                      <TableCell>{log.accessionNumber}</TableCell>
-                      <TableCell>{new Date(log.dateRead).toLocaleDateString()}</TableCell>
-                      <TableCell>{renderStars(log.rating)}</TableCell>
+                  displayedJournals.map((journal) => ( 
+                    <TableRow key={journal.id}> 
+                      <TableCell>{journal.entryNo || "-"}</TableCell>
+                      <TableCell>{new Date(journal.dateRead).toLocaleDateString()}</TableCell>
+                      <TableCell>{journal.activity || "Read Book"}</TableCell>
+                      <TableCell>{journal.details || journal.title}</TableCell>
+                      <TableCell>{journal.comment || "—"}</TableCell>
+                      <TableCell>{renderStars(journal.rating)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -697,7 +770,7 @@ const BookLog = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={filteredLogs.length}
+              count={filteredJournals.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
@@ -717,14 +790,15 @@ const BookLog = () => {
         </Box>
       </Box>
 
-      <AddBookLog
-        open={addBookLogOpen}
-        handleClose={handleAddBookLogClose}
-        handleSubmit={(bookLog) => handleAddBookLogSubmit(bookLog)}
+      <AddEntry
+        open={addJournalOpen}
+        handleClose={handleAddJournalClose}
+        handleSubmit={(journal) => handleAddJournalSubmit(journal)}
         registeredBooks={registeredBooks}
+        getNextEntryNumber={getNextEntryNumber}
       />
     </>
   );
 };
 
-export default BookLog;
+export default Journal;

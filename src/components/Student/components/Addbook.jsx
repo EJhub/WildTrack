@@ -15,10 +15,6 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Rating from "@mui/material/Rating";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import InfoIcon from "@mui/icons-material/Info";
 import Tooltip from "@mui/material/Tooltip";
 import api from "../../../utils/api"; // Import the API utility instead of axios
@@ -30,27 +26,16 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   const [selectedBook, setSelectedBook] = useState(null); // Added state for selected book
   const [rating, setRating] = useState(0); // Added state for rating
   
-  // Get today's date in YYYY-MM-DD format
+  // Get today's date in YYYY-MM-DD format - still keep this for backend recording
   const today = new Date().toISOString().split('T')[0];
   const [dateRead, setDateRead] = useState(today); // Initialize with today's date
   
-  const [academicYear, setAcademicYear] = useState(""); // Added state for academic year
-  const [academicYearOptions, setAcademicYearOptions] = useState([]); // Added for academic year options
-
-  // Fetch academic years when component mounts
-  useEffect(() => {
-    const fetchAcademicYears = async () => {
-      try {
-        const response = await api.get('/academic-years/all');
-        const formattedYears = response.data.map(year => `${year.startYear}-${year.endYear}`);
-        setAcademicYearOptions(formattedYears);
-      } catch (error) {
-        console.error('Error fetching academic years:', error);
-      }
-    };
-
-    fetchAcademicYears();
-  }, []);
+  // New fields
+  const [summary, setSummary] = useState(""); // Summary/What I learned
+  const [comment, setComment] = useState(""); // Comment for Journal system
+  
+  // Character count tracking
+  const [summaryChars, setSummaryChars] = useState(0);
 
   // Get books to display based on the search query
   const getFilteredBooks = () => {
@@ -75,6 +60,18 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
     setError(null);
   };
 
+  const handleSummaryChange = (e) => {
+    const text = e.target.value;
+    if (text.length <= 1000) {
+      setSummary(text);
+      setSummaryChars(text.length);
+    }
+  };
+
+  const handleCommentChange = (e) => {
+    setComment(e.target.value);
+  };
+
   const handleBookSubmit = () => {
     setError(null);
     setSuccess(null);
@@ -90,8 +87,8 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       return;
     }
 
-    if (!academicYear) {
-      setError("Please select an academic year.");
+    if (!summary.trim()) {
+      setError("Please provide a summary of what you learned.");
       return;
     }
 
@@ -101,7 +98,8 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         ...selectedBook,
         rating,
         dateRead, // This will be today's date
-        academicYear
+        summary, // New summary field
+        comment // New comment field
       });
       
       setSuccess(`Book "${selectedBook.title}" added successfully!`);
@@ -111,7 +109,9 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
         setSelectedBook(null);
         setRating(0);
         setDateRead(today);
-        setAcademicYear("");
+        setSummary("");
+        setComment("");
+        setSummaryChars(0);
         handleClose();
       }, 1500);
     } catch (err) {
@@ -305,7 +305,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           </Box>
         </TableContainer>
 
-        {/* Additional fields for BookLog - Only show if a book is selected */}
+        {/* Additional fields for Book Log - Only show if a book is selected */}
         {selectedBook && (
           <Box sx={{ marginTop: 3, textAlign: "center" }}>
             <Typography sx={{ fontWeight: "bold", color: "#000", marginBottom: 2 }}>
@@ -325,50 +325,54 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
               />
             </Box>
             
-            <Box sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
-              <Box sx={{ position: "relative", width: "100%" }}>
-                <TextField
-                  label="Date Read"
-                  type="date"
-                  value={dateRead}
-                  disabled // Make the field disabled/read-only
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    backgroundColor: "#f5f5f5", // Lighter background to indicate disabled
-                    borderRadius: "10px",
-                  }}
-                />
-                <Tooltip title="Date is automatically set to today" placement="top">
-                  <InfoIcon 
-                    sx={{ 
-                      position: "absolute", 
-                      right: "10px", 
-                      top: "50%", 
-                      transform: "translateY(-50%)",
-                      color: "#666" 
-                    }} 
-                  />
-                </Tooltip>
-              </Box>
-              
-              <FormControl fullWidth sx={{ backgroundColor: "#fff", borderRadius: "10px" }}>
-                <InputLabel id="academic-year-label">Academic Year</InputLabel>
-                <Select
-                  labelId="academic-year-label"
-                  id="academic-year-select"
-                  value={academicYear}
-                  label="Academic Year"
-                  onChange={(e) => setAcademicYear(e.target.value)}
-                >
-                  <MenuItem value="">Select Academic Year</MenuItem>
-                  {academicYearOptions.map((year, index) => (
-                    <MenuItem key={index} value={year}>
-                      {year}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            {/* Hidden date field - we keep the logic but hide the UI element */}
+            <Box sx={{ display: "none" }}>
+              <TextField
+                label="Date Read"
+                type="date"
+                value={dateRead}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+            
+            {/* New Summary field */}
+            <Box sx={{ marginBottom: 2 }}>
+              <Typography sx={{ color: "#000", marginBottom: 1, textAlign: "left" }}>
+                Summary / What I Learned: ({summaryChars}/1000)
+              </Typography>
+              <TextField
+                multiline
+                rows={4}
+                value={summary}
+                onChange={handleSummaryChange}
+                fullWidth
+                placeholder="Share what you learned from this book..."
+                sx={{
+                  backgroundColor: "#fff",
+                  borderRadius: "10px",
+                }}
+                inputProps={{ maxLength: 1000 }}
+              />
+            </Box>
+            
+            {/* New Comment field */}
+            <Box sx={{ marginBottom: 2 }}>
+              <Typography sx={{ color: "#000", marginBottom: 1, textAlign: "left" }}>
+                Comment:
+              </Typography>
+              <TextField
+                multiline
+                rows={2}
+                value={comment}
+                onChange={handleCommentChange}
+                fullWidth
+                placeholder="Add your comments about this book..."
+                sx={{
+                  backgroundColor: "#fff",
+                  borderRadius: "10px",
+                }}
+              />
             </Box>
           </Box>
         )}

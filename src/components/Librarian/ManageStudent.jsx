@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
@@ -10,6 +10,7 @@ import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import BulkUpdateStudents from './components/BulkUpdateStudents';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../utils/api';
+import { saveAs } from 'file-saver'; // Import for export functionality
 import {
   Box,
   Table,
@@ -35,7 +36,7 @@ import UpdateStudentForm from './components/UpdateStudentForm';
 import DeleteConfirmation from './components/DeleteConfirmation';
 import BulkImportStudents from './components/BulkImportStudents';
 import BulkDeleteStudents from './components/BulkDeleteStudents';
-import { Search as SearchIcon, Info as InfoIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Info as InfoIcon, GetApp as GetAppIcon } from '@mui/icons-material'; // Added GetAppIcon for export
 
 const ManageStudent = () => {
   // Get query parameters
@@ -45,6 +46,8 @@ const ManageStudent = () => {
   
   // States
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [bulkImportStep, setBulkImportStep] = useState(0); // Track the current step
   const [currentView, setCurrentView] = useState('students');
   const [data, setData] = useState([]);
@@ -71,14 +74,75 @@ const ManageStudent = () => {
 
   // Create a reference for the bulk import handler
   const bulkImportRef = useRef(null);
-  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
   const bulkUpdateRef = useRef(null);
-  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const bulkDeleteRef = useRef(null);
 
-  // Define fetchData outside useEffect so it can be called from other functions
-  const fetchData = async () => {
+  // Export students function
+  const handleExportStudents = () => {
+    // Start with loading indicator
+    setTableRefreshing(true);
+    
     try {
+      // Determine what data to export - either just the current filtered & paginated data,
+      // or all filtered data (regardless of pagination)
+      const dataToExport = filteredData;
+      
+      // Create CSV headers
+      const headers = [
+        'ID Number',
+        'First Name',
+        'Middle Name',
+        'Last Name', 
+        'Grade',
+        'Section',
+        'Academic Year',
+        'Library Hour Subject'
+      ];
+      
+      // Convert data to CSV format
+      let csvContent = headers.join(',') + '\n';
+      
+      dataToExport.forEach(student => {
+        // Properly handle fields that might contain commas by wrapping in quotes
+        const row = [
+          `"${student.idNumber || ''}"`,
+          `"${student.firstName || ''}"`,
+          `"${student.middleName || ''}"`,
+          `"${student.lastName || ''}"`,
+          `"${student.grade || ''}"`,
+          `"${student.section || ''}"`,
+          `"${student.academicYear || ''}"`,
+          `"${student.subject || 'No library hours assigned'}"`
+        ];
+        
+        csvContent += row.join(',') + '\n';
+      });
+      
+      // Create Blob and filename
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `students_export_${timestamp}.csv`;
+      
+      // Use FileSaver to save the file
+      saveAs(blob, filename);
+      
+      // Success message (optional - could implement a snackbar notification here)
+      console.log(`Exported ${dataToExport.length} students to ${filename}`);
+    } catch (error) {
+      console.error('Error exporting students:', error);
+      // Error handling (implement a snackbar or alert here)
+    } finally {
+      // Stop loading indicator
+      setTableRefreshing(false);
+    }
+  };
+
+  // ===== OPTIMIZED FETCH DATA FUNCTION =====
+  const fetchData = useCallback(async () => {
+    try {
+      // Show loading indicator
+      setTableRefreshing(true);
+      
       // Get token from localStorage
       const token = localStorage.getItem("token");
       if (!token) {
@@ -88,48 +152,57 @@ const ManageStudent = () => {
       // Set authorization header for all requests
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
-      // First fetch all students
+      // First fetch all students (keep the original endpoint)
       const response = await api.get('/students/all');
       const studentsResult = response.data;
       
-      // For each student, fetch their actual library requirements
-      const enhancedStudents = await Promise.all(studentsResult.map(async student => {
-        try {
-          // Check if this student has initialized requirements
-          const progressResponse = await api.get(`/library-progress/${student.idNumber}`);
-          
-          if (progressResponse.status === 200) {
-            const progressData = progressResponse.data;
-            
-            // Only display subjects if the student has requirements and they're not empty
-            if (progressData && progressData.length > 0) {
-              // Extract only the subjects that have actual requirements
-              // Group by subject to remove duplicates
-              const actualSubjects = [...new Set(progressData.map(req => req.subject))];
-              
-              if (actualSubjects.length > 0) {
-                return {
-                  ...student,
-                  subject: actualSubjects.join(', ')
-                };
-              }
-            }
-          }
-          
-          // No requirements found or API error
+      // OPTIMIZATION 1: Batch fetch subjects for all students in a single call
+      const grades = [...new Set(studentsResult.filter(s => s.grade).map(s => s.grade))];
+      
+      // Fetch subjects for all grades in a single batch call
+      const gradeSubjectsPromises = grades.map(grade => 
+        api.get(`/users/teachers/by-grade/${grade}`)
+          .catch(error => {
+            console.error(`Error fetching teachers for grade ${grade}:`, error);
+            return { data: [] };
+          })
+      );
+      
+      // Create a lookup map for quicker access
+      const gradeSubjectsMap = {};
+      
+      // Wait for all API calls to complete
+      const gradeSubjectsResponses = await Promise.all(gradeSubjectsPromises);
+      
+      // Process results and build the map
+      grades.forEach((grade, index) => {
+        const teachersData = gradeSubjectsResponses[index].data;
+        const uniqueSubjects = [...new Set(teachersData
+          .filter(teacher => teacher.subject)
+          .map(teacher => teacher.subject))];
+        
+        gradeSubjectsMap[grade] = uniqueSubjects.length > 0 
+          ? { subjects: uniqueSubjects.join(', '), source: 'teacher' }
+          : { subjects: "No library hours assigned", source: 'none' };
+      });
+      
+      // OPTIMIZATION 2: Use the map to enhance student data without individual API calls
+      const enhancedStudents = studentsResult.map(student => {
+        if (student.grade && gradeSubjectsMap[student.grade]) {
+          const { subjects, source } = gradeSubjectsMap[student.grade];
           return {
             ...student,
-            subject: "No library hours assigned"
-          };
-          
-        } catch (error) {
-          console.error(`Error checking library requirements for student ${student.idNumber}:`, error);
-          return {
-            ...student,
-            subject: "No library hours assigned"
+            subject: subjects,
+            subjectSource: source
           };
         }
-      }));
+        
+        return {
+          ...student,
+          subject: "No library hours assigned",
+          subjectSource: 'none'
+        };
+      });
       
       setData(enhancedStudents);
       
@@ -156,7 +229,7 @@ const ManageStudent = () => {
       setLoading(false);
       setTableRefreshing(false); // Stop table-only refresh indicator
     }
-  };
+  }, [resetPasswordUserId]);
 
   // Fetch academic year data
   const fetchAcademicYearData = async () => {
@@ -184,15 +257,15 @@ const ManageStudent = () => {
   };
 
   // Table-only refresh function
-  const refreshTableData = () => {
+  const refreshTableData = useCallback(() => {
     setTableRefreshing(true);
     fetchData();
-  };
+  }, [fetchData]);
 
   // Call fetchData when component mounts or resetPasswordUserId changes
   useEffect(() => {
     fetchData();
-  }, [resetPasswordUserId]);
+  }, [fetchData, resetPasswordUserId]);
 
   // Get search placeholder text based on current view
   const getSearchPlaceholder = () => {
@@ -256,9 +329,14 @@ const ManageStudent = () => {
     setIsFormOpen(true);
   };
 
-  const handleCloseForm = () => {
+  const handleCloseForm = useCallback(() => {
     setIsFormOpen(false);
-  };
+    refreshTableData();
+  }, [refreshTableData]);
+
+  const handleCloseBulkUpdate = useCallback(() => {
+    setIsBulkUpdateOpen(false);
+  }, []);
 
   const handleDeleteConfirmation = async () => {
     try {
@@ -283,36 +361,20 @@ const ManageStudent = () => {
     setBulkImportStep(0); // Reset to first step when newly opened
     setIsBulkImportOpen(true);
   };
-
-  const handleCloseBulkUpdate = () => {
-    setIsBulkUpdateOpen(false);
-  };
   
   // Handler for successful bulk import
-  const handleBulkImportSuccess = (importResults) => {
-    // Just refresh the table data
+  const handleOperationSuccess = useCallback(() => {
     refreshTableData();
-    // We no longer need to set success data as it's displayed in the component
-  };
-
-  const handleBulkUpdateSuccess = (results) => {
-    // Refresh the table with only a loading indicator
-    refreshTableData();
-  };
-
-  const handleBulkDeleteSuccess = (results) => {
-    // Refresh the table with only a loading indicator
-    refreshTableData();
-  };
-
-  // Get filtered data
-  const filteredData = getFilteredData();
+  }, [refreshTableData]);
 
   // Handle view change with search term persisting
   const handleViewChange = (newView) => {
     setCurrentView(newView);
     setPage(0); // Reset to first page when changing views
   };
+
+  // Get filtered data
+  const filteredData = getFilteredData();
 
   // Loading and Error states
   if (error) {
@@ -534,7 +596,7 @@ const ManageStudent = () => {
                 onClick={() => setIsBulkDeleteOpen(true)}
                 sx={{
                   color: '#FFEB3B',
-                  backgroundColor: '#d32f2f',
+                  backgroundColor: '#EE4242',
                   border: '1px solid #d32f2f',
                   borderRadius: '50px',
                   height: '40px',
@@ -551,6 +613,31 @@ const ManageStudent = () => {
               >
                 <DeleteIcon sx={{ marginRight: 1 }} />
                 Bulk Delete
+              </Button>
+              
+              {/* Export Students Button */}
+              <Button
+                
+                onClick={handleExportStudents}
+                sx={{
+                  color: '#800000',
+                  backgroundColor: '#CCCCCC', // Different color to distinguish from other actions
+                
+                  borderRadius: '50px',
+                  height: '40px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: 2,
+                  '&:hover': {
+                    backgroundColor: '#800000',
+                    color: '#CCCCCC',
+                  },
+                }}
+              >
+                <GetAppIcon sx={{ marginRight: 1 }} />
+                Export Students
               </Button>
             </Box>
           )}
@@ -687,7 +774,7 @@ const ManageStudent = () => {
                         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                         .map((student, index) => (
                           <TableRow
-                            key={index}
+                            key={student.id || index}
                             hover
                             sx={{
                               backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFF',
@@ -704,10 +791,11 @@ const ManageStudent = () => {
                                 <Typography 
                                   sx={{ 
                                     fontWeight: 'medium',
-                                    color: '#800000'  // Uses your theme's maroon color
+                                    color: '#800000', // Use same color for all subjects
                                   }}
                                 >
                                   {student.subject}
+
                                 </Typography>
                               ) : (
                                 <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
@@ -787,11 +875,11 @@ const ManageStudent = () => {
           )}
 
           {currentView === 'academic' && 
-            <AcademicYearTable searchTerm={searchTerm} />
+            <AcademicYearTable searchTerm={searchTerm} onSuccess={handleOperationSuccess} />
           }
 
           {currentView === 'gradeSection' && 
-            <GradeSectionTable searchTerm={searchTerm} />
+            <GradeSectionTable searchTerm={searchTerm} onSuccess={handleOperationSuccess} />
           }
           
           {/* Extra spacer to ensure scrollability */}
@@ -800,7 +888,12 @@ const ManageStudent = () => {
       </Box>
 
       {/* Modals */}
-      <CreateStudentForm open={isFormOpen} onClose={handleCloseForm} />
+      <CreateStudentForm 
+        open={isFormOpen} 
+        onClose={handleCloseForm} 
+        onSuccess={handleOperationSuccess}
+      />
+      
       <UpdateStudentForm
         open={isUpdateFormOpen}
         onClose={() => setIsUpdateFormOpen(false)}
@@ -813,26 +906,29 @@ const ManageStudent = () => {
           setIsUpdateFormOpen(false);
         }}
       />
+
       <DeleteConfirmation
         open={isDeleteConfirmationOpen}
         onClose={() => setIsDeleteConfirmationOpen(false)}
         onConfirm={handleDeleteConfirmation}
       />
-      {/* New Modals */}
+
       <AddAcademicYear 
         open={isAddAcademicYearModalOpen}
         onClose={() => setIsAddAcademicYearModalOpen(false)}
+        onSuccess={handleOperationSuccess}
       />
 
       <AddGradeSection 
         open={isAddGradeSectionModalOpen}
         onClose={() => setIsAddGradeSectionModalOpen(false)}
+        onSuccess={handleOperationSuccess}
       />
       
       <BulkImportStudents
         open={isBulkImportOpen}
         onClose={() => setIsBulkImportOpen(false)}
-        onSuccess={handleBulkImportSuccess}
+        onSuccess={handleOperationSuccess}
         initialStep={bulkImportStep}
         onStepChange={handleBulkImportStepChange}
         ref={bulkImportRef}
@@ -841,14 +937,14 @@ const ManageStudent = () => {
       <BulkUpdateStudents
         open={isBulkUpdateOpen}
         onClose={handleCloseBulkUpdate}
-        onSuccess={handleBulkUpdateSuccess}
+        onSuccess={handleOperationSuccess}
         ref={bulkUpdateRef}
       />
 
       <BulkDeleteStudents
         open={isBulkDeleteOpen}
         onClose={() => setIsBulkDeleteOpen(false)}
-        onSuccess={handleBulkDeleteSuccess}
+        onSuccess={handleOperationSuccess}
         ref={bulkDeleteRef}
       />
     </>

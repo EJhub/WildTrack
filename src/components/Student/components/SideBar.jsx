@@ -112,14 +112,14 @@ const SideBar = () => {
 
           <ListItem
             button
-            onClick={() => navigateTo('/studentDashboard/booklog')}
-            sx={getListItemStyles('/studentDashboard/booklog')}
+            onClick={() => navigateTo('/studentDashboard/journal')}
+            sx={getListItemStyles('/studentDashboard/journal')}
           >
             <ListItemText
-              primary={isSmallScreen ? 'B' : 'Book Log'}
+              primary={isSmallScreen ? 'B' : 'Journal'}
               primaryTypographyProps={{
                 align: 'center',
-                fontWeight: location.pathname.startsWith('/studentDashboard/booklog') ? 'bold' : 'normal',
+                fontWeight: location.pathname.startsWith('/studentDashboard/journal') ? 'bold' : 'normal',
               }}
             />
           </ListItem>
