@@ -7,7 +7,7 @@ import {
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import LibraryHoursCompletionRate from './components/LibraryHoursCompletionRate';
-import ActiveLibraryHoursParticipants from './components/ActiveLibraryHoursParticipants';
+import ActiveLibraryHoursParticipants from './components/LibraryHoursParticipants';
 
 const Analytics = () => {
   const [activeView, setActiveView] = useState('completion'); // 'completion' or 'participants'
@@ -108,7 +108,7 @@ const Analytics = () => {
                   flexGrow: { xs: 1, md: 0 }
                 }}
               >
-                Active Library Hours Participants
+               Library Hours Participants
               </Button>
             </Box>
           </Box>

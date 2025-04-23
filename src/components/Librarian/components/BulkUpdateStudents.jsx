@@ -201,7 +201,12 @@ const fetchStudents = async () => {
         });
       }
       
-      setStudents(filteredStudents);
+      // Remove duplicates based on student ID
+      const uniqueStudents = Array.from(
+        new Map(filteredStudents.map(student => [student.id, student])).values()
+      );
+      
+      setStudents(uniqueStudents);
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
@@ -222,9 +227,15 @@ const fetchStudents = async () => {
       setSelectedStudents([]);
       setSelectedStudentDetails([]);
     } else {
-      const ids = students.map(student => student.id);
-      setSelectedStudents(ids);
-      setSelectedStudentDetails(students);
+      // Get unique student IDs
+      const uniqueIds = [...new Set(students.map(student => student.id))];
+      setSelectedStudents(uniqueIds);
+      
+      // Create unique student details array using Map to prevent duplicates
+      const uniqueStudents = Array.from(
+        new Map(students.map(student => [student.id, student])).values()
+      );
+      setSelectedStudentDetails(uniqueStudents);
     }
     setSelectAll(!selectAll);
   };
@@ -238,7 +249,10 @@ const fetchStudents = async () => {
         );
         return prev.filter(id => id !== student.id);
       } else {
-        setSelectedStudentDetails(prevDetails => [...prevDetails, student]);
+        // Check if student is already in the details array to prevent duplicates
+        if (!selectedStudentDetails.some(s => s.id === student.id)) {
+          setSelectedStudentDetails(prevDetails => [...prevDetails, student]);
+        }
         return [...prev, student.id];
       }
     });
@@ -290,12 +304,18 @@ const fetchStudents = async () => {
     let failed = 0;
     const errors = [];
 
-    for (let i = 0; i < selectedStudents.length; i++) {
+    // Get unique students to update
+    const uniqueStudentIds = [...new Set(selectedStudents)];
+    const uniqueStudentDetails = Array.from(
+      new Map(selectedStudentDetails.map(student => [student.id, student])).values()
+    );
+
+    for (let i = 0; i < uniqueStudentIds.length; i++) {
       try {
-        const studentId = selectedStudents[i];
+        const studentId = uniqueStudentIds[i];
         
         // Get the current student data from the selectedStudentDetails array
-        const currentStudent = selectedStudentDetails.find(s => s.id === studentId);
+        const currentStudent = uniqueStudentDetails.find(s => s.id === studentId);
         
         // Create update data object with only selected fields while preserving existing data
         const updateData = {
@@ -322,17 +342,17 @@ const fetchStudents = async () => {
         }
         
         // Update progress
-        setUpdateProgress(Math.round(((i + 1) / selectedStudents.length) * 100));
+        setUpdateProgress(Math.round(((i + 1) / uniqueStudentIds.length) * 100));
         
         // Call API to update student
         await api.put(`/students/${studentId}`, updateData);
         successful++;
       } catch (error) {
-        console.error(`Error updating student ${selectedStudents[i]}:`, error);
-        const student = selectedStudentDetails.find(s => s.id === selectedStudents[i]);
+        console.error(`Error updating student ${uniqueStudentIds[i]}:`, error);
+        const student = uniqueStudentDetails.find(s => s.id === uniqueStudentIds[i]);
         errors.push({
-          id: selectedStudents[i],
-          name: student ? `${student.firstName} ${student.lastName}` : `Student ID ${selectedStudents[i]}`,
+          id: uniqueStudentIds[i],
+          name: student ? `${student.firstName} ${student.lastName}` : `Student ID ${uniqueStudentIds[i]}`,
           error: error.response?.data?.error || 'Unknown error occurred'
         });
         failed++;
@@ -383,6 +403,11 @@ const fetchStudents = async () => {
         [name]: value
       });
     }
+  };
+
+  // Get unique count of students
+  const getUniqueStudentCount = () => {
+    return new Set(selectedStudents).size;
   };
 
   return (
@@ -560,7 +585,7 @@ const fetchStudents = async () => {
             
             <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
               <Chip 
-                label={`${selectedStudents.length} students selected`} 
+                label={`${getUniqueStudentCount()} students selected`} 
                 color={selectedStudents.length > 0 ? "primary" : "default"}
                 sx={{ fontWeight: 'bold' }}
               />
@@ -576,7 +601,7 @@ const fetchStudents = async () => {
             </Typography>
             
             <Alert severity="info" sx={{ mb: 3 }}>
-              Specify new values for the fields you want to update. All {selectedStudents.length} selected students will be updated.
+              Specify new values for the fields you want to update. All {getUniqueStudentCount()} selected students will be updated.
             </Alert>
             
             <Paper sx={{ p: 3, mb: 3 }}>
@@ -643,7 +668,7 @@ const fetchStudents = async () => {
                   Update Summary:
                 </Typography>
                 <Typography>
-                  {selectedStudents.length} students will have the following fields updated:
+                  {getUniqueStudentCount()} students will have the following fields updated:
                 </Typography>
                 <Box sx={{ ml: 2, mt: 1 }}>
                   {fieldsToUpdate.grade && fieldsToUpdate.section && (
@@ -682,7 +707,7 @@ const fetchStudents = async () => {
                   <>
                     <Alert severity="warning" sx={{ mb: 3 }}>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        You are about to update {selectedStudents.length} students. 
+                        You are about to update {getUniqueStudentCount()} students. 
                       </Typography>
                       <Typography variant="body2">
                         This action cannot be undone. Please review the details below and confirm.
@@ -692,7 +717,7 @@ const fetchStudents = async () => {
                     <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f9f9f9' }}>
                       <Typography sx={{ fontWeight: 'bold', mb: 1, textAlign: 'center' }}>Update Details:</Typography>
                       <Box sx={{ pl: 2 }}>
-                        <Typography>• Students to update: {selectedStudents.length}</Typography>
+                        <Typography>• Students to update: {getUniqueStudentCount()}</Typography>
                         {fieldsToUpdate.grade && fieldsToUpdate.section && (
                           <>
                             <Typography>• Grade: {fieldsToUpdate.grade}</Typography>
@@ -710,7 +735,9 @@ const fetchStudents = async () => {
                     </Typography>
                     
                     <Box sx={{ maxHeight: 200, overflow: 'auto', mb: 3, border: '1px solid #eee', p: 1 }}>
-                      {selectedStudentDetails.map((student, index) => (
+                      {/* Remove duplicates based on student ID and display unique entries */}
+                      {Array.from(new Map(selectedStudentDetails.map(student => [student.id, student])).values())
+                        .map((student, index) => (
                         <Typography key={student.id} variant="body2" sx={{ mb: 0.5 }}>
                           {index + 1}. {student.idNumber} - {student.firstName} {student.lastName}
                         </Typography>

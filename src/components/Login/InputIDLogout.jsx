@@ -146,7 +146,12 @@ function InputIDLogout() {
   const getFullImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    return url; // No need to add base URL - the proxy takes care of this
+    
+    // Extract the filename from the URL path
+    const fileName = url.split('/').pop();
+    
+    // Ensure the URL matches the controller endpoint
+    return `/api/users/uploads/${fileName}`;
   };
 
   return (

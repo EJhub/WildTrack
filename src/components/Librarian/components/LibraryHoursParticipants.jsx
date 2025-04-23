@@ -402,7 +402,7 @@ const LibraryHoursParticipants = () => {
       };
       
       const fileName = `participants-${appliedFilters.gradeLevel}-${new Date().toISOString().split('T')[0]}`;
-      const title = 'Active Library Hours Participants';
+      const title = 'Library Hours Participants';
       
       const success = exportToExcel(chartData, fileName, title);
       
@@ -569,7 +569,7 @@ const LibraryHoursParticipants = () => {
 
   // Build title for the chart
   const getChartTitle = () => {
-    const parts = ['Active Library Hours Participants'];
+    const parts = ['Library Hours Participants'];
     
     if (appliedFilters.academicYear) {
       parts.push(`- AY ${appliedFilters.academicYear}`);
