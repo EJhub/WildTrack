@@ -16,6 +16,16 @@ import {
 import LoginNavBar from "./component/AppBar";
 import api from "../../utils/api"; // Changed from axios to the custom API utility
 
+// Add this function to get the base URL depending on environment
+const getBaseURL = () => {
+  // Check if we're in production environment
+  if (window.location.hostname !== 'localhost' && 
+      !window.location.hostname.includes('127.0.0.1')) {
+    return 'https://backend-5erg.onrender.com'; // Your production backend URL
+  }
+  return '';
+};
+
 // Format time in Philippine timezone (UTC+8)
 const formatPHTime = (date) => {
   return date.toLocaleTimeString('en-US', {
@@ -138,16 +148,13 @@ function InputIdLogin() {
    }
  };
 
- // Get full image URL with base path if needed
+ // Updated getFullImageUrl function to use the base URL
  const getFullImageUrl = (url) => {
    if (!url) return null;
    if (url.startsWith("http")) return url;
    
-   // Extract the filename from the URL path
-   const fileName = url.split('/').pop();
-   
-   // Ensure the URL matches the controller endpoint
-   return `/api/users/uploads/${fileName}`;
+   // Use the same approach as in PersonalInformation.js
+   return `${getBaseURL()}${url}`;
  };
 
  return (
