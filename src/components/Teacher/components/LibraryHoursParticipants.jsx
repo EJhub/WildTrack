@@ -607,7 +607,7 @@ const ActiveLibraryHoursParticipants = () => {
   const handleExportToPDF = async () => {
     try {
       // Create a descriptive title that includes filter information
-      const chartTitle = `Active Library Hours Participants - ${teacherSubject || 'All Subjects'}`;
+      const chartTitle = `Library Hours Participants - ${teacherSubject || 'All Subjects'}`;
       const fileName = `active-participants-${new Date().toISOString().split('T')[0]}`;
       
       // Add any active filters to the title
@@ -639,7 +639,7 @@ const ActiveLibraryHoursParticipants = () => {
   const handleExportToExcel = () => {
     try {
       // Create a descriptive title that includes filter information
-      const chartTitle = `Active Library Hours Participants - ${teacherSubject || 'All Subjects'}`;
+      const chartTitle = `Library Hours Participants - ${teacherSubject || 'All Subjects'}`;
       const fileName = `active-participants-${new Date().toISOString().split('T')[0]}`;
       
       // Add any active filters to the title
@@ -970,7 +970,7 @@ const ActiveLibraryHoursParticipants = () => {
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#8C383E' }}>
-            Active Library Hours Participants - {teacherSubject || 'All Subjects'}
+           Library Hours Participants - {teacherSubject || 'All Subjects'}
             {appliedFilters.section ? ` - Section ${appliedFilters.section}` : ''}
             {appliedFilters.academicYear ? ` - AY ${appliedFilters.academicYear}` : ''}
           </Typography>

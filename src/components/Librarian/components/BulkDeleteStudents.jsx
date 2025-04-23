@@ -56,6 +56,10 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
     notes: ''
   });
   
+  // Add delete confirmation state
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleteConfirmationError, setDeleteConfirmationError] = useState(false);
+  
   // State for dropdown options
   const [gradeOptions, setGradeOptions] = useState([]);
   const [sectionOptions, setSectionOptions] = useState([]);
@@ -97,6 +101,8 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
       });
       setDeleteResults({ successful: 0, failed: 0, errors: [] });
       setSelectAll(false);
+      setDeleteConfirmation('');
+      setDeleteConfirmationError(false);
     }
   }, [open]);
   
@@ -117,6 +123,8 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
       });
       setDeleteResults({ successful: 0, failed: 0, errors: [] });
       setSelectAll(false);
+      setDeleteConfirmation('');
+      setDeleteConfirmationError(false);
     }
   }));
 
@@ -200,7 +208,12 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
         });
       }
       
-      setStudents(filteredStudents);
+      // Remove duplicates based on student ID
+      const uniqueStudents = Array.from(
+        new Map(filteredStudents.map(student => [student.id, student])).values()
+      );
+      
+      setStudents(uniqueStudents);
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
@@ -221,9 +234,15 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
       setSelectedStudents([]);
       setSelectedStudentDetails([]);
     } else {
-      const ids = students.map(student => student.id);
-      setSelectedStudents(ids);
-      setSelectedStudentDetails(students);
+      // Get unique student IDs
+      const uniqueIds = [...new Set(students.map(student => student.id))];
+      setSelectedStudents(uniqueIds);
+      
+      // Create unique student details array using Map to prevent duplicates
+      const uniqueStudents = Array.from(
+        new Map(students.map(student => [student.id, student])).values()
+      );
+      setSelectedStudentDetails(uniqueStudents);
     }
     setSelectAll(!selectAll);
   };
@@ -237,7 +256,10 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
         );
         return prev.filter(id => id !== student.id);
       } else {
-        setSelectedStudentDetails(prevDetails => [...prevDetails, student]);
+        // Check if student is already in the details array to prevent duplicates
+        if (!selectedStudentDetails.some(s => s.id === student.id)) {
+          setSelectedStudentDetails(prevDetails => [...prevDetails, student]);
+        }
         return [...prev, student.id];
       }
     });
@@ -257,13 +279,31 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
     }));
   };
 
+  // Handle delete confirmation text change
+  const handleDeleteConfirmationChange = (event) => {
+    setDeleteConfirmation(event.target.value);
+    // Reset error state when user types
+    setDeleteConfirmationError(false);
+  };
+
   // Check if all required settings are filled
   const areSettingsValid = () => {
     return deletionSettings.reason !== '';
   };
 
+  // Check if the delete confirmation is valid
+  const isDeleteConfirmationValid = () => {
+    return deleteConfirmation === 'DELETE';
+  };
+
   // Perform the bulk deletion
   const performDeletion = async () => {
+    // Check if DELETE confirmation is correct
+    if (!isDeleteConfirmationValid()) {
+      setDeleteConfirmationError(true);
+      return;
+    }
+
     setIsDeleting(true);
     let successful = 0;
     let failed = 0;
@@ -654,16 +694,18 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
                     </Typography>
                     
                     <Box sx={{ maxHeight: 200, overflow: 'auto', mb: 3, border: '1px solid #eee', p: 1 }}>
-                      {selectedStudentDetails.map((student, index) => (
-                        <Typography key={student.id} variant="body2" sx={{ mb: 0.5 }}>
-                          {index + 1}. {student.idNumber} - {student.firstName} {student.lastName}
-                        </Typography>
-                      ))}
+                      {/* Remove duplicates based on student ID and display unique entries */}
+                      {Array.from(new Map(selectedStudentDetails.map(student => [student.id, student])).values())
+                        .map((student, index) => (
+                          <Typography key={student.id} variant="body2" sx={{ mb: 0.5 }}>
+                            {index + 1}. {student.idNumber} - {student.firstName} {student.lastName}
+                          </Typography>
+                        ))}
                     </Box>
                     
-                    <Box sx={{ p: 2, bgcolor: '#fff4e5', borderRadius: 2, mb: 3 }}>
+                    <Box sx={{ p: 2, bgcolor: deleteConfirmationError ? '#fff1f1' : '#fff4e5', borderRadius: 2, mb: 3 }}>
                       <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
-                        <WarningIcon sx={{ color: '#ff9800', mr: 1 }} />
+                        <WarningIcon sx={{ color: deleteConfirmationError ? '#f44336' : '#ff9800', mr: 1 }} />
                         Type "DELETE" in the box below to confirm this action
                       </Typography>
                       <TextField 
@@ -672,7 +714,10 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
                         size="small"
                         sx={{ mt: 1 }}
                         name="deleteConfirmation"
-                        // You could add state and logic for this text field to ensure they type "DELETE"
+                        value={deleteConfirmation}
+                        onChange={handleDeleteConfirmationChange}
+                        error={deleteConfirmationError}
+                        helperText={deleteConfirmationError ? 'You must type "DELETE" exactly to confirm' : ''}
                       />
                     </Box>
                   </>
@@ -735,10 +780,11 @@ const BulkDeleteStudents = forwardRef(({ open, onClose, onSuccess }, ref) => {
                       variant="contained"
                       onClick={performDeletion}
                       startIcon={<DeleteIcon />}
+                      disabled={!isDeleteConfirmationValid()}
                       sx={{
-                        backgroundColor: '#d32f2f',
+                        backgroundColor: isDeleteConfirmationValid() ? '#d32f2f' : '#d32f2f77',
                         color: '#fff',
-                        '&:hover': { backgroundColor: '#b71c1c' },
+                        '&:hover': { backgroundColor: isDeleteConfirmationValid() ? '#b71c1c' : '#d32f2f77' },
                       }}
                     >
                       CONFIRM DELETION

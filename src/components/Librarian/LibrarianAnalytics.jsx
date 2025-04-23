@@ -10,7 +10,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
-import LibraryHoursParticipants from './components/ActiveLibraryHoursParticipants';
+import LibraryHoursParticipants from './components/LibraryHoursParticipants';
 import AccessionUsageFrequency from './components/AccessionUsageFrequency';
 import LibraryHoursCompletionRate from './components/LibraryHoursCompletionRate';
 import ReportsView from './components/ReportsView';
@@ -145,7 +145,7 @@ const Analytics = () => {
                   }}
                   onClick={() => setSelectedGraph('participants')}
                 >
-                  Active Library Hours Participants
+                  Library Hours Participants
                 </Button>
                 <Button
                   variant="contained"
