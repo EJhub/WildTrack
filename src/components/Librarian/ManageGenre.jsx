@@ -382,14 +382,6 @@ const LibrarianManageGenre = () => {
     setPage(1);
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography variant="h6">Loading...</Typography>
-      </Box>
-    );
-  }
-  
   // Calculate pagination values
   const totalGenres = filteredData.length;
   const totalPages = Math.ceil(totalGenres / rowsPerPage);
@@ -399,15 +391,31 @@ const LibrarianManageGenre = () => {
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 120px 32px', // Increased bottom padding for better scrolling
             flexGrow: 1,
             backgroundColor: '#ffffff',
             display: 'flex',
             flexDirection: 'column',
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Typography 
@@ -479,7 +487,19 @@ const LibrarianManageGenre = () => {
           </Box>
 
           {/* Table Section */}
-          <TableContainer component={Paper} sx={{ borderRadius: '15px', overflow: 'auto', mb: 2 }}>
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              borderRadius: '15px',
+              boxShadow: 3,
+              overflow: 'visible', // Changed from 'auto' to 'visible' to ensure pagination is visible
+              flexGrow: 1, // Allow table to grow with content
+              marginBottom: 5, // Added margin bottom for pagination visibility
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative', // For better positioning
+            }}
+          >
             <Table>
               <TableHead>
                 <TableRow>
@@ -527,60 +547,65 @@ const LibrarianManageGenre = () => {
                 })()}
               </TableBody>
             </Table>
-          </TableContainer>
           
-          {/* Pagination Controls - Centered */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center',
-            alignItems: 'center',
-            mt: 2,
-            mb: 2
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-              <Typography variant="body2" color="textSecondary" mr={1}>
-                Rows per page:
+            {/* Pagination Controls - Centered inside TableContainer for better positioning */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 2,
+              backgroundColor: 'transparent',
+              width: '100%',
+              position: 'relative', // Ensure visibility
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                <Typography variant="body2" color="textSecondary" mr={1}>
+                  Rows per page:
+                </Typography>
+                <FormControl variant="standard" size="small">
+                  <Select
+                    value={rowsPerPage}
+                    onChange={handleChangeRowsPerPage}
+                    sx={{ 
+                      fontSize: '0.875rem',
+                      '& .MuiSelect-select': { 
+                        py: 0.5,
+                        pr: 2 
+                      }
+                    }}
+                  >
+                    <MenuItem value={5}>5</MenuItem>
+                    <MenuItem value={10}>10</MenuItem>
+                    <MenuItem value={25}>25</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              
+              <Typography variant="body2" color="textSecondary" sx={{ mx: 2 }}>
+                {startRow}–{endRow} of {totalGenres}
               </Typography>
-              <FormControl variant="standard" size="small">
-                <Select
-                  value={rowsPerPage}
-                  onChange={handleChangeRowsPerPage}
-                  sx={{ 
-                    fontSize: '0.875rem',
-                    '& .MuiSelect-select': { 
-                      py: 0.5,
-                      pr: 2 
-                    }
-                  }}
+              
+              <Box sx={{ display: 'flex' }}>
+                <IconButton 
+                  size="small"
+                  disabled={page === 1}
+                  onClick={() => handleChangePage(null, page - 1)}
                 >
-                  <MenuItem value={5}>5</MenuItem>
-                  <MenuItem value={10}>10</MenuItem>
-                  <MenuItem value={25}>25</MenuItem>
-                </Select>
-              </FormControl>
+                  <KeyboardArrowLeftIcon />
+                </IconButton>
+                <IconButton 
+                  size="small"
+                  disabled={page >= totalPages}
+                  onClick={() => handleChangePage(null, page + 1)}
+                >
+                  <KeyboardArrowRightIcon />
+                </IconButton>
+              </Box>
             </Box>
-            
-            <Typography variant="body2" color="textSecondary" sx={{ mx: 2 }}>
-              {startRow}–{endRow} of {totalGenres}
-            </Typography>
-            
-            <Box sx={{ display: 'flex' }}>
-              <IconButton 
-                size="small"
-                disabled={page === 1}
-                onClick={() => handleChangePage(null, page - 1)}
-              >
-                <KeyboardArrowLeftIcon />
-              </IconButton>
-              <IconButton 
-                size="small"
-                disabled={page >= totalPages}
-                onClick={() => handleChangePage(null, page + 1)}
-              >
-                <KeyboardArrowRightIcon />
-              </IconButton>
-            </Box>
-          </Box>
+          </TableContainer>
+
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 60, width: '100%' }} />
         </Box>
       </Box>
 

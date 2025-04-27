@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress, // Added CircularProgress import
 } from "@mui/material";
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -540,8 +541,29 @@ const StudentLibraryHours = () => {
     setPage(0);
   };
 
+  // UPDATED LOADING STATE
   if (authLoading || loading) {
-    return <Typography>Loading...</Typography>;
+    return (
+      <>
+        <NavBar />
+        <Box sx={{ display: "flex", height: "100vh" }}>
+          <SideBar />
+          <Box
+            sx={{
+              padding: 4,
+              flexGrow: 1,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#fff",
+            }}
+          >
+            <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Loading library hours...</Typography>
+          </Box>
+        </Box>
+      </>
+    );
   }
 
   // Get displayed data with pagination
@@ -796,137 +818,145 @@ const StudentLibraryHours = () => {
           </Box>
 
           <TableContainer
-            component={Paper}
-            sx={{
-              borderRadius: '15px',
-              boxShadow: 3,
-              overflow: 'visible', // Allow content to flow outside container
-              marginTop: 3,
-              marginBottom: 7, // Increased bottom margin
-              backgroundColor: "rgba(255, 255, 255, 0.8)",
-              flexGrow: 1,
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <Table sx={{ flexGrow: 1 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell 
-                    onClick={() => handleRequestSort("date")}
-                    sx={sortableHeaderStyle}
+  component={Paper}
+  sx={{
+    borderRadius: '15px',
+    boxShadow: 3,
+    overflow: 'visible',
+    marginTop: 3,
+    marginBottom: 7,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+  }}
+>
+  <Table sx={{ minWidth: 650 }}>
+    <TableHead>
+      <TableRow>
+        <TableCell 
+          onClick={() => handleRequestSort("date")}
+          sx={sortableHeaderStyle}
+        >
+          <Tooltip title="Sort by date">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              Date <SortIndicator column="date" />
+            </Box>
+          </Tooltip>
+        </TableCell>
+        <TableCell 
+          onClick={() => handleRequestSort("timeIn")}
+          sx={sortableHeaderStyle}
+        >
+          <Tooltip title="Sort by time in">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              Time In <SortIndicator column="timeIn" />
+            </Box>
+          </Tooltip>
+        </TableCell>
+        <TableCell 
+          onClick={() => handleRequestSort("bookTitle")}
+          sx={sortableHeaderStyle}
+        >
+          <Tooltip title="Sort by book title">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              Book Title <SortIndicator column="bookTitle" />
+            </Box>
+          </Tooltip>
+        </TableCell>
+        <TableCell 
+          onClick={() => handleRequestSort("timeOut")}
+          sx={sortableHeaderStyle}
+        >
+          <Tooltip title="Sort by time out">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              Time Out <SortIndicator column="timeOut" />
+            </Box>
+          </Tooltip>
+        </TableCell>
+        <TableCell 
+          onClick={() => handleRequestSort("minutes")}
+          sx={sortableHeaderStyle}
+        >
+          <Tooltip title="Sort by minutes">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              Minutes <SortIndicator column="minutes" />
+            </Box>
+          </Tooltip>
+        </TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {displayedHours.length === 0 ? (
+        <TableRow>
+          <TableCell colSpan={5} align="center">
+            No library hours found matching your criteria
+          </TableCell>
+        </TableRow>
+      ) : (
+        <>
+          {/* Display actual data rows */}
+          {displayedHours.map((entry) => (
+            <TableRow key={entry.id} sx={{ verticalAlign: "top" }}>
+              <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
+              <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
+              <TableCell sx={{ verticalAlign: "top" }}>
+                {entry.bookTitle ? (
+                  <Button
+                    onClick={() => handleBookTitleClick(entry)}
+                    color="primary"
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: entry.summary ? "bold" : "normal",
+                      "&:hover": {
+                        textDecoration: "underline",
+                        backgroundColor: "transparent",
+                      },
+                      padding: "0",
+                      justifyContent: "flex-start",
+                    }}
                   >
-                    <Tooltip title="Sort by date">
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        Date <SortIndicator column="date" />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => handleRequestSort("timeIn")}
-                    sx={sortableHeaderStyle}
-                  >
-                    <Tooltip title="Sort by time in">
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        Time In <SortIndicator column="timeIn" />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => handleRequestSort("bookTitle")}
-                    sx={sortableHeaderStyle}
-                  >
-                    <Tooltip title="Sort by book title">
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        Book Title <SortIndicator column="bookTitle" />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => handleRequestSort("timeOut")}
-                    sx={sortableHeaderStyle}
-                  >
-                    <Tooltip title="Sort by time out">
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        Time Out <SortIndicator column="timeOut" />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => handleRequestSort("minutes")}
-                    sx={sortableHeaderStyle}
-                  >
-                    <Tooltip title="Sort by minutes">
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        Minutes <SortIndicator column="minutes" />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {displayedHours.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      No library hours found matching your criteria
-                    </TableCell>
-                  </TableRow>
+                    {entry.bookTitle}
+                  </Button>
                 ) : (
-                  displayedHours.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
-                      <TableCell>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
-                      <TableCell>
-                        {entry.bookTitle ? (
-                          <Button
-                            onClick={() => handleBookTitleClick(entry)}
-                            color="primary"
-                            sx={{
-                              textTransform: "none",
-                              fontWeight: entry.summary ? "bold" : "normal",
-                              "&:hover": {
-                                textDecoration: "underline",
-                                backgroundColor: "transparent",
-                              },
-                              padding: "0",
-                              justifyContent: "flex-start",
-                            }}
-                          >
-                            {entry.bookTitle}
-                            
-                          </Button>
-                        ) : (
-                          "--"
-                        )}
-                      </TableCell>
-                      <TableCell>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
-                      <TableCell>{calculateMinutes(entry.timeIn, entry.timeOut)}</TableCell>
-                    </TableRow>
-                  ))
+                  "--"
                 )}
-              </TableBody>
-            </Table>
+              </TableCell>
+              <TableCell sx={{ verticalAlign: "top" }}>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
+              <TableCell sx={{ verticalAlign: "top" }}>{calculateMinutes(entry.timeIn, entry.timeOut)}</TableCell>
+            </TableRow>
+          ))}
+          
+          {/* Only add empty rows when rowsPerPage is 5 (default) and we have fewer rows */}
+          {rowsPerPage === 5 && displayedHours.length > 0 && displayedHours.length < 5 && 
+            Array.from({ length: 5 - displayedHours.length }).map((_, index) => (
+              <TableRow key={`empty-${index}`} sx={{ height: '53px' }}>
+                <TableCell colSpan={5} sx={{ border: 'none' }}></TableCell>
+              </TableRow>
+            ))
+          }
+        </>
+      )}
+    </TableBody>
+  </Table>
 
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={filteredHours.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                paddingTop: 2,
-                paddingBottom: 2,
-                backgroundColor: "transparent",
-                fontWeight: "bold",
-                display: "flex",
-                justifyContent: "center",
-                width: "100%",
-                position: "relative",
-              }}
-            />
-          </TableContainer>
+  <TablePagination
+    rowsPerPageOptions={[5, 10, 25]}
+    component="div"
+    count={filteredHours.length}
+    rowsPerPage={rowsPerPage}
+    page={page}
+    onPageChange={handleChangePage}
+    onRowsPerPageChange={handleChangeRowsPerPage}
+    sx={{
+      paddingTop: 2,
+      paddingBottom: 2,
+      backgroundColor: "transparent",
+      fontWeight: "bold",
+      display: "flex",
+      justifyContent: "center",
+      width: "100%",
+      position: "relative",
+    }}
+  />
+</TableContainer>
         </Box>
       </Box>
 

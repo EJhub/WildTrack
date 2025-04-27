@@ -14,6 +14,8 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Grid from "@mui/material/Grid";
 import { styled } from "@mui/material/styles";
+import InputAdornment from "@mui/material/InputAdornment";
+import SearchIcon from "@mui/icons-material/Search";
 
 // Styled components for consistent styling
 const StyledLabel = styled(Typography)(({ theme }) => ({
@@ -55,8 +57,12 @@ const AddEntry = (props) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
+  // New state for book search
+  const [bookSearchQuery, setBookSearchQuery] = useState("");
+  
+  // Get today's date in local timezone (Manila)
+  const date = new Date();
+  const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   
   // Mock periodicals data (replace with actual data fetch if available)
   const periodicals = [
@@ -83,6 +89,7 @@ const AddEntry = (props) => {
       setComputerPurpose("");
       setSelectedBook("");
       setSelectedPeriodical("");
+      setBookSearchQuery("");
       setComment("");
       setRating(0);
       setError(null);
@@ -98,17 +105,32 @@ const AddEntry = (props) => {
     if (newActivity === "Used Computer") {
       setSelectedBook("");
       setSelectedPeriodical("");
+      setBookSearchQuery("");
     } else if (newActivity === "Read Book") {
       setComputerPurpose("");
       setSelectedPeriodical("");
     } else if (newActivity === "Read Periodical") {
       setComputerPurpose("");
       setSelectedBook("");
+      setBookSearchQuery("");
     }
   };
   
   const handleRatingChange = (event, newValue) => {
     setRating(newValue);
+  };
+  
+  // Filter books based on search query (title, author, and accession number)
+  const filteredBooks = bookSearchQuery 
+    ? registeredBooks.filter(book => 
+        book.title.toLowerCase().includes(bookSearchQuery.toLowerCase()) ||
+        (book.author && book.author.toLowerCase().includes(bookSearchQuery.toLowerCase())) ||
+        (book.accessionNumber && book.accessionNumber.toLowerCase().includes(bookSearchQuery.toLowerCase())))
+    : registeredBooks;
+  
+  const handleBookSearchChange = (e) => {
+    setBookSearchQuery(e.target.value);
+    setSelectedBook(""); // Reset selected book when search changes
   };
   
   const handleFormSubmit = () => {
@@ -302,55 +324,87 @@ const AddEntry = (props) => {
             </>
           )}
           
-          {/* Book Selection (conditional) */}
-          <Grid item xs={4}>
-            <StyledLabel>Select a book:</StyledLabel>
-          </Grid>
-          <Grid item xs={8}>
-            <StyledSelect size="small">
-              <Select
-                value={selectedBook}
-                onChange={(e) => setSelectedBook(e.target.value)}
-                displayEmpty
-                fullWidth
-                disabled={activity !== "Read Book"}
-              >
-                <MenuItem value="" disabled>
-                  Select a Book
-                </MenuItem>
-                {registeredBooks.map((book) => (
-                  <MenuItem key={book.id} value={book.id.toString()}>
-                    {book.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </StyledSelect>
-          </Grid>
+          {/* Book Selection with Search (conditional) */}
+          {activity === "Read Book" && (
+            <>
+              {/* Book Search Bar */}
+              <Grid item xs={4}>
+                <StyledLabel>Search for a book:</StyledLabel>
+              </Grid>
+              <Grid item xs={8}>
+                <StyledInput
+                  placeholder="Search by title, author, or accession number..."
+                  value={bookSearchQuery}
+                  onChange={handleBookSearchChange}
+                  size="small"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              
+              {/* Book Dropdown */}
+              <Grid item xs={4}>
+                <StyledLabel>Select a book:</StyledLabel>
+              </Grid>
+              <Grid item xs={8}>
+                <StyledSelect size="small">
+                  <Select
+                    value={selectedBook}
+                    onChange={(e) => setSelectedBook(e.target.value)}
+                    displayEmpty
+                    fullWidth
+                  >
+                    <MenuItem value="" disabled>
+                      {filteredBooks.length > 0 
+                        ? "Select a Book" 
+                        : "No books match your search"}
+                    </MenuItem>
+                    {filteredBooks.map((book) => (
+                      <MenuItem key={book.id} value={book.id.toString()}>
+                        {book.title}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </StyledSelect>
+                <Typography variant="caption" sx={{ display: 'block', ml: 1, mt: 0.5 }}>
+                  {filteredBooks.length} book(s) found
+                </Typography>
+              </Grid>
+            </>
+          )}
           
           {/* Periodical Selection (conditional) */}
-          <Grid item xs={4}>
-            <StyledLabel>Select a periodical:</StyledLabel>
-          </Grid>
-          <Grid item xs={8}>
-            <StyledSelect size="small">
-              <Select
-                value={selectedPeriodical}
-                onChange={(e) => setSelectedPeriodical(e.target.value)}
-                displayEmpty
-                fullWidth
-                disabled={activity !== "Read Periodical"}
-              >
-                <MenuItem value="" disabled>
-                  Select a Periodical
-                </MenuItem>
-                {periodicals.map((periodical) => (
-                  <MenuItem key={periodical.id} value={periodical.id.toString()}>
-                    {periodical.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </StyledSelect>
-          </Grid>
+          {activity === "Read Periodical" && (
+            <>
+              <Grid item xs={4}>
+                <StyledLabel>Select a periodical:</StyledLabel>
+              </Grid>
+              <Grid item xs={8}>
+                <StyledSelect size="small">
+                  <Select
+                    value={selectedPeriodical}
+                    onChange={(e) => setSelectedPeriodical(e.target.value)}
+                    displayEmpty
+                    fullWidth
+                  >
+                    <MenuItem value="" disabled>
+                      Select a Periodical
+                    </MenuItem>
+                    {periodicals.map((periodical) => (
+                      <MenuItem key={periodical.id} value={periodical.id.toString()}>
+                        {periodical.title}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </StyledSelect>
+              </Grid>
+            </>
+          )}
           
           {/* Comments */}
           <Grid item xs={4}>

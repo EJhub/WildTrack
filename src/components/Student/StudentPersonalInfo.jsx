@@ -34,6 +34,8 @@ const PersonalInformation = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
+  // State for profile picture removal confirmation
+  const [confirmRemoveDialogOpen, setConfirmRemoveDialogOpen] = useState(false);
   
   // Password visibility states
   const [showOldPassword, setShowOldPassword] = useState(false);
@@ -202,6 +204,10 @@ const PersonalInformation = () => {
     }
   };
 
+  const handleShowRemoveConfirmation = () => {
+    setConfirmRemoveDialogOpen(true);
+  };
+
   const handleRemoveProfilePicture = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -218,6 +224,9 @@ const PersonalInformation = () => {
       }));
 
       handleCloseProfilePictureModal();
+      
+      // Close the confirmation dialog
+      setConfirmRemoveDialogOpen(false);
       
       // Show success message with Snackbar
       setSnackbar({
@@ -387,7 +396,7 @@ const PersonalInformation = () => {
                   boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",
                 }}
               >
-                {userInfo.firstName} {userInfo.lastName}
+                {userInfo.firstName} {userInfo.middleName ? `${userInfo.middleName.charAt(0)}. ` : ''}{userInfo.lastName}
               </Box>
             </Box>
 
@@ -741,13 +750,18 @@ const PersonalInformation = () => {
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              onClick={handleRemoveProfilePicture}
+              onClick={handleShowRemoveConfirmation}
+              disabled={!userInfo.profilePictureUrl}
               sx={{ 
                 color: '#800000', 
                 borderColor: '#800000',
                 '&:hover': { 
                   backgroundColor: '#800000',
                   color: 'white'
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(128, 0, 0, 0.3)',
+                  color: 'rgba(128, 0, 0, 0.3)'
                 }
               }}
             >
@@ -787,6 +801,81 @@ const PersonalInformation = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Confirmation Dialog for Profile Picture Removal */}
+      <Modal
+        open={confirmRemoveDialogOpen}
+        onClose={() => setConfirmRemoveDialogOpen(false)}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 320,
+            bgcolor: "white",
+            boxShadow: 5,
+            borderRadius: 1,
+            p: 0,
+            overflow: "hidden"
+          }}
+        >
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: '1px solid #ddd',
+            p: 2
+          }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Remove Profile Picture
+            </Typography>
+            <IconButton 
+              onClick={() => setConfirmRemoveDialogOpen(false)}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="body1" sx={{ mb: 3 }}>
+              Are you sure you want to remove your profile picture?
+            </Typography>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+              <Button 
+                onClick={() => setConfirmRemoveDialogOpen(false)}
+                variant="outlined"
+                sx={{
+                  color: '#800000',
+                  borderColor: '#800000',
+                  '&:hover': {
+                    backgroundColor: 'rgba(128, 0, 0, 0.04)',
+                    borderColor: '#800000'
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleRemoveProfilePicture}
+                variant="contained"
+                sx={{
+                  backgroundColor: '#800000',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#600000'
+                  }
+                }}
+              >
+                Remove
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      </Modal>
     </>
   );
 };

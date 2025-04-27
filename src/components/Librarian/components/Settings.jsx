@@ -31,6 +31,9 @@ const Settings = ({ open, onClose }) => {
   // State to control the ConfirmUpdate dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   
+  // State for profile picture removal confirmation
+  const [confirmRemoveDialogOpen, setConfirmRemoveDialogOpen] = useState(false);
+  
   // Profile picture states
   const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
@@ -185,6 +188,11 @@ const Settings = ({ open, onClose }) => {
     }
   };
 
+  // Show confirmation dialog before removing profile picture
+  const handleShowRemoveConfirmation = () => {
+    setConfirmRemoveDialogOpen(true);
+  };
+  
   const handleRemoveProfilePicture = async () => {
     try {
       await api.delete(`/users/${user.id}/profile-picture`, {
@@ -201,6 +209,9 @@ const Settings = ({ open, onClose }) => {
 
       // Close the modal
       handleCloseProfilePictureModal();
+      
+      // Close the confirmation dialog
+      setConfirmRemoveDialogOpen(false);
       
       // Show success message
       setSnackbar({
@@ -625,13 +636,22 @@ const Settings = ({ open, onClose }) => {
         onClose={handleCloseRegisterModal} 
       />
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog for Profile Update */}
       <ConfirmUpdateDialog
         open={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}
         onConfirm={handleProfileUpdate}
         title="Confirm Update"
         message="Are you sure you want to update your position and department information?"
+      />
+      
+      {/* Confirmation Dialog for Profile Picture Removal */}
+      <ConfirmUpdateDialog
+        open={confirmRemoveDialogOpen}
+        onClose={() => setConfirmRemoveDialogOpen(false)}
+        onConfirm={handleRemoveProfilePicture}
+        title="Remove Profile Picture"
+        message="Are you sure you want to remove your profile picture?"
       />
 
       {/* Profile Picture Modal */}
@@ -711,13 +731,18 @@ const Settings = ({ open, onClose }) => {
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              onClick={handleRemoveProfilePicture}
+              onClick={handleShowRemoveConfirmation}
+              disabled={!profileData.profilePictureUrl}
               sx={{ 
                 color: '#FFD700', 
                 borderColor: '#FFD700',
                 '&:hover': { 
                   backgroundColor: '#FFD700',
                   color: 'black'
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(255, 215, 0, 0.3)',
+                  color: 'rgba(255, 215, 0, 0.3)'
                 }
               }}
             >

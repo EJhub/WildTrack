@@ -299,6 +299,7 @@ const LibraryRequirementsProgress = () => {
     }
   };
 
+  // UPDATED LOADING STATE
   if (loading) {
     return (
       <>
@@ -307,13 +308,16 @@ const LibraryRequirementsProgress = () => {
           <SideBar />
           <Box
             sx={{
+              padding: 4,
+              flexGrow: 1,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              width: "100%",
+              backgroundColor: "#fff", // White background
             }}
           >
             <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Loading library requirements...</Typography>
           </Box>
         </Box>
       </>

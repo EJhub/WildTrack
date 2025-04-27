@@ -59,6 +59,8 @@ const LibrarianSideBar = () => {
       <Box
         sx={{
           width: isSmallScreen ? '80px' : '250px',
+          minWidth: isSmallScreen ? '80px' : '250px', // Added minWidth to prevent squishing
+          flexShrink: 0, // Prevent the sidebar from shrinking
           height: 'calc(100vh - 135px)', // Adjusted to account for navbar height
           background: 'linear-gradient(to bottom, #CD6161, #8B3D3D)',
           padding: '0px',
