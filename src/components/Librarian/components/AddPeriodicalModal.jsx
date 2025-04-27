@@ -7,6 +7,8 @@ import {
   TextField,
   Button,
 } from '@mui/material';
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import api from '../../../utils/api';
 
 const AddPeriodicalModal = ({ open, onClose, onSuccess, periodical = null }) => {
@@ -63,12 +65,12 @@ const AddPeriodicalModal = ({ open, onClose, onSuccess, periodical = null }) => 
     try {
       // Validate required fields
       if (!formFields.title.trim()) {
-        alert('Please enter the periodical title');
+        toast.error('Please enter the periodical title');
         return;
       }
       
       if (!formFields.accessionNumber.trim()) {
-        alert('Please enter the accession number');
+        toast.error('Please enter the accession number');
         return;
       }
       
@@ -77,12 +79,12 @@ const AddPeriodicalModal = ({ open, onClose, onSuccess, periodical = null }) => 
       if (isEditing && periodical) {
         // Update existing periodical
         const response = await api.put(`/periodicals/${periodical.id}`, submissionData);
-        alert('Periodical updated successfully');
+        // Let parent component handle success notification
         onSuccess(response.data, 'update');
       } else {
         // Add new periodical
         const response = await api.post('/periodicals/add', submissionData);
-        alert('Periodical added successfully');
+        // Let parent component handle success notification
         onSuccess(response.data, 'add');
       }
       
@@ -98,7 +100,7 @@ const AddPeriodicalModal = ({ open, onClose, onSuccess, periodical = null }) => 
           ...formFields
         };
         
-        alert('Periodical updated (demo mode)');
+        // Let parent component handle success notification
         onSuccess(updatedPeriodical, 'update');
       } else {
         // Add new periodical in demo mode
@@ -107,7 +109,7 @@ const AddPeriodicalModal = ({ open, onClose, onSuccess, periodical = null }) => 
           ...formFields
         };
         
-        alert('Periodical added (demo mode)');
+        // Let parent component handle success notification
         onSuccess(newPeriodical, 'add');
       }
       
@@ -117,8 +119,10 @@ const AddPeriodicalModal = ({ open, onClose, onSuccess, periodical = null }) => 
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEditing ? 'Edit Periodical' : 'Add New Periodical'}</DialogTitle>
-      <DialogContent>
+      <DialogTitle sx={{ bgcolor: '#f5f5f5', borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>
+        {isEditing ? 'Edit Periodical' : 'Add New Periodical'}
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
         <TextField
           autoFocus
           margin="dense"
@@ -163,13 +167,23 @@ const AddPeriodicalModal = ({ open, onClose, onSuccess, periodical = null }) => 
           fullWidth
         />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} color="primary">
+      <DialogActions sx={{ p: 2, justifyContent: 'center', gap: 2 }}>
+        <Button 
+          onClick={handleClose} 
+          variant="outlined"
+          sx={{ width: '120px' }}
+        >
           Cancel
         </Button>
         <Button 
           onClick={handleSubmit} 
-          color="primary"
+          variant="contained"
+          sx={{
+            backgroundColor: '#F8C400',
+            '&:hover': { backgroundColor: '#FFDF16' },
+            color: 'black',
+            width: '120px'
+          }}
           disabled={!formFields.title.trim() || !formFields.accessionNumber.trim()}
         >
           {isEditing ? 'Update' : 'Add'}
