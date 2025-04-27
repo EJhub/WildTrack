@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
+import BulkImportBooks from './components/BulkImportBooks';
+import BulkUpdateBooks from './components/BulkUpdateBooks';
 import {
   Box,
   Table,
@@ -32,6 +34,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import api from '../../utils/api'; // Import the API utility
 
 const LibrarianManageBooks = () => {
@@ -48,6 +52,16 @@ const LibrarianManageBooks = () => {
   const [filteredBooks, setFilteredBooks] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Bulk import/update states
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  const [bulkImportStep, setBulkImportStep] = useState(0);
+  const [tableRefreshing, setTableRefreshing] = useState(false);
+  
+  // Refs for bulk operations
+  const bulkImportRef = useRef(null);
+  const bulkUpdateRef = useRef(null);
 
   const [formFields, setFormFields] = useState({
     title: '',
@@ -84,26 +98,24 @@ const LibrarianManageBooks = () => {
       
       // Sample data for testing
       const sampleBooks = [
-        { id: 1, title: 'hjkhjkhjk', author: 'KJDKSADSI', accessionNumber: 'ewr', genre: 'Fiction', dateRegistered: '2025-03-22' },
-        { id: 2, title: 'Ssad', author: 'asdasdsad', accessionNumber: '56675', genre: 'LOL', dateRegistered: '2025-03-23' },
-        { id: 3, title: 'sfdsfsd', author: 'dsffsd', accessionNumber: '234236546', genre: 'Poetry', dateRegistered: '2025-03-24' },
-        { id: 4, title: 'sa', author: 'Ambos', accessionNumber: 'DZ1', genre: 'Poetry', dateRegistered: '2025-03-24' },
-        { id: 5, title: 'Ygg', author: 'asdas', accessionNumber: 'asa21', genre: 'Actions', dateRegistered: '2025-03-25' },
+        { id: 1, title: 'To Kill a Mockingbird', author: 'Harper Lee', accessionNumber: 'ACC001', genre: 'Fiction', dateRegistered: '2025-03-22' },
+        { id: 2, title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', accessionNumber: 'ACC002', genre: 'Fiction', dateRegistered: '2025-03-23' },
+        { id: 3, title: 'Pride and Prejudice', author: 'Jane Austen', accessionNumber: 'ACC003', genre: 'Classic', dateRegistered: '2025-03-24' },
+        { id: 4, title: '1984', author: 'George Orwell', accessionNumber: 'ACC004', genre: 'Dystopian', dateRegistered: '2025-03-24' },
+        { id: 5, title: 'The Hobbit', author: 'J.R.R. Tolkien', accessionNumber: 'ACC005', genre: 'Fantasy', dateRegistered: '2025-03-25' },
       ];
       
       const sampleGenres = [
-        { id: 1, genre: 'History', title: 'the past', books: [], archived: true },
-        { id: 2, genre: 'Actions', title: 'fighting', books: [{ title: 'Action Book 1' }], archived: false },
-        { id: 3, genre: 'Fantasy', title: 'Power', books: [], archived: false },
-        { id: 4, genre: 'Literature', title: 'english', books: [], archived: false },
-        { id: 5, genre: 'Poetry', title: 'words', books: [{ title: 'Poetry Book 1' }, { title: 'Poetry Book 2' }], archived: false },
-        { id: 6, genre: 'Fiction', title: 'Not real', books: [{ title: 'Fiction Book 1' }], archived: false },
-        { id: 7, genre: 'Sports', title: 'Hotdog Virginia', books: [], archived: false },
-        { id: 8, genre: 'Romance', title: 'Kissing', books: [], archived: false },
-        { id: 9, genre: 'SciFi', title: 'ASDA', books: [], archived: false },
-        { id: 10, genre: 'LOL', title: 'Junrey Bayut', books: [{ title: 'LOL Book 1' }], archived: false },
-        { id: 11, genre: 'ipoujp', title: 'new genre', books: [], archived: false },
-        { id: 12, genre: 'xev', title: 'another new', books: [], archived: false },
+        { id: 1, genre: 'History', title: 'Historical books', books: [], archived: true },
+        { id: 2, genre: 'Fiction', title: 'Fiction books', books: [{ title: 'Fiction Book 1' }], archived: false },
+        { id: 3, genre: 'Fantasy', title: 'Fantasy books', books: [], archived: false },
+        { id: 4, genre: 'Classic', title: 'Classic literature', books: [], archived: false },
+        { id: 5, genre: 'Poetry', title: 'Poetry collections', books: [{ title: 'Poetry Book 1' }, { title: 'Poetry Book 2' }], archived: false },
+        { id: 6, genre: 'Dystopian', title: 'Dystopian fiction', books: [{ title: 'Dystopian Book 1' }], archived: false },
+        { id: 7, genre: 'Biography', title: 'Biography books', books: [], archived: false },
+        { id: 8, genre: 'Romance', title: 'Romance novels', books: [], archived: false },
+        { id: 9, genre: 'SciFi', title: 'Science Fiction', books: [], archived: false },
+        { id: 10, genre: 'Mystery', title: 'Mystery novels', books: [{ title: 'Mystery Book 1' }], archived: false },
       ];
       
       setData(sampleBooks);
@@ -115,6 +127,7 @@ const LibrarianManageBooks = () => {
       setActiveGenres(unarchived);
     } finally {
       setLoading(false);
+      setTableRefreshing(false);
     }
   };
 
@@ -168,6 +181,28 @@ const LibrarianManageBooks = () => {
       setFilteredBooks(data);
     }
   }, [mainSearchTerm, data]);
+
+  // Table-only refresh function
+  const refreshTableData = () => {
+    setTableRefreshing(true);
+    fetchData();
+  };
+
+  // Function to save bulk import step
+  const handleBulkImportStepChange = (step) => {
+    setBulkImportStep(step);
+  };
+
+  // Handle bulk import modal opening
+  const handleOpenBulkImport = () => {
+    setBulkImportStep(0); // Reset to first step when newly opened
+    setIsBulkImportOpen(true);
+  };
+
+  // Handle bulk operations success
+  const handleOperationSuccess = () => {
+    refreshTableData();
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -405,28 +440,35 @@ const LibrarianManageBooks = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <>
       <NavBar />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          overflow: 'hidden' // Prevent outer document scrolling
+        }}
+      >
         <SideBar />
 
         <Box
           sx={{
-            padding: 4,
+            padding: '32px 32px 120px 32px', // Increased bottom padding for better scrolling
             flexGrow: 1,
             backgroundColor: '#ffffff',
             display: 'flex',
             flexDirection: 'column',
-            maxHeight: 'calc(100vh - 140px)',
+            overflow: 'auto', // Enable scrolling for main content
+            height: '100%', // Fill available height
+            '&::-webkit-scrollbar': { // Style scrollbar
+              width: '8px',
+              background: 'rgba(0,0,0,0.1)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            }
           }}
         >
           <Typography
@@ -500,17 +542,84 @@ const LibrarianManageBooks = () => {
             >
               Add Book
             </Button>
+
+            {/* Bulk Import Button */}
+            <Button
+              variant="contained"
+              onClick={handleOpenBulkImport}
+              sx={{
+                fontWeight: 'bold',
+                padding: '10px 15px',
+                fontSize: '11px', 
+                borderRadius: '10px',
+                color: 'black',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                backgroundColor: '#F8C400',
+                '&:hover': { backgroundColor: '#FFDF16' },
+              }}
+            >
+              <UploadFileIcon sx={{ marginRight: 1, fontSize: '16px' }} />
+              Bulk Import
+            </Button>
+
+            {/* Bulk Update Button */}
+            <Button
+              variant="contained"
+              onClick={() => setIsBulkUpdateOpen(true)}
+              sx={{
+                fontWeight: 'bold',
+                padding: '10px 15px',
+                fontSize: '11px', 
+                borderRadius: '10px',
+                color: 'black',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                backgroundColor: '#F8C400',
+                '&:hover': { backgroundColor: '#FFDF16' },
+              }}
+            >
+              <SystemUpdateAltIcon sx={{ marginRight: 1, fontSize: '16px' }} />
+              Bulk Update
+            </Button>
           </Box>
 
+          {/* Table container with positioned loading overlay */}
           <TableContainer
             component={Paper}
             sx={{
-              flexGrow: 1,
               borderRadius: '15px',
-              overflow: 'auto',
-              maxHeight: 'calc(100vh - 340px)',
+              boxShadow: 3,
+              overflow: 'visible', // Changed from 'auto' to 'visible' to ensure pagination is visible
+              flexGrow: 1, // Allow table to grow with content
+              marginBottom: 5, // Added margin bottom for pagination visibility
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative', // For positioning the loading overlay
             }}
           >
+            {/* Loading or refreshing overlay */}
+            {(loading || tableRefreshing) && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 10,
+                }}
+              >
+                <CircularProgress size={60} thickness={4} />
+                <Typography variant="h6" sx={{ mt: 2 }}>
+                  {loading ? 'Loading books...' : 'Refreshing data...'}
+                </Typography>
+              </Box>
+            )}
+
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
@@ -583,30 +692,38 @@ const LibrarianManageBooks = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                {filteredBooks.length === 0 && (
+                {filteredBooks.length === 0 && !loading && (
                   <TableRow>
                     <TableCell colSpan={6} align="center">No books found</TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            
+            {/* Integrated pagination inside the TableContainer */}
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={filteredBooks.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              sx={{
+                paddingTop: 2,
+                paddingBottom: 2,
+                backgroundColor: 'transparent',
+                fontWeight: 'bold',
+                display: 'flex',
+                justifyContent: 'center',
+                width: '100%',
+                position: 'relative', // Ensure visibility
+              }}
+            />
           </TableContainer>
-
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredBooks.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              paddingTop: 2,
-              width: '100%',
-            }}
-          />
+          
+          {/* Extra spacer to ensure scrollability */}
+          <Box sx={{ height: 60, width: '100%' }} />
         </Box>
       </Box>
 
@@ -688,7 +805,7 @@ const LibrarianManageBooks = () => {
         >
           View Book Details
         </DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
+        <DialogContent sx={{ pt: 3 }}>
           {selectedBook && (
             <Box>
               <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
@@ -899,6 +1016,26 @@ const LibrarianManageBooks = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Bulk Import Dialog */}
+      <BulkImportBooks
+        open={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onSuccess={handleOperationSuccess}
+        initialStep={bulkImportStep}
+        onStepChange={handleBulkImportStepChange}
+        activeGenres={activeGenres}
+        ref={bulkImportRef}
+      />
+
+      {/* Bulk Update Dialog */}
+      <BulkUpdateBooks
+        open={isBulkUpdateOpen}
+        onClose={() => setIsBulkUpdateOpen(false)}
+        onSuccess={handleOperationSuccess}
+        activeGenres={activeGenres}
+        ref={bulkUpdateRef}
+      />
     </>
   );
 };

@@ -26,8 +26,9 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
   const [selectedBook, setSelectedBook] = useState(null); // Added state for selected book
   const [rating, setRating] = useState(0); // Added state for rating
   
-  // Get today's date in YYYY-MM-DD format - still keep this for backend recording
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date in local timezone (Manila)
+  const date = new Date();
+  const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const [dateRead, setDateRead] = useState(today); // Initialize with today's date
   
   // New fields
@@ -43,9 +44,11 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
       // If search query is empty, return all registered books
       return registeredBooks;
     }
-    // Filter books based on the search query
+    // Filter books based on the search query for title, author, and accession number
     return registeredBooks.filter((book) =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase())
+      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.accessionNumber.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
 
@@ -152,14 +155,14 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
           padding: "30px",
         }}
       >
-        {/* Horizontal Alignment for Title and Search Bar */}
+        {/* Horizontal Alignment for Search Bar */}
         <Box sx={{ display: "flex", alignItems: "center", marginBottom: 3 }}>
           <Typography sx={{ textAlign: "left", color: "#000", marginRight: 2, fontWeight: 'bold' }}>
-            Title:
+            Search:
           </Typography>
           <TextField
             name="search"
-            placeholder="Type book title here..."
+            placeholder="Search by title, author, or accession number..."
             fullWidth
             variant="outlined"
             value={searchQuery}
@@ -193,7 +196,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                     backgroundColor: "#8B3D3D",
                     color: "#FFD700",
                     textAlign: "center",
-                    width: "30%",
+                    width: "35%",
                   }}
                 >
                   BOOK TITLE
@@ -204,7 +207,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                     backgroundColor: "#8B3D3D",
                     color: "#FFD700",
                     textAlign: "center",
-                    width: "25%",
+                    width: "30%",
                   }}
                 >
                   AUTHOR
@@ -215,21 +218,10 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                     backgroundColor: "#8B3D3D",
                     color: "#FFD700",
                     textAlign: "center",
-                    width: "25%",
+                    width: "30%",
                   }}
                 >
                   ACCESSION NUMBER
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontWeight: "bold",
-                    backgroundColor: "#8B3D3D",
-                    color: "#FFD700",
-                    textAlign: "center",
-                    width: "25%",
-                  }}
-                >
-                  ISBN
                 </TableCell>
                 <TableCell
                   sx={{
@@ -264,19 +256,16 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                       backgroundColor: selectedBook?.id === book.id ? "rgba(255, 215, 0, 0.3)" : "inherit",
                     }}
                   >
-                    <TableCell sx={{ textAlign: "center", width: "30%" }}>
+                    <TableCell sx={{ textAlign: "center", width: "35%" }}>
                       {book.title}
                     </TableCell>
-                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                    <TableCell sx={{ textAlign: "center", width: "30%" }}>
                       {book.author}
                     </TableCell>
-                    <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                    <TableCell sx={{ textAlign: "center", width: "30%" }}>
                       {book.accessionNumber}
                     </TableCell>
                     <TableCell sx={{ textAlign: "center", width: "20%" }}>
-                      {book.isbn}
-                    </TableCell>
-                    <TableCell sx={{ textAlign: "center", width: "10%" }}>
                       <Button
                         variant="contained"
                         onClick={() => handleBookSelection(book)}
@@ -295,7 +284,7 @@ const AddBook = ({ open, handleClose, handleSubmit, registeredBooks }) => {
                 ))}
                 {filteredBooks.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} sx={{ textAlign: "center" }}>
+                    <TableCell colSpan={4} sx={{ textAlign: "center" }}>
                       No books found.
                     </TableCell>
                   </TableRow>

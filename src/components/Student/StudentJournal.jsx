@@ -29,6 +29,9 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import InputLabel from '@mui/material/InputLabel';
+// Import toast notification
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Journal = () => {
   const [journals, setJournals] = useState([]);
@@ -74,7 +77,7 @@ const Journal = () => {
       setLoading(true);
       
       if (!isAuthenticated || !user || !user.idNumber) {
-        alert("Unauthorized access. Please log in.");
+        console.error("Unauthorized access. Please log in.");
         setLoading(false);
         return;
       }
@@ -112,7 +115,7 @@ const Journal = () => {
         "Error fetching journals:",
         error.response?.data || error.message
       );
-      alert(error.response?.data || "Failed to fetch journals.");
+      toast.error("Failed to fetch journals.");
     }
   };
 
@@ -253,9 +256,10 @@ const Journal = () => {
     });
     
     if (searchQuery) {
+      // If there's a search query, apply it to the reset data
       handleSearchChange({ target: { value: searchQuery } });
     } else {
-      // Apply just the sorting to the unfiltered data
+      // Otherwise just apply the current sort to the original data
       const sortedData = getSortedData(journals);
       setFilteredJournals(sortedData);
     }
@@ -353,7 +357,7 @@ const Journal = () => {
   const handleAddJournalSubmit = async (journal) => {
     try {
       if (!user || !user.idNumber) {
-        alert("User information not available.");
+        console.error("User information not available.");
         return;
       }
 
@@ -398,20 +402,23 @@ const Journal = () => {
           }
         );
       } else {
-        alert("Invalid journal entry type");
+        console.error("Invalid journal entry type");
         return;
       }
   
       if (response.status === 200) {
-        alert("Journal entry added successfully!");
+        // Show success toast notification
+        toast.success("Journal entry added successfully!");
+        
         await fetchJournals(); // Will trigger sort via useEffect
+        handleAddJournalClose(); // Close the form after successful submission
       } else {
         console.error("Unexpected status:", response.status, response.data);
-        alert("Unexpected error occurred.");
+        toast.error("Unexpected error occurred.");
       }
     } catch (error) {
       console.error("Caught error:", error.response || error.message || error);
-      alert(error.response?.data?.error || "Failed to add journal entry.");
+      toast.error(error.response?.data?.error || "Failed to add journal entry.");
     }
   };
 
@@ -440,6 +447,7 @@ const Journal = () => {
 
   return (
     <>
+      <ToastContainer />
       <NavBar />
       <Box 
         sx={{ 
@@ -753,16 +761,28 @@ const Journal = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayedJournals.map((journal) => ( 
-                    <TableRow key={journal.id}> 
-                      <TableCell>{journal.entryNo || "-"}</TableCell>
-                      <TableCell>{new Date(journal.dateRead).toLocaleDateString()}</TableCell>
-                      <TableCell>{journal.activity || "Read Book"}</TableCell>
-                      <TableCell>{journal.details || journal.title}</TableCell>
-                      <TableCell>{journal.comment || "—"}</TableCell>
-                      <TableCell>{renderStars(journal.rating)}</TableCell>
-                    </TableRow>
-                  ))
+                  <>
+                    {/* Display actual data rows */}
+                    {displayedJournals.map((journal) => ( 
+                      <TableRow key={journal.id}> 
+                        <TableCell>{journal.entryNo || "-"}</TableCell>
+                        <TableCell>{new Date(journal.dateRead).toLocaleDateString()}</TableCell>
+                        <TableCell>{journal.activity || "Read Book"}</TableCell>
+                        <TableCell>{journal.details || journal.title}</TableCell>
+                        <TableCell>{journal.comment || "—"}</TableCell>
+                        <TableCell>{renderStars(journal.rating)}</TableCell>
+                      </TableRow>
+                    ))}
+                    
+                    {/* Only add empty rows when rowsPerPage is 5 (default) and we have fewer rows */}
+                    {rowsPerPage === 5 && displayedJournals.length > 0 && displayedJournals.length < 5 && 
+                      Array.from({ length: 5 - displayedJournals.length }).map((_, index) => (
+                        <TableRow key={`empty-${index}`} sx={{ height: '53px' }}>
+                          <TableCell colSpan={6} sx={{ border: 'none' }}></TableCell>
+                        </TableRow>
+                      ))
+                    }
+                  </>
                 )}
               </TableBody>
             </Table>
