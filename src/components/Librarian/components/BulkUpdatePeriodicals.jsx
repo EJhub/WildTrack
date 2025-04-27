@@ -38,18 +38,13 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import api from '../../../utils/api';
 
-const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [] }, ref) => {
+const BulkUpdatePeriodicals = forwardRef(({ open, onClose, onSuccess }, ref) => {
   const [activeStep, setActiveStep] = useState(0);
-  const [selectedBooks, setSelectedBooks] = useState([]);
-  const [selectedBookDetails, setSelectedBookDetails] = useState([]);
-  const [filters, setFilters] = useState({
-    genre: '',
-  });
+  const [selectedPeriodicals, setSelectedPeriodicals] = useState([]);
+  const [selectedPeriodicalDetails, setSelectedPeriodicalDetails] = useState([]);
   
-  // Fields to update - now with new columns
+  // Fields to update - specific to periodicals
   const [fieldsToUpdate, setFieldsToUpdate] = useState({
-    genre: '',
-    callNumber: '',
     placeOfPublication: '',
     publisher: '',
     copyright: ''
@@ -57,8 +52,6 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
   
   // Track which fields should be updated
   const [fieldsToInclude, setFieldsToInclude] = useState({
-    genre: false,
-    callNumber: false,
     placeOfPublication: false,
     publisher: false,
     copyright: false
@@ -68,7 +61,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateResults, setUpdateResults] = useState({ successful: 0, failed: 0, errors: [] });
   const [loading, setLoading] = useState(false);
-  const [books, setBooks] = useState([]);
+  const [periodicals, setPeriodicals] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectAll, setSelectAll] = useState(false);
@@ -77,21 +70,14 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
   useImperativeHandle(ref, () => ({
     reset: () => {
       setActiveStep(0);
-      setSelectedBooks([]);
-      setSelectedBookDetails([]);
-      setFilters({
-        genre: '',
-      });
+      setSelectedPeriodicals([]);
+      setSelectedPeriodicalDetails([]);
       setFieldsToUpdate({
-        genre: '',
-        callNumber: '',
         placeOfPublication: '',
         publisher: '',
         copyright: ''
       });
       setFieldsToInclude({
-        genre: false,
-        callNumber: false,
         placeOfPublication: false,
         publisher: false,
         copyright: false
@@ -101,24 +87,20 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
     }
   }));
 
-  const steps = ['Select Books', 'Update Parameters', 'Confirmation'];
+  const steps = ['Select Periodicals', 'Update Parameters', 'Confirmation'];
 
   useEffect(() => {
     // Reset to first step when dialog opens
     if (open) {
       setActiveStep(0);
-      setSelectedBooks([]);
-      setSelectedBookDetails([]);
+      setSelectedPeriodicals([]);
+      setSelectedPeriodicalDetails([]);
       setFieldsToUpdate({
-        genre: '',
-        callNumber: '',
         placeOfPublication: '',
         publisher: '',
         copyright: ''
       });
       setFieldsToInclude({
-        genre: false,
-        callNumber: false,
         placeOfPublication: false,
         publisher: false,
         copyright: false
@@ -128,74 +110,67 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
     }
   }, [open]);
 
-  // Fetch books based on filters
-  const fetchBooks = async () => {
+  // Fetch periodicals
+  const fetchPeriodicals = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/books/all');
-      let books = response.data;
-      
-      // Apply genre filter if provided
-      if (filters.genre) {
-        books = books.filter(book => book.genre === filters.genre);
-      }
-      
-      setBooks(books);
+      const response = await api.get('/periodicals/all');
+      setPeriodicals(response.data);
     } catch (error) {
-      console.error('Error fetching books:', error);
-      setBooks([]);
+      console.error('Error fetching periodicals:', error);
+      setPeriodicals([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Call fetchBooks when filters change
+  // Call fetchPeriodicals when dialog opens
   React.useEffect(() => {
     if (open && activeStep === 0) {
-      fetchBooks();
+      fetchPeriodicals();
     }
-  }, [filters, open, activeStep]);
+  }, [open, activeStep]);
 
-  // Logic for selecting all filtered books
+  // Logic for selecting all periodicals
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedBooks([]);
-      setSelectedBookDetails([]);
+      setSelectedPeriodicals([]);
+      setSelectedPeriodicalDetails([]);
     } else {
-      // Get unique book IDs
-      const uniqueIds = [...new Set(books.map(book => book.id))];
-      setSelectedBooks(uniqueIds);
+      // Get unique periodical IDs
+      const uniqueIds = [...new Set(periodicals.map(periodical => periodical.id))];
+      setSelectedPeriodicals(uniqueIds);
       
-      // Create unique book details array using Map to prevent duplicates
-      const uniqueBooks = Array.from(
-        new Map(books.map(book => [book.id, book])).values()
+      // Create unique periodical details array using Map to prevent duplicates
+      const uniquePeriodicals = Array.from(
+        new Map(periodicals.map(periodical => [periodical.id, periodical])).values()
       );
-      setSelectedBookDetails(uniqueBooks);
+      setSelectedPeriodicalDetails(uniquePeriodicals);
     }
     setSelectAll(!selectAll);
   };
 
-  // Toggle individual book selection
-  const handleToggleBook = (book) => {
-    setSelectedBooks(prev => {
-      if (prev.includes(book.id)) {
-        setSelectedBookDetails(prevDetails => 
-          prevDetails.filter(b => b.id !== book.id)
+  // Toggle individual periodical selection
+  const handleTogglePeriodical = (periodical) => {
+    setSelectedPeriodicals(prev => {
+      if (prev.includes(periodical.id)) {
+        setSelectedPeriodicalDetails(prevDetails => 
+          prevDetails.filter(p => p.id !== periodical.id)
         );
-        return prev.filter(id => id !== book.id);
+        return prev.filter(id => id !== periodical.id);
       } else {
-        // Check if book is already in the details array to prevent duplicates
-        if (!selectedBookDetails.some(b => b.id === book.id)) {
-          setSelectedBookDetails(prevDetails => [...prevDetails, book]);
+        // Check if periodical is already in the details array to prevent duplicates
+        if (!selectedPeriodicalDetails.some(p => p.id === periodical.id)) {
+          setSelectedPeriodicalDetails(prevDetails => [...prevDetails, periodical]);
         }
-        return [...prev, book.id];
+        return [...prev, periodical.id];
       }
     });
   };
 
-  // Check if a book is selected
-  const isBookSelected = (bookId) => {
-    return selectedBooks.includes(bookId);
+  // Check if a periodical is selected
+  const isPeriodicalSelected = (periodicalId) => {
+    return selectedPeriodicals.includes(periodicalId);
   };
 
   // Handle field value changes
@@ -223,14 +198,6 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
     });
   };
 
-  // Handle filter change
-  const handleFilterChange = (event) => {
-    const { value } = event.target;
-    setFilters({
-      genre: value
-    });
-  };
-
   // Check if at least one field is selected for update with a value
   const hasFieldsToUpdate = () => {
     return Object.keys(fieldsToInclude).some(key => 
@@ -245,45 +212,43 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
     let failed = 0;
     const errors = [];
 
-    // Get unique books to update
-    const uniqueBookIds = [...new Set(selectedBooks)];
-    const uniqueBookDetails = Array.from(
-      new Map(selectedBookDetails.map(book => [book.id, book])).values()
+    // Get unique periodicals to update
+    const uniquePeriodicalIds = [...new Set(selectedPeriodicals)];
+    const uniquePeriodicalDetails = Array.from(
+      new Map(selectedPeriodicalDetails.map(periodical => [periodical.id, periodical])).values()
     );
 
-    for (let i = 0; i < uniqueBookIds.length; i++) {
+    for (let i = 0; i < uniquePeriodicalIds.length; i++) {
       try {
-        const bookId = uniqueBookIds[i];
+        const periodicalId = uniquePeriodicalIds[i];
         
-        // Get the current book data from the selectedBookDetails array
-        const currentBook = uniqueBookDetails.find(b => b.id === bookId);
+        // Get the current periodical data from the selectedPeriodicalDetails array
+        const currentPeriodical = uniquePeriodicalDetails.find(p => p.id === periodicalId);
         
         // Create update data object that preserves all existing data
         // We'll only add the specific fields the user has chosen to update
         const updateData = {
-          // Copy all existing data from the book first
-          ...currentBook,
+          // Copy all existing data from the periodical first
+          ...currentPeriodical,
           
           // Then only override fields that are selected for update
-          ...(fieldsToInclude.genre && { genre: fieldsToUpdate.genre }),
-          ...(fieldsToInclude.callNumber && { callNumber: fieldsToUpdate.callNumber }),
           ...(fieldsToInclude.placeOfPublication && { placeOfPublication: fieldsToUpdate.placeOfPublication }),
           ...(fieldsToInclude.publisher && { publisher: fieldsToUpdate.publisher }),
           ...(fieldsToInclude.copyright && { copyright: fieldsToUpdate.copyright })
         };
         
         // Update progress
-        setUpdateProgress(Math.round(((i + 1) / uniqueBookIds.length) * 100));
+        setUpdateProgress(Math.round(((i + 1) / uniquePeriodicalIds.length) * 100));
         
-        // Call API to update book
-        await api.put(`/books/${bookId}`, updateData);
+        // Call API to update periodical
+        await api.put(`/periodicals/${periodicalId}`, updateData);
         successful++;
       } catch (error) {
-        console.error(`Error updating book ${uniqueBookIds[i]}:`, error);
-        const book = uniqueBookDetails.find(b => b.id === uniqueBookIds[i]);
+        console.error(`Error updating periodical ${uniquePeriodicalIds[i]}:`, error);
+        const periodical = uniquePeriodicalDetails.find(p => p.id === uniquePeriodicalIds[i]);
         errors.push({
-          id: uniqueBookIds[i],
-          title: book ? book.title : `Book ID ${uniqueBookIds[i]}`,
+          id: uniquePeriodicalIds[i],
+          title: periodical ? periodical.title : `Periodical ID ${uniquePeriodicalIds[i]}`,
           error: error.response?.data?.error || 'Unknown error occurred'
         });
         failed++;
@@ -318,9 +283,9 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
     setPage(0);
   };
 
-  // Get unique count of books
-  const getUniqueBookCount = () => {
-    return new Set(selectedBooks).size;
+  // Get unique count of periodicals
+  const getUniquePeriodicalCount = () => {
+    return new Set(selectedPeriodicals).size;
   };
   
   return (
@@ -337,7 +302,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
         p: 2,
         backgroundColor: '#f5f5f5',
       }}>
-        <Typography variant="h6">Bulk Update Books</Typography>
+        <Typography variant="h6">Bulk Update Periodicals</Typography>
         <IconButton onClick={onClose} disabled={isUpdating}>
           <CloseIcon />
         </IconButton>
@@ -352,35 +317,16 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
           ))}
         </Stepper>
 
-        {/* Step 1: Select Books */}
+        {/* Step 1: Select Periodicals */}
         {activeStep === 0 && (
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Select Books to Update
+              Select Periodicals to Update
             </Typography>
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>Filter Books:</Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <FormControl sx={{ minWidth: 200, flexGrow: 1 }}>
-                  <InputLabel>Genre</InputLabel>
-                  <Select
-                    value={filters.genre}
-                    onChange={handleFilterChange}
-                    label="Genre"
-                  >
-                    <MenuItem value="">All Genres</MenuItem>
-                    {activeGenres.map(genre => (
-                      <MenuItem key={genre.id} value={genre.genre}>{genre.genre}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
               <Typography>
-                {books.length} books match your filters
+                {periodicals.length} periodicals available
               </Typography>
               <Box>
                 <Button 
@@ -411,46 +357,44 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                       <TableRow>
                         <TableCell padding="checkbox">
                           <Checkbox
-                            indeterminate={selectedBooks.length > 0 && selectedBooks.length < books.length}
-                            checked={books.length > 0 && selectedBooks.length === books.length}
+                            indeterminate={selectedPeriodicals.length > 0 && selectedPeriodicals.length < periodicals.length}
+                            checked={periodicals.length > 0 && selectedPeriodicals.length === periodicals.length}
                             onChange={handleSelectAll}
                           />
                         </TableCell>
                         <TableCell>Title</TableCell>
-                        <TableCell>Author</TableCell>
                         <TableCell>Accession Number</TableCell>
-                        <TableCell>Call Number</TableCell>
                         <TableCell>Publisher</TableCell>
-                        <TableCell>Genre</TableCell>
+                        <TableCell>Place of Publication</TableCell>
+                        <TableCell>Copyright</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {books
+                      {periodicals
                         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                        .map((book) => (
+                        .map((periodical) => (
                           <TableRow 
-                            key={book.id}
+                            key={periodical.id}
                             hover
-                            onClick={() => handleToggleBook(book)}
+                            onClick={() => handleTogglePeriodical(periodical)}
                             role="checkbox"
-                            selected={isBookSelected(book.id)}
+                            selected={isPeriodicalSelected(periodical.id)}
                             sx={{ cursor: 'pointer' }}
                           >
                             <TableCell padding="checkbox">
                               <Checkbox
-                                checked={isBookSelected(book.id)}
+                                checked={isPeriodicalSelected(periodical.id)}
                                 onChange={(event) => {
                                   event.stopPropagation();
-                                  handleToggleBook(book);
+                                  handleTogglePeriodical(periodical);
                                 }}
                               />
                             </TableCell>
-                            <TableCell>{book.title}</TableCell>
-                            <TableCell>{book.author}</TableCell>
-                            <TableCell>{book.accessionNumber}</TableCell>
-                            <TableCell>{book.callNumber || 'N/A'}</TableCell>
-                            <TableCell>{book.publisher || 'N/A'}</TableCell>
-                            <TableCell>{book.genre}</TableCell>
+                            <TableCell>{periodical.title}</TableCell>
+                            <TableCell>{periodical.accessionNumber}</TableCell>
+                            <TableCell>{periodical.publisher || 'N/A'}</TableCell>
+                            <TableCell>{periodical.placeOfPublication || 'N/A'}</TableCell>
+                            <TableCell>{periodical.copyright || 'N/A'}</TableCell>
                           </TableRow>
                         ))}
                     </TableBody>
@@ -459,7 +403,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                 <TablePagination
                   rowsPerPageOptions={[5, 10, 25]}
                   component="div"
-                  count={books.length}
+                  count={periodicals.length}
                   rowsPerPage={rowsPerPage}
                   page={page}
                   onPageChange={handleChangePage}
@@ -470,8 +414,8 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
             
             <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
               <Chip 
-                label={`${getUniqueBookCount()} books selected`} 
-                color={selectedBooks.length > 0 ? "primary" : "default"}
+                label={`${getUniquePeriodicalCount()} periodicals selected`} 
+                color={selectedPeriodicals.length > 0 ? "primary" : "default"}
                 sx={{ fontWeight: 'bold' }}
               />
             </Box>
@@ -486,7 +430,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
             </Typography>
             
             <Alert severity="info" sx={{ mb: 3 }}>
-              Select which fields to update and specify new values. All {getUniqueBookCount()} selected books will be updated with these values.
+              Select which fields to update and specify new values. All {getUniquePeriodicalCount()} selected periodicals will be updated with these values.
             </Alert>
             
             <Paper sx={{ p: 3, mb: 3 }}>
@@ -495,48 +439,6 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
               </Typography>
               
               <Grid container spacing={2}>
-                {/* GENRE */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <Box sx={{ display: 'flex', mb: 1, alignItems: 'center' }}>
-                    <Checkbox 
-                      checked={fieldsToInclude.genre}
-                      onChange={() => toggleFieldInclusion('genre')}
-                    />
-                    <Typography>Genre</Typography>
-                  </Box>
-                  <FormControl fullWidth disabled={!fieldsToInclude.genre}>
-                    <InputLabel>Genre</InputLabel>
-                    <Select
-                      value={fieldsToUpdate.genre}
-                      onChange={(e) => handleFieldChange(e, 'genre')}
-                      label="Genre"
-                    >
-                      <MenuItem value="">Select genre</MenuItem>
-                      {activeGenres.map(genre => (
-                        <MenuItem key={genre.id} value={genre.genre}>{genre.genre}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-                {/* CALL NUMBER */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <Box sx={{ display: 'flex', mb: 1, alignItems: 'center' }}>
-                    <Checkbox 
-                      checked={fieldsToInclude.callNumber}
-                      onChange={() => toggleFieldInclusion('callNumber')}
-                    />
-                    <Typography>Call Number</Typography>
-                  </Box>
-                  <TextField
-                    fullWidth
-                    label="Call Number"
-                    value={fieldsToUpdate.callNumber}
-                    onChange={(e) => handleFieldChange(e, 'callNumber')}
-                    disabled={!fieldsToInclude.callNumber}
-                  />
-                </Grid>
-                
                 {/* PLACE OF PUBLICATION */}
                 <Grid item xs={12} sm={6} md={4}>
                   <Box sx={{ display: 'flex', mb: 1, alignItems: 'center' }}>
@@ -599,19 +501,9 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                   Update Summary:
                 </Typography>
                 <Typography>
-                  {getUniqueBookCount()} books will have the following fields updated:
+                  {getUniquePeriodicalCount()} periodicals will have the following fields updated:
                 </Typography>
                 <Box sx={{ ml: 2, mt: 1 }}>
-                  {fieldsToInclude.genre && fieldsToUpdate.genre && (
-                    <Typography sx={{ mb: 0.5 }}>
-                      • <strong>Genre</strong>: {fieldsToUpdate.genre}
-                    </Typography>
-                  )}
-                  {fieldsToInclude.callNumber && fieldsToUpdate.callNumber && (
-                    <Typography sx={{ mb: 0.5 }}>
-                      • <strong>Call Number</strong>: {fieldsToUpdate.callNumber}
-                    </Typography>
-                  )}
                   {fieldsToInclude.placeOfPublication && fieldsToUpdate.placeOfPublication && (
                     <Typography sx={{ mb: 0.5 }}>
                       • <strong>Place of Publication</strong>: {fieldsToUpdate.placeOfPublication}
@@ -643,7 +535,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
             {isUpdating ? (
               <Box sx={{ mb: 3 }}>
                 <Typography sx={{ mb: 1 }}>
-                  Updating books... ({updateProgress}%)
+                  Updating periodicals... ({updateProgress}%)
                 </Typography>
                 <LinearProgress variant="determinate" value={updateProgress} sx={{ height: 10, borderRadius: 5 }} />
               </Box>
@@ -653,7 +545,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                   <>
                     <Alert severity="warning" sx={{ mb: 3 }}>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        You are about to update {getUniqueBookCount()} books. 
+                        You are about to update {getUniquePeriodicalCount()} periodicals. 
                       </Typography>
                       <Typography variant="body2">
                         This action cannot be undone. Please review the details below and confirm.
@@ -663,14 +555,8 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                     <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f9f9f9' }}>
                       <Typography sx={{ fontWeight: 'bold', mb: 1, textAlign: 'center' }}>Update Details:</Typography>
                       <Box sx={{ pl: 2 }}>
-                        <Typography>• Books to update: {getUniqueBookCount()}</Typography>
+                        <Typography>• Periodicals to update: {getUniquePeriodicalCount()}</Typography>
                         
-                        {fieldsToInclude.genre && fieldsToUpdate.genre && (
-                          <Typography>• New Genre: {fieldsToUpdate.genre}</Typography>
-                        )}
-                        {fieldsToInclude.callNumber && fieldsToUpdate.callNumber && (
-                          <Typography>• New Call Number: {fieldsToUpdate.callNumber}</Typography>
-                        )}
                         {fieldsToInclude.placeOfPublication && fieldsToUpdate.placeOfPublication && (
                           <Typography>• New Place of Publication: {fieldsToUpdate.placeOfPublication}</Typography>
                         )}
@@ -684,15 +570,15 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                     </Paper>
                     
                     <Typography variant="subtitle2" color="text.secondary">
-                      The following books will be updated:
+                      The following periodicals will be updated:
                     </Typography>
                     
                     <Box sx={{ maxHeight: 200, overflow: 'auto', mb: 3, border: '1px solid #eee', p: 1 }}>
-                      {/* Remove duplicates based on book ID and display unique entries */}
-                      {Array.from(new Map(selectedBookDetails.map(book => [book.id, book])).values())
-                        .map((book, index) => (
-                        <Typography key={book.id} variant="body2" sx={{ mb: 0.5 }}>
-                          {index + 1}. {book.title} by {book.author} (Accession: {book.accessionNumber})
+                      {/* Remove duplicates based on periodical ID and display unique entries */}
+                      {Array.from(new Map(selectedPeriodicalDetails.map(periodical => [periodical.id, periodical])).values())
+                        .map((periodical, index) => (
+                        <Typography key={periodical.id} variant="body2" sx={{ mb: 0.5 }}>
+                          {index + 1}. {periodical.title} (Accession: {periodical.accessionNumber})
                         </Typography>
                       ))}
                     </Box>
@@ -706,8 +592,8 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                       Update completed
                     </Typography>
                     <Box sx={{ mt: 1 }}>
-                      <Typography>Successfully updated: {updateResults.successful} books</Typography>
-                      <Typography>Failed to update: {updateResults.failed} books</Typography>
+                      <Typography>Successfully updated: {updateResults.successful} periodicals</Typography>
+                      <Typography>Failed to update: {updateResults.failed} periodicals</Typography>
                     </Box>
                   </Alert>
                 )}
@@ -721,7 +607,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell>Book</TableCell>
+                            <TableCell>Periodical</TableCell>
                             <TableCell>Error</TableCell>
                           </TableRow>
                         </TableHead>
@@ -790,7 +676,7 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
             variant="contained"
             onClick={handleNext}
             disabled={
-              (activeStep === 0 && selectedBooks.length === 0) ||
+              (activeStep === 0 && selectedPeriodicals.length === 0) ||
               (activeStep === 1 && !hasFieldsToUpdate())
             }
             sx={{
@@ -807,6 +693,6 @@ const BulkUpdateBooks = forwardRef(({ open, onClose, onSuccess, activeGenres = [
   );
 });
 
-BulkUpdateBooks.displayName = 'BulkUpdateBooks';
+BulkUpdatePeriodicals.displayName = 'BulkUpdatePeriodicals';
 
-export default BulkUpdateBooks;
+export default BulkUpdatePeriodicals;

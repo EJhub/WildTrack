@@ -3,6 +3,10 @@ import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import BulkImportBooks from './components/BulkImportBooks';
 import BulkUpdateBooks from './components/BulkUpdateBooks';
+import BulkImportPeriodicals from './components/BulkImportPeriodicals';
+import BulkUpdatePeriodicals from './components/BulkUpdatePeriodicals';
+import AddBookModal from './components/AddBookModal';
+import AddPeriodicalModal from './components/AddPeriodicalModal';
 import {
   Box,
   Table,
@@ -23,10 +27,6 @@ import {
   DialogContent,
   DialogTitle,
   DialogContentText,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Tooltip,
   CircularProgress,
 } from '@mui/material';
@@ -36,46 +36,51 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import api from '../../utils/api'; // Import the API utility
 
 const LibrarianManageBooks = () => {
   const [data, setData] = useState([]); // Book data with additional UI states
+  const [periodicals, setPeriodicals] = useState([]); // Periodicals data
   const [genres, setGenres] = useState([]); // Store all genres
   const [activeGenres, setActiveGenres] = useState([]); // Store only unarchived genres
-  const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
+  const [periodicalToDelete, setPeriodicalToDelete] = useState(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedPeriodical, setSelectedPeriodical] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredBooks, setFilteredBooks] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
+  const [filteredPeriodicals, setFilteredPeriodicals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('books'); // Track which tab is active
   
+  // Modal states
+  const [openAddBookDialog, setOpenAddBookDialog] = useState(false);
+  const [openAddPeriodicalDialog, setOpenAddPeriodicalDialog] = useState(false);
+
   // Bulk import/update states
-  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  const [isBulkImportBooksOpen, setIsBulkImportBooksOpen] = useState(false);
+  const [isBulkUpdateBooksOpen, setIsBulkUpdateBooksOpen] = useState(false);
+  const [isBulkImportPeriodicalsOpen, setIsBulkImportPeriodicalsOpen] = useState(false);
+  const [isBulkUpdatePeriodicalsOpen, setIsBulkUpdatePeriodicalsOpen] = useState(false);
   const [bulkImportStep, setBulkImportStep] = useState(0);
   const [tableRefreshing, setTableRefreshing] = useState(false);
   
   // Refs for bulk operations
-  const bulkImportRef = useRef(null);
-  const bulkUpdateRef = useRef(null);
-
-  const [formFields, setFormFields] = useState({
-    title: '',
-    author: '',
-    accessionNumber: '',
-    genre: '',
-    dateRegistered: new Date().toISOString()
-  });
+  const bulkImportBooksRef = useRef(null);
+  const bulkUpdateBooksRef = useRef(null);
+  const bulkImportPeriodicalsRef = useRef(null);
+  const bulkUpdatePeriodicalsRef = useRef(null);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [mainSearchTerm, setMainSearchTerm] = useState('');
 
-  // Fetch books and genres data
+  // Fetch books, periodicals and genres data
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -84,6 +89,12 @@ const LibrarianManageBooks = () => {
       const books = booksResponse.data;
       setData(books);
       setFilteredBooks(books);
+      
+      // Fetch periodicals
+      const periodicalsResponse = await api.get('/periodicals/all');
+      const periodicalsData = periodicalsResponse.data;
+      setPeriodicals(periodicalsData);
+      setFilteredPeriodicals(periodicalsData);
       
       // Fetch genres for dropdown
       const genresResponse = await api.get('/genres');
@@ -95,36 +106,15 @@ const LibrarianManageBooks = () => {
       setActiveGenres(unarchived);
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast.error('Failed to fetch data. Please try again later.');
       
-      // Sample data for testing
-      const sampleBooks = [
-        { id: 1, title: 'To Kill a Mockingbird', author: 'Harper Lee', accessionNumber: 'ACC001', genre: 'Fiction', dateRegistered: '2025-03-22' },
-        { id: 2, title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', accessionNumber: 'ACC002', genre: 'Fiction', dateRegistered: '2025-03-23' },
-        { id: 3, title: 'Pride and Prejudice', author: 'Jane Austen', accessionNumber: 'ACC003', genre: 'Classic', dateRegistered: '2025-03-24' },
-        { id: 4, title: '1984', author: 'George Orwell', accessionNumber: 'ACC004', genre: 'Dystopian', dateRegistered: '2025-03-24' },
-        { id: 5, title: 'The Hobbit', author: 'J.R.R. Tolkien', accessionNumber: 'ACC005', genre: 'Fantasy', dateRegistered: '2025-03-25' },
-      ];
-      
-      const sampleGenres = [
-        { id: 1, genre: 'History', title: 'Historical books', books: [], archived: true },
-        { id: 2, genre: 'Fiction', title: 'Fiction books', books: [{ title: 'Fiction Book 1' }], archived: false },
-        { id: 3, genre: 'Fantasy', title: 'Fantasy books', books: [], archived: false },
-        { id: 4, genre: 'Classic', title: 'Classic literature', books: [], archived: false },
-        { id: 5, genre: 'Poetry', title: 'Poetry collections', books: [{ title: 'Poetry Book 1' }, { title: 'Poetry Book 2' }], archived: false },
-        { id: 6, genre: 'Dystopian', title: 'Dystopian fiction', books: [{ title: 'Dystopian Book 1' }], archived: false },
-        { id: 7, genre: 'Biography', title: 'Biography books', books: [], archived: false },
-        { id: 8, genre: 'Romance', title: 'Romance novels', books: [], archived: false },
-        { id: 9, genre: 'SciFi', title: 'Science Fiction', books: [], archived: false },
-        { id: 10, genre: 'Mystery', title: 'Mystery novels', books: [{ title: 'Mystery Book 1' }], archived: false },
-      ];
-      
-      setData(sampleBooks);
-      setFilteredBooks(sampleBooks);
-      setGenres(sampleGenres);
-      
-      // Filter out archived genres for the dropdown
-      const unarchived = sampleGenres.filter(genre => !genre.archived);
-      setActiveGenres(unarchived);
+      // Set empty arrays if data fetching fails
+      setData([]);
+      setFilteredBooks([]);
+      setPeriodicals([]);
+      setFilteredPeriodicals([]);
+      setGenres([]);
+      setActiveGenres([]);
     } finally {
       setLoading(false);
       setTableRefreshing(false);
@@ -158,6 +148,8 @@ const LibrarianManageBooks = () => {
         book.title?.toLowerCase().includes(lowercasedTerm) ||
         book.author?.toLowerCase().includes(lowercasedTerm) ||
         book.accessionNumber?.toLowerCase().includes(lowercasedTerm) ||
+        book.callNumber?.toLowerCase().includes(lowercasedTerm) ||
+        book.publisher?.toLowerCase().includes(lowercasedTerm) ||
         book.genre?.toLowerCase().includes(lowercasedTerm)
       );
       setFilteredBooks(filtered);
@@ -170,17 +162,32 @@ const LibrarianManageBooks = () => {
   useEffect(() => {
     if (mainSearchTerm) {
       const lowercasedTerm = mainSearchTerm.toLowerCase();
-      const filtered = data.filter(book => 
+      
+      // Filter books
+      const filteredBooksData = data.filter(book => 
         book.title?.toLowerCase().includes(lowercasedTerm) ||
         book.author?.toLowerCase().includes(lowercasedTerm) ||
         book.accessionNumber?.toLowerCase().includes(lowercasedTerm) ||
+        book.callNumber?.toLowerCase().includes(lowercasedTerm) ||
+        book.publisher?.toLowerCase().includes(lowercasedTerm) ||
         book.genre?.toLowerCase().includes(lowercasedTerm)
       );
-      setFilteredBooks(filtered);
+      setFilteredBooks(filteredBooksData);
+      
+      // Filter periodicals
+      const filteredPeriodicalsData = periodicals.filter(periodical => 
+        periodical.title?.toLowerCase().includes(lowercasedTerm) ||
+        periodical.accessionNumber?.toLowerCase().includes(lowercasedTerm) ||
+        periodical.publisher?.toLowerCase().includes(lowercasedTerm) ||
+        periodical.placeOfPublication?.toLowerCase().includes(lowercasedTerm) ||
+        periodical.copyright?.toString().toLowerCase().includes(lowercasedTerm)
+      );
+      setFilteredPeriodicals(filteredPeriodicalsData);
     } else {
       setFilteredBooks(data);
+      setFilteredPeriodicals(periodicals);
     }
-  }, [mainSearchTerm, data]);
+  }, [mainSearchTerm, data, periodicals]);
 
   // Table-only refresh function
   const refreshTableData = () => {
@@ -188,19 +195,71 @@ const LibrarianManageBooks = () => {
     fetchData();
   };
 
+  // Handle opening the add/edit book dialog
+  const handleOpenBookDialog = (book = null) => {
+    setSelectedBook(book);
+    setOpenAddBookDialog(true);
+  };
+
+  // Handle opening the add/edit periodical dialog
+  const handleOpenPeriodicalDialog = (periodical = null) => {
+    setSelectedPeriodical(periodical);
+    setOpenAddPeriodicalDialog(true);
+  };
+
+  // Handle book operation success
+  const handleBookSuccess = (book, operation) => {
+    if (operation === 'add') {
+      setData(prevData => [...prevData, book]);
+      setFilteredBooks(prevData => [...prevData, book]);
+      toast.success(`Book "${book.title}" added successfully!`);
+    } else if (operation === 'update') {
+      setData(prevData => prevData.map(item => item.id === book.id ? book : item));
+      setFilteredBooks(prevData => prevData.map(item => item.id === book.id ? book : item));
+      toast.success(`Book "${book.title}" updated successfully!`);
+    }
+  };
+
+  // Handle periodical operation success
+  const handlePeriodicalSuccess = (periodical, operation) => {
+    if (operation === 'add') {
+      setPeriodicals(prevData => [...prevData, periodical]);
+      setFilteredPeriodicals(prevData => [...prevData, periodical]);
+      toast.success(`Periodical "${periodical.title}" added successfully!`);
+    } else if (operation === 'update') {
+      setPeriodicals(prevData => prevData.map(item => item.id === periodical.id ? periodical : item));
+      setFilteredPeriodicals(prevData => prevData.map(item => item.id === periodical.id ? periodical : item));
+      toast.success(`Periodical "${periodical.title}" updated successfully!`);
+    }
+  };
+
   // Function to save bulk import step
   const handleBulkImportStepChange = (step) => {
     setBulkImportStep(step);
   };
 
-  // Handle bulk import modal opening
+  // Handle bulk import modal opening based on active tab
   const handleOpenBulkImport = () => {
     setBulkImportStep(0); // Reset to first step when newly opened
-    setIsBulkImportOpen(true);
+    if (activeTab === 'books') {
+      setIsBulkImportBooksOpen(true);
+    } else {
+      setIsBulkImportPeriodicalsOpen(true);
+    }
+  };
+
+  // Handle bulk update modal opening based on active tab
+  const handleOpenBulkUpdate = () => {
+    if (activeTab === 'books') {
+      setIsBulkUpdateBooksOpen(true);
+    } else {
+      setIsBulkUpdatePeriodicalsOpen(true);
+    }
   };
 
   // Handle bulk operations success
   const handleOperationSuccess = () => {
+    toast.success(`Bulk operation completed successfully!`);
     refreshTableData();
   };
 
@@ -211,58 +270,6 @@ const LibrarianManageBooks = () => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
-
-  const handleOpenDialog = (book = null) => {
-    if (book) {
-      // When editing a book with an archived genre,
-      // we need to handle it specially
-      let initialGenre = book.genre;
-      
-      // If the genre is "N/A" (archived genre), clear it so user must select a new one
-      if (initialGenre === 'N/A') {
-        initialGenre = '';
-      }
-      
-      setFormFields({
-        title: book.title || '',
-        author: book.author || '',
-        accessionNumber: book.accessionNumber || '',
-        genre: initialGenre,
-        dateRegistered: book.dateRegistered || new Date().toISOString()
-      });
-      setSelectedBook(book);
-      setIsEditing(true);
-    } else {
-      setFormFields({
-        title: '',
-        author: '',
-        accessionNumber: '',
-        genre: '',
-        dateRegistered: new Date().toISOString()
-      });
-      setSelectedBook(null);
-      setIsEditing(false);
-    }
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setFormFields({
-      title: '',
-      author: '',
-      accessionNumber: '',
-      genre: '',
-      dateRegistered: new Date().toISOString()
-    });
-    setIsEditing(false);
-    setSelectedBook(null);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormFields({ ...formFields, [name]: value });
   };
 
   // View book details
@@ -292,7 +299,8 @@ const LibrarianManageBooks = () => {
     const filtered = data.filter(book => 
       book.title?.toLowerCase().includes(term) ||
       book.author?.toLowerCase().includes(term) ||
-      book.accessionNumber?.toLowerCase().includes(term)
+      book.accessionNumber?.toLowerCase().includes(term) ||
+      book.callNumber?.toLowerCase().includes(term)
     );
     
     setFilteredBooks(filtered);
@@ -303,124 +311,75 @@ const LibrarianManageBooks = () => {
     setSelectedBook(null);
   };
 
-  // Delete related functions
-  const handleDeleteClick = (event, book) => {
+  // Delete functions for books and periodicals
+  const handleDeleteClick = (event, item, type) => {
     event.stopPropagation(); // Prevent row click
-    setBookToDelete(book);
+    if (type === 'book') {
+      setBookToDelete(item);
+      setPeriodicalToDelete(null);
+    } else {
+      setBookToDelete(null);
+      setPeriodicalToDelete(item);
+    }
     setOpenDeleteDialog(true);
   };
 
   const handleCloseDeleteDialog = () => {
     setOpenDeleteDialog(false);
     setBookToDelete(null);
+    setPeriodicalToDelete(null);
   };
 
   const handleConfirmDelete = async () => {
     try {
-      await api.delete(`/books/${bookToDelete.id}`);
-
-      // Remove the deleted book from the data state
-      setData((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
-      setFilteredBooks((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
-      handleCloseDeleteDialog();
+      if (bookToDelete) {
+        // Delete book
+        await api.delete(`/books/${bookToDelete.id}`);
+        
+        // Remove the deleted book from the data state
+        setData((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+        setFilteredBooks((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+        
+        // Show success message
+        toast.success(`Book "${bookToDelete.title}" deleted successfully!`);
+      } else if (periodicalToDelete) {
+        // Delete periodical
+        await api.delete(`/periodicals/${periodicalToDelete.id}`);
+        
+        // Remove the deleted periodical from the data state
+        setPeriodicals((prevData) => prevData.filter((item) => item.id !== periodicalToDelete.id));
+        setFilteredPeriodicals((prevData) => prevData.filter((item) => item.id !== periodicalToDelete.id));
+        
+        // Show success message
+        toast.success(`Periodical "${periodicalToDelete.title}" deleted successfully!`);
+      }
       
-      // Show success message
-      alert('Book deleted successfully');
+      handleCloseDeleteDialog();
     } catch (error) {
-      console.error('Error deleting book:', error);
+      console.error('Error deleting item:', error);
       
-      // For demo mode, still remove the book from the UI
-      setData((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
-      setFilteredBooks((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+      // For demo mode, still remove the item from the UI
+      if (bookToDelete) {
+        setData((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+        setFilteredBooks((prevData) => prevData.filter((book) => book.id !== bookToDelete.id));
+        toast.success(`Book "${bookToDelete.title}" deleted (demo mode)`);
+      } else if (periodicalToDelete) {
+        setPeriodicals((prevData) => prevData.filter((item) => item.id !== periodicalToDelete.id));
+        setFilteredPeriodicals((prevData) => prevData.filter((item) => item.id !== periodicalToDelete.id));
+        toast.success(`Periodical "${periodicalToDelete.title}" deleted (demo mode)`);
+      }
+      
       handleCloseDeleteDialog();
-      
-      alert('Book deleted (demo mode)');
     }
   };
 
-  const handleEditClick = (event, book) => {
+  // Handle edit for both books and periodicals
+  const handleEditClick = (event, item, type) => {
     event.stopPropagation(); // Prevent row click
-    handleOpenDialog(book);
-  };
-
-  const handleSubmit = async () => {
-    try {
-      // Validate required fields
-      if (!formFields.title.trim()) {
-        alert('Please enter the book title');
-        return;
-      }
-      
-      if (!formFields.accessionNumber.trim()) {
-        alert('Please enter the accession number');
-        return;
-      }
-      
-      if (!formFields.genre) {
-        alert('Please select a genre');
-        return;
-      }
-      
-      const submissionData = {
-        ...formFields,
-        dateRegistered: formFields.dateRegistered || new Date().toISOString()
-      };
-      
-      if (isEditing && selectedBook) {
-        // Update existing book
-        const response = await api.put(`/books/${selectedBook.id}`, submissionData);
-        const updatedBook = response.data;
-        
-        setData((prevData) => prevData.map(book => 
-          book.id === selectedBook.id ? updatedBook : book
-        ));
-        setFilteredBooks((prevData) => prevData.map(book => 
-          book.id === selectedBook.id ? updatedBook : book
-        ));
-        alert('Book updated successfully');
-      } else {
-        // Add new book
-        const response = await api.post('/books/add', submissionData);
-        const newBook = response.data;
-        
-        setData((prevData) => [...prevData, newBook]);
-        setFilteredBooks((prevData) => [...prevData, newBook]);
-        alert('Book added successfully');
-      }
-      
-      handleCloseDialog();
-    } catch (error) {
-      console.error('Error with book operation:', error);
-      
-      // For demo mode, simulate success
-      if (isEditing && selectedBook) {
-        // Update book in demo mode
-        const updatedBook = {
-          ...selectedBook,
-          ...formFields
-        };
-        
-        setData((prevData) => prevData.map(book => 
-          book.id === selectedBook.id ? updatedBook : book
-        ));
-        setFilteredBooks((prevData) => prevData.map(book => 
-          book.id === selectedBook.id ? updatedBook : book
-        ));
-        alert('Book updated (demo mode)');
-      } else {
-        // Add new book in demo mode
-        const newBook = {
-          id: Math.max(0, ...data.map(b => b.id)) + 1,
-          ...formFields,
-          dateRegistered: formFields.dateRegistered || new Date().toISOString()
-        };
-        
-        setData((prevData) => [...prevData, newBook]);
-        setFilteredBooks((prevData) => [...prevData, newBook]);
-        alert('Book added (demo mode)');
-      }
-      
-      handleCloseDialog();
+    if (type === 'book') {
+      handleOpenBookDialog(item);
+    } else {
+      handleOpenPeriodicalDialog(item);
     }
   };
 
@@ -442,6 +401,7 @@ const LibrarianManageBooks = () => {
 
   return (
     <>
+      <ToastContainer />
       <NavBar />
       <Box 
         sx={{ 
@@ -454,7 +414,7 @@ const LibrarianManageBooks = () => {
 
         <Box
           sx={{
-            padding: '32px 32px 120px 32px', // Increased bottom padding for better scrolling
+            padding: '32px 32px 32px 32px',
             flexGrow: 1,
             backgroundColor: '#ffffff',
             display: 'flex',
@@ -475,7 +435,7 @@ const LibrarianManageBooks = () => {
             variant="h4"
             sx={{ color: '#000', fontWeight: 'bold', marginBottom: 3, textAlign: 'left' }}
           >
-            Manage Books
+            Manage {activeTab === 'books' ? 'Books' : 'Periodicals'}
           </Typography>
 
           <Box
@@ -487,13 +447,11 @@ const LibrarianManageBooks = () => {
               flexWrap: { xs: 'wrap', md: 'nowrap' },
             }}
           >
-            <IconButton>
-              <MenuIcon />
-            </IconButton>
+            
 
             <TextField
               variant="outlined"
-              placeholder="Search books..."
+              placeholder={`Search ${activeTab === 'books' ? 'books' : 'periodicals'}...`}
               size="small"
               value={mainSearchTerm}
               onChange={(e) => setMainSearchTerm(e.target.value)}
@@ -523,76 +481,118 @@ const LibrarianManageBooks = () => {
               gap: 2,
               marginBottom: 2,
               flexWrap: 'wrap',
-              justifyContent: 'flex-end',
+              justifyContent: 'space-between',
             }}
           >
-            <Button
-              variant="contained"
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 15px',
-                fontSize: '11px', 
-                borderRadius: '10px',
-                color: 'black',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                backgroundColor: '#F8C400',
-                '&:hover': { backgroundColor: '#FFDF16' },
-              }}
-              onClick={() => handleOpenDialog(null)}
-            >
-              Add Book
-            </Button>
+            {/* Tab Buttons (Left Side) */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="contained"
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 15px',
+                  fontSize: '11px', 
+                  borderRadius: '10px 10px 0 0',
+                  color: activeTab === 'books' ? '#800000' : 'rgba(0, 0, 0, 0.6)',
+                  boxShadow: activeTab === 'books' ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+                  backgroundColor: activeTab === 'books' ? '#FFEB3B' : '#e0e0e0',
+                  '&:hover': { backgroundColor: activeTab === 'books' ? '#FFEB3B' : '#d5d5d5' },
+                  borderBottom: activeTab === 'books' ? 'none' : '1px solid #ccc',
+                }}
+                onClick={() => setActiveTab('books')}
+              >
+                Books
+              </Button>
+              <Button
+                variant="contained"
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 15px',
+                  fontSize: '11px', 
+                  borderRadius: '10px 10px 0 0',
+                  color: activeTab === 'periodicals' ? '#800000' : 'rgba(0, 0, 0, 0.6)',
+                  boxShadow: activeTab === 'periodicals' ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+                  backgroundColor: activeTab === 'periodicals' ? '#FFEB3B' : '#e0e0e0',
+                  '&:hover': { backgroundColor: activeTab === 'periodicals' ? '#FFEB3B' : '#d5d5d5' },
+                  borderBottom: activeTab === 'periodicals' ? 'none' : '1px solid #ccc',
+                }}
+                onClick={() => setActiveTab('periodicals')}
+              >
+                Periodicals
+              </Button>
+            </Box>
 
-            {/* Bulk Import Button */}
-            <Button
-              variant="contained"
-              onClick={handleOpenBulkImport}
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 15px',
-                fontSize: '11px', 
-                borderRadius: '10px',
-                color: 'black',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                backgroundColor: '#F8C400',
-                '&:hover': { backgroundColor: '#FFDF16' },
-              }}
-            >
-              <UploadFileIcon sx={{ marginRight: 1, fontSize: '16px' }} />
-              Bulk Import
-            </Button>
+            {/* Action Buttons (Right Side) */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 15px',
+                  fontSize: '11px', 
+                  borderRadius: '50px',
+                  color: '#FFEB3B',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                  backgroundColor: '#800000',
+                  border: '1px solid #800000',
+                  '&:hover': { backgroundColor: '#940000' },
+                }}
+                onClick={() => activeTab === 'books' ? handleOpenBookDialog(null) : handleOpenPeriodicalDialog(null)}
+              >
+                {activeTab === 'books' ? 'Add Book' : 'Add Periodical'}
+              </Button>
 
-            {/* Bulk Update Button */}
-            <Button
-              variant="contained"
-              onClick={() => setIsBulkUpdateOpen(true)}
-              sx={{
-                fontWeight: 'bold',
-                padding: '10px 15px',
-                fontSize: '11px', 
-                borderRadius: '10px',
-                color: 'black',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                backgroundColor: '#F8C400',
-                '&:hover': { backgroundColor: '#FFDF16' },
-              }}
-            >
-              <SystemUpdateAltIcon sx={{ marginRight: 1, fontSize: '16px' }} />
-              Bulk Update
-            </Button>
+              {/* Bulk Import Button */}
+              <Button
+                variant="contained"
+                onClick={handleOpenBulkImport}
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 15px',
+                  fontSize: '11px', 
+                  borderRadius: '50px',
+                  color: '#FFEB3B',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                  backgroundColor: '#800000',
+                  border: '1px solid #800000',
+                  '&:hover': { backgroundColor: '#940000' },
+                }}
+              >
+                <UploadFileIcon sx={{ marginRight: 1, fontSize: '16px' }} />
+                Bulk Import
+              </Button>
+
+              {/* Bulk Update Button */}
+              <Button
+                variant="contained"
+                onClick={handleOpenBulkUpdate}
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 15px',
+                  fontSize: '11px', 
+                  borderRadius: '50px',
+                  color: '#FFEB3B',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                  backgroundColor: '#800000',
+                  border: '1px solid #800000',
+                  '&:hover': { backgroundColor: '#940000' },
+                }}
+              >
+                <SystemUpdateAltIcon sx={{ marginRight: 1, fontSize: '16px' }} />
+                Bulk Update
+              </Button>
+            </Box>
           </Box>
 
-          {/* Table container with positioned loading overlay */}
-          <TableContainer
-            component={Paper}
+          {/* Paper container with margins to make space at bottom for pagination */}
+          <Paper
             sx={{
               borderRadius: '15px',
               boxShadow: 3,
-              overflow: 'visible', // Changed from 'auto' to 'visible' to ensure pagination is visible
-              flexGrow: 1, // Allow table to grow with content
-              marginBottom: 5, // Added margin bottom for pagination visibility
+              mb: 4,
               display: 'flex',
               flexDirection: 'column',
+              flexGrow: 1,
               position: 'relative', // For positioning the loading overlay
             }}
           >
@@ -613,180 +613,267 @@ const LibrarianManageBooks = () => {
                   zIndex: 10,
                 }}
               >
-                <CircularProgress size={60} thickness={4} />
-                <Typography variant="h6" sx={{ mt: 2 }}>
-                  {loading ? 'Loading books...' : 'Refreshing data...'}
+                <CircularProgress size={60} thickness={4} sx={{ color: '#800000' }} />
+                <Typography variant="h6" sx={{ mt: 2, color: '#800000', fontWeight: 'bold' }}>
+                  {loading ? `Loading ${activeTab}...` : 'Refreshing data...'}
                 </Typography>
               </Box>
             )}
+          
+            {/* Table container with horizontal scroll */}
+            <TableContainer
+              sx={{
+                maxHeight: 'calc(100vh - 300px)',
+                overflowX: 'auto',
+                overflowY: 'auto',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                  height: '8px',
+                  background: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: 'rgba(0,0,0,0.1)',
+                  borderRadius: '4px',
+                }
+              }}
+            >
 
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    BOOK TITLE
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    AUTHOR
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    ACCESSION NUMBER
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    GENRE
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    DATE REGISTERED
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    ACTIONS
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredBooks
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((book, index) => (
-                    <TableRow
-                      key={book.id || index}
-                      hover
-                      onClick={() => handleViewBook(book)}
-                      sx={{
-                        backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF',
-                        '&:hover': { backgroundColor: '#FCEAEA' },
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <TableCell align="center">{book.title}</TableCell>
-                      <TableCell align="center">{book.author}</TableCell>
-                      <TableCell align="center">{book.accessionNumber}</TableCell>
-                      <TableCell align="center">{book.genre}</TableCell>
-                      <TableCell align="center">{formatDate(book.dateRegistered)}</TableCell>
-                      <TableCell align="center">
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                          <Tooltip title="Edit">
-                            <IconButton 
-                              size="small" 
-                              onClick={(e) => handleEditClick(e, book)}
-                              sx={{ 
-                                color: '#2196F3',
-                                '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.1)' }
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete">
-                            <IconButton 
-                              size="small" 
-                              onClick={(e) => handleDeleteClick(e, book)}
-                              sx={{ 
-                                color: '#F44336',
-                                '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' }
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                {filteredBooks.length === 0 && !loading && (
+            {activeTab === 'books' ? (
+              <Table stickyHeader>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={6} align="center">No books found</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 180 }}>
+                      BOOK TITLE
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 160 }}>
+                      AUTHOR
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 140 }}>
+                      CALL NUMBER
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 160 }}>
+                      ACCESSION NUMBER
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 140 }}>
+                      PLACE OF PUBLICATION
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 140 }}>
+                      PUBLISHER
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 120 }}>
+                      COPYRIGHT
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 120 }}>
+                      GENRE
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 160 }}>
+                      DATE REGISTERED
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', position: 'sticky', right: 0, zIndex: 3 }}>
+                      ACTIONS
+                    </TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {filteredBooks
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((book, index) => (
+                      <TableRow
+                        key={book.id || index}
+                        hover
+                        onClick={() => handleViewBook(book)}
+                        sx={{
+                          backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF',
+                          '&:hover': { backgroundColor: '#FCEAEA' },
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <TableCell align="center">{book.title}</TableCell>
+                        <TableCell align="center">{book.author}</TableCell>
+                        <TableCell align="center">{book.callNumber || 'N/A'}</TableCell>
+                        <TableCell align="center">{book.accessionNumber}</TableCell>
+                        <TableCell align="center">{book.placeOfPublication || 'N/A'}</TableCell>
+                        <TableCell align="center">{book.publisher || 'N/A'}</TableCell>
+                        <TableCell align="center">{book.copyright || 'N/A'}</TableCell>
+                        <TableCell align="center">{book.genre}</TableCell>
+                        <TableCell align="center">{formatDate(book.dateRegistered)}</TableCell>
+                        <TableCell align="center" sx={{ position: 'sticky', right: 0, backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF', zIndex: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                            <Tooltip title="Edit">
+                              <Button
+                                size="small" 
+                                onClick={(e) => handleEditClick(e, book, 'book')}
+                                sx={{ 
+                                  color: '#800000',
+                                  backgroundColor: '#F5B400',
+                                  border: '1px solid #FFEB3B',
+                                  minWidth: '32px',
+                                  padding: '4px',
+                                  '&:hover': { 
+                                    backgroundColor: '#FFEB3B',
+                                    color: '#800000',
+                                  }
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <Button
+                                size="small" 
+                                onClick={(e) => handleDeleteClick(e, book, 'book')}
+                                sx={{ 
+                                  color: '#FFEB3B',
+                                  backgroundColor: '#EE4242',
+                                  border: '1px solid #d32f2f',
+                                  minWidth: '32px',
+                                  padding: '4px',
+                                  '&:hover': { 
+                                    backgroundColor: '#b71c1c',
+                                    color: '#FFEB3B',
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </Button>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {filteredBooks.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={10} align="center">No books found</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            ) : (
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 160 }}>
+                      ACCESSION NUMBER
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 180 }}>
+                      TITLE
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 140 }}>
+                      PUBLISHER
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 140 }}>
+                      PLACE OF PUBLICATION
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', minWidth: 120 }}>
+                      COPYRIGHT YEAR
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#FFEB3B', position: 'sticky', right: 0, zIndex: 3 }}>
+                      ACTIONS
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredPeriodicals
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((periodical, index) => (
+                      <TableRow
+                        key={periodical.id || index}
+                        hover
+                        onClick={() => handleViewBook(periodical)}
+                        sx={{
+                          backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF',
+                          '&:hover': { backgroundColor: '#FCEAEA' },
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <TableCell align="center">{periodical.accessionNumber}</TableCell>
+                        <TableCell align="center">{periodical.title}</TableCell>
+                        <TableCell align="center">{periodical.publisher || 'N/A'}</TableCell>
+                        <TableCell align="center">{periodical.placeOfPublication || 'N/A'}</TableCell>
+                        <TableCell align="center">{periodical.copyright || 'N/A'}</TableCell>
+                        <TableCell align="center" sx={{ position: 'sticky', right: 0, backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF', zIndex: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                            <Tooltip title="Edit">
+                              <Button 
+                                size="small" 
+                                onClick={(e) => handleEditClick(e, periodical, 'periodical')}
+                                sx={{ 
+                                  color: '#800000',
+                                  backgroundColor: '#F5B400',
+                                  border: '1px solid #FFEB3B',
+                                  minWidth: '32px',
+                                  padding: '4px',
+                                  '&:hover': { 
+                                    backgroundColor: '#FFEB3B',
+                                    color: '#800000',
+                                  }
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <Button
+                                size="small" 
+                                onClick={(e) => handleDeleteClick(e, periodical, 'periodical')}
+                                sx={{ 
+                                  color: '#FFEB3B',
+                                  backgroundColor: '#EE4242',
+                                  border: '1px solid #d32f2f',
+                                  minWidth: '32px',
+                                  padding: '4px',
+                                  '&:hover': { 
+                                    backgroundColor: '#b71c1c',
+                                    color: '#FFEB3B',
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </Button>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {filteredPeriodicals.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">No periodicals found</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
             
-            {/* Integrated pagination inside the TableContainer */}
+            </TableContainer>
+            
+            {/* Pagination at bottom of Paper container */}
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={filteredBooks.length}
+              count={activeTab === 'books' ? filteredBooks.length : filteredPeriodicals.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
               sx={{
-                paddingTop: 2,
-                paddingBottom: 2,
-                backgroundColor: 'transparent',
-                fontWeight: 'bold',
+                borderTop: '1px solid #e0e0e0',
+                backgroundColor: '#f5f5f5',
                 display: 'flex',
                 justifyContent: 'center',
-                width: '100%',
-                position: 'relative', // Ensure visibility
+                '& .MuiTablePagination-toolbar': {
+                  justifyContent: 'center',
+                },
+                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                  margin: '0 10px',
+                },
               }}
             />
-          </TableContainer>
+          </Paper>
           
           {/* Extra spacer to ensure scrollability */}
           <Box sx={{ height: 60, width: '100%' }} />
         </Box>
       </Box>
-
-      {/* Add/Edit Book Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{isEditing ? 'Edit Book' : 'Add New Book'}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Book Title"
-            name="title"
-            value={formFields.title}
-            onChange={handleInputChange}
-            fullWidth
-            required
-          />
-          <TextField
-            margin="dense"
-            label="Author"
-            name="author"
-            value={formFields.author}
-            onChange={handleInputChange}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            label="Accession Number"
-            name="accessionNumber"
-            value={formFields.accessionNumber}
-            onChange={handleInputChange}
-            fullWidth
-            required
-          />
-          <FormControl fullWidth margin="dense" required>
-            <InputLabel>Genre</InputLabel>
-            <Select
-              name="genre"
-              value={formFields.genre}
-              onChange={handleInputChange}
-            >
-              {/* Only show unarchived genres in the dropdown */}
-              {activeGenres.map(genre => (
-                <MenuItem key={genre.id} value={genre.genre}>
-                  {genre.genre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            color="primary"
-            disabled={!formFields.title.trim() || !formFields.accessionNumber.trim() || !formFields.genre}
-          >
-            {isEditing ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* View Book Dialog */}
       <Dialog 
@@ -803,14 +890,14 @@ const LibrarianManageBooks = () => {
             borderBottom: '1px solid #ddd'
           }}
         >
-          View Book Details
+          View {activeTab === 'books' ? 'Book' : 'Periodical'} Details
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           {selectedBook && (
             <Box>
               <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Book Title</Typography>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Title</Typography>
                   <TextField
                     fullWidth
                     value={selectedBook.title || ''}
@@ -828,34 +915,75 @@ const LibrarianManageBooks = () => {
                     InputProps={{ readOnly: true }}
                   />
                 </Box>
+                {activeTab === 'books' && (
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Call Number</Typography>
+                    <TextField
+                      fullWidth
+                      value={selectedBook.callNumber || 'N/A'}
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Box>
+                )}
+              </Box>
+              
+              {activeTab === 'books' && (
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Author</Typography>
+                    <TextField
+                      fullWidth
+                      value={selectedBook.author || ''}
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Genre</Typography>
+                    <TextField
+                      fullWidth
+                      value={selectedBook.genre || ''}
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Box>
+                </Box>
+              )}
+              
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Place of Publication</Typography>
+                  <TextField
+                    fullWidth
+                    value={selectedBook.placeOfPublication || 'N/A'}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Publisher</Typography>
+                  <TextField
+                    fullWidth
+                    value={selectedBook.publisher || 'N/A'}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Box>
               </Box>
               
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Author</Typography>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Copyright</Typography>
                   <TextField
                     fullWidth
-                    value={selectedBook.author || ''}
+                    value={selectedBook.copyright || 'N/A'}
                     InputProps={{ readOnly: true }}
                   />
                 </Box>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Genre</Typography>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>Date Registered</Typography>
                   <TextField
                     fullWidth
-                    value={selectedBook.genre || ''}
+                    value={formatDate(selectedBook.dateRegistered)}
                     InputProps={{ readOnly: true }}
                   />
                 </Box>
-              </Box>
-              
-              <Box>
-                <Typography variant="subtitle1" sx={{ mb: 1 }}>Date Registered</Typography>
-                <TextField
-                  fullWidth
-                  value={formatDate(selectedBook.dateRegistered)}
-                  InputProps={{ readOnly: true }}
-                />
               </Box>
             </Box>
           )}
@@ -865,8 +993,9 @@ const LibrarianManageBooks = () => {
             onClick={handleCloseViewDialog}
             variant="contained"
             sx={{
-              backgroundColor: '#CD6161',
-              '&:hover': { backgroundColor: '#B33A3A' },
+              backgroundColor: '#EE4242',
+              '&:hover': { backgroundColor: '#b71c1c' },
+              color: '#FFEB3B',
               width: '100px'
             }}
           >
@@ -926,11 +1055,11 @@ const LibrarianManageBooks = () => {
           <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
             <Table stickyHeader>
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#FFB300' }}>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>BOOK TITLE</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>AUTHOR</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>ACCESSION NUMBER</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>GENRE</TableCell>
+                <TableRow>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#FFEB3B' }}>TITLE</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#FFEB3B' }}>AUTHOR</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#FFEB3B' }}>CALL NUMBER</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', backgroundColor: '#FFEB3B' }}>ACCESSION NUMBER</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -945,8 +1074,8 @@ const LibrarianManageBooks = () => {
                     >
                       <TableCell>{book.title}</TableCell>
                       <TableCell>{book.author}</TableCell>
+                      <TableCell>{book.callNumber || 'N/A'}</TableCell>
                       <TableCell>{book.accessionNumber}</TableCell>
-                      <TableCell>{book.genre}</TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -963,8 +1092,9 @@ const LibrarianManageBooks = () => {
             variant="contained"
             onClick={handleCloseSearchDialog}
             sx={{
-              backgroundColor: '#666666',
-              '&:hover': { backgroundColor: '#444444' },
+              backgroundColor: '#800000',
+              color: '#FFEB3B',
+              '&:hover': { backgroundColor: '#940000' },
               width: '120px'
             }}
           >
@@ -973,22 +1103,27 @@ const LibrarianManageBooks = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Book Dialog */}
+      {/* Delete Dialog */}
       <Dialog 
         open={openDeleteDialog} 
         onClose={handleCloseDeleteDialog}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ textAlign: 'center', color: '#f44336' }}>
+        <DialogTitle sx={{ textAlign: 'center', color: '#EE4242' }}>
           Confirm Delete
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete this book?
+            Are you sure you want to delete this {bookToDelete ? 'book' : 'periodical'}?
             {bookToDelete && (
               <Box component="span" sx={{ display: 'block', fontWeight: 'bold', mt: 2 }}>
                 "{bookToDelete.title}" by {bookToDelete.author}
+              </Box>
+            )}
+            {periodicalToDelete && (
+              <Box component="span" sx={{ display: 'block', fontWeight: 'bold', mt: 2 }}>
+                "{periodicalToDelete.title}"
               </Box>
             )}
           </DialogContentText>
@@ -998,8 +1133,9 @@ const LibrarianManageBooks = () => {
             variant="contained"
             onClick={handleConfirmDelete}
             sx={{
-              backgroundColor: '#f44336',
-              '&:hover': { backgroundColor: '#d32f2f' },
+              backgroundColor: '#EE4242',
+              color: '#FFEB3B',
+              '&:hover': { backgroundColor: '#b71c1c' },
               width: '120px'
             }}
           >
@@ -1009,6 +1145,9 @@ const LibrarianManageBooks = () => {
             variant="outlined"
             onClick={handleCloseDeleteDialog}
             sx={{
+              color: '#800000',
+              border: '1px solid #800000',
+              '&:hover': { backgroundColor: '#f5f5f5' },
               width: '120px'
             }}
           >
@@ -1017,24 +1156,59 @@ const LibrarianManageBooks = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Bulk Import Dialog */}
+      {/* Book Modal */}
+      <AddBookModal 
+        open={openAddBookDialog}
+        onClose={() => setOpenAddBookDialog(false)}
+        onSuccess={handleBookSuccess}
+        book={selectedBook}
+        activeGenres={activeGenres}
+      />
+
+      {/* Periodical Modal */}
+      <AddPeriodicalModal
+        open={openAddPeriodicalDialog}
+        onClose={() => setOpenAddPeriodicalDialog(false)}
+        onSuccess={handlePeriodicalSuccess}
+        periodical={selectedPeriodical}
+      />
+
+      {/* Bulk Import Books Dialog */}
       <BulkImportBooks
-        open={isBulkImportOpen}
-        onClose={() => setIsBulkImportOpen(false)}
+        open={isBulkImportBooksOpen}
+        onClose={() => setIsBulkImportBooksOpen(false)}
         onSuccess={handleOperationSuccess}
         initialStep={bulkImportStep}
         onStepChange={handleBulkImportStepChange}
         activeGenres={activeGenres}
-        ref={bulkImportRef}
+        ref={bulkImportBooksRef}
       />
 
-      {/* Bulk Update Dialog */}
+      {/* Bulk Update Books Dialog */}
       <BulkUpdateBooks
-        open={isBulkUpdateOpen}
-        onClose={() => setIsBulkUpdateOpen(false)}
+        open={isBulkUpdateBooksOpen}
+        onClose={() => setIsBulkUpdateBooksOpen(false)}
         onSuccess={handleOperationSuccess}
         activeGenres={activeGenres}
-        ref={bulkUpdateRef}
+        ref={bulkUpdateBooksRef}
+      />
+
+      {/* Bulk Import Periodicals Dialog */}
+      <BulkImportPeriodicals
+        open={isBulkImportPeriodicalsOpen}
+        onClose={() => setIsBulkImportPeriodicalsOpen(false)}
+        onSuccess={handleOperationSuccess}
+        initialStep={bulkImportStep}
+        onStepChange={handleBulkImportStepChange}
+        ref={bulkImportPeriodicalsRef}
+      />
+
+      {/* Bulk Update Periodicals Dialog */}
+      <BulkUpdatePeriodicals
+        open={isBulkUpdatePeriodicalsOpen}
+        onClose={() => setIsBulkUpdatePeriodicalsOpen(false)}
+        onSuccess={handleOperationSuccess}
+        ref={bulkUpdatePeriodicalsRef}
       />
     </>
   );

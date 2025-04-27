@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress, // Added import for CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -59,6 +60,7 @@ const LibrarianManageRecords = () => {
   const [data, setData] = useState([]);
   const [originalData, setOriginalData] = useState([]); // Store original unfiltered data
   const [loading, setLoading] = useState(true);
+  const [tableRefreshing, setTableRefreshing] = useState(false); // Added state for table refreshing
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [academicYear, setAcademicYear] = useState('');
@@ -150,6 +152,7 @@ const LibrarianManageRecords = () => {
   // Fetch data using API utility
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true); // Start loading
       try {
         const response = await api.get('/library-hours/summary');
         const result = response.data;
@@ -158,10 +161,26 @@ const LibrarianManageRecords = () => {
       } catch (error) {
         console.error('Error fetching library hours summary:', error);
       } finally {
-        setLoading(false);
+        setLoading(false); // Stop loading
+        setTableRefreshing(false); // Ensure table refreshing is off
       }
     };
     fetchData();
+  }, []);
+
+  // Table-only refresh function
+  const refreshTableData = useCallback(async () => {
+    setTableRefreshing(true); // Start table refreshing
+    try {
+      const response = await api.get('/library-hours/summary');
+      const result = response.data;
+      setData(result);
+      setOriginalData(result);
+    } catch (error) {
+      console.error('Error refreshing library hours summary:', error);
+    } finally {
+      setTableRefreshing(false); // Stop table refreshing
+    }
   }, []);
 
   // Handle page change
@@ -209,6 +228,7 @@ const LibrarianManageRecords = () => {
   // Handle Search Submit - improved to filter data
   const handleSearchSubmit = useCallback((e) => {
     preventDefaultAndStop(e);
+    setTableRefreshing(true); // Start table refreshing
     console.log('Searching for:', searchText);
     
     // Apply search to filter data
@@ -228,11 +248,14 @@ const LibrarianManageRecords = () => {
     
     setData(filteredData);
     setPage(0); // Reset to first page after search
+    setTableRefreshing(false); // Stop table refreshing
   }, [searchText, originalData, preventDefaultAndStop]);
 
   // Reset all filters function
   const handleResetFilters = useCallback((e) => {
     if (e) preventDefaultAndStop(e);
+    
+    setTableRefreshing(true); // Start table refreshing
     
     // Reset all filter states
     setSearchText('');
@@ -243,11 +266,14 @@ const LibrarianManageRecords = () => {
     // Reset data to original
     setData(originalData);
     setPage(0);
+    
+    setTableRefreshing(false); // Stop table refreshing
   }, [originalData, preventDefaultAndStop]);
 
   // Handle Filter Apply with improved event handling
   const handleFilterApply = useCallback((e) => {
     preventDefaultAndStop(e);
+    setTableRefreshing(true); // Start table refreshing
     console.log('Applying filters:', { dateFrom, dateTo, academicYear });
     
     // Start with original or search-filtered data
@@ -302,6 +328,8 @@ const LibrarianManageRecords = () => {
     setData(filteredData);
     // Reset pagination
     setPage(0);
+    
+    setTableRefreshing(false); // Stop table refreshing
   }, [dateFrom, dateTo, academicYear, searchText, originalData, preventDefaultAndStop]);
 
   // Handle field changes in the update modal - improved
@@ -327,6 +355,7 @@ const LibrarianManageRecords = () => {
       preventDefaultAndStop(e);
     }
     
+    setTableRefreshing(true); // Start table refreshing
     const recordToUpdate = manualRecord || currentRecord;
     
     const updateRecord = async () => {
@@ -337,6 +366,7 @@ const LibrarianManageRecords = () => {
             !recordToUpdate.latestTimeIn || 
             !recordToUpdate.latestTimeOut) {
           setError('Please fill in all required fields');
+          setTableRefreshing(false);
           return;
         }
 
@@ -374,6 +404,8 @@ const LibrarianManageRecords = () => {
       } catch (error) {
         console.error('Error updating record:', error);
         setError(error.message || 'Failed to update record');
+      } finally {
+        setTableRefreshing(false); // Stop table refreshing regardless of outcome
       }
     };
 
@@ -547,14 +579,6 @@ const LibrarianManageRecords = () => {
       </div>
     );
   };
-    
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography variant="h6">Loading...</Typography>
-      </Box>
-    );
-  }
     
   // Main component JSX with all the "form" elements replaced with divs
   return (
@@ -806,9 +830,34 @@ const LibrarianManageRecords = () => {
               marginBottom: 5,
               display: 'flex',
               flexDirection: 'column',
+              position: 'relative', // For positioning the loading overlay
             }}
             onClick={preventDefaultAndStop}
           >
+            {/* Loading or refreshing overlay */}
+            {(loading || tableRefreshing) && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 10,
+                }}
+              >
+                <CircularProgress size={60} thickness={4} sx={{ color: '#800000' }} />
+                <Typography variant="h6" sx={{ mt: 2, color: '#800000', fontWeight: 'bold' }}>
+                  {loading ? 'Loading records...' : 'Refreshing data...'}
+                </Typography>
+              </Box>
+            )}
+
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
