@@ -432,9 +432,7 @@ const LibrarianManageGenre = () => {
 
           {/* Search Section */}
           <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 3, gap: 2 }}>
-            <IconButton>
-              <MenuIcon />
-            </IconButton>
+
             <TextField
               variant="outlined"
               placeholder="Search genres..."

@@ -34,7 +34,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import * as XLSX from 'xlsx';
 import api from '../../../utils/api';
 
-const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onStepChange, activeGenres = [] }, ref) => {
+const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialStep, onStepChange }, ref) => {
   const [activeStep, setActiveStep] = useState(initialStep || 0);
   const [file, setFile] = useState(null);
   const [parsedData, setParsedData] = useState([]);
@@ -45,7 +45,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
   const [importProgress, setImportProgress] = useState(0);
   const fileInputRef = useRef(null);
 
-  const steps = ['Upload Template', 'Validate Data', 'Import Books'];
+  const steps = ['Upload Template', 'Validate Data', 'Import Periodicals'];
   
   // Reset when dialog opens
   useEffect(() => {
@@ -60,28 +60,21 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
   }));
   
   const generateTemplate = () => {
-    // Create sample data with new fields
+    // Create sample data for periodicals
     const data = [
       {
-        'Title*': 'To Kill a Mockingbird',
-        'Author*': 'Harper Lee',
-        'Call Number': 'FIC LEE',
-        'Accession Number*': 'ACC001',
+        'Title*': 'Scientific American',
+        'Accession Number*': 'PER001',
         'Place of Publication': 'New York',
-        'Publisher': 'HarperCollins',
-        'Copyright': '1960',
-        'Genre*': activeGenres && activeGenres.length > 0 ? activeGenres[0].genre : 'Fiction'
+        'Publisher': 'Springer Nature',
+        'Copyright': '2023'
       },
       {
-        'Title*': 'The Great Gatsby',
-        'Author*': 'F. Scott Fitzgerald',
-        'Call Number': 'FIC FIT',
-        'Accession Number*': 'ACC002',
-        'Place of Publication': 'New York',
-        'Publisher': 'Scribner',
-        'Copyright': '1925',
-        'Genre*': activeGenres && activeGenres.length > 0 ? 
-          (activeGenres.length > 1 ? activeGenres[1].genre : activeGenres[0].genre) : 'Fiction'
+        'Title*': 'National Geographic',
+        'Accession Number*': 'PER002',
+        'Place of Publication': 'Washington D.C.',
+        'Publisher': 'National Geographic Partners',
+        'Copyright': '2023'
       }
     ];
 
@@ -91,15 +84,14 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
     
     // Add a note about required fields
     XLSX.utils.sheet_add_aoa(ws, [
-      ['Fields marked with * are required'],
-      ['Available genres: ' + (activeGenres && activeGenres.length > 0 ? activeGenres.map(g => g.genre).join(', ') : 'No genres available')]
+      ['Fields marked with * are required']
     ], { origin: { r: data.length + 2, c: 0 } });
     
     // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Book Import Template');
+    XLSX.utils.book_append_sheet(wb, ws, 'Periodical Import Template');
     
     // Generate and download the file
-    XLSX.writeFile(wb, 'book_import_template.xlsx');
+    XLSX.writeFile(wb, 'periodical_import_template.xlsx');
   };
 
   const handleFileUpload = (event) => {
@@ -129,7 +121,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
 
   const validateData = (data) => {
     const validationResults = [];
-    const requiredFields = ['Title*', 'Author*', 'Accession Number*', 'Genre*'];
+    const requiredFields = ['Title*', 'Accession Number*'];
     
     // Track duplicate accession numbers
     const accessionNumbers = new Set();
@@ -146,14 +138,6 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
           rowErrors.push(`Missing required field: ${fieldName}`);
         }
       });
-      
-      // Validate Genre - must be one of the active genres
-      if (row['Genre*'] && activeGenres && activeGenres.length > 0) {
-        const availableGenres = activeGenres.map(g => g.genre);
-        if (!availableGenres.includes(row['Genre*'])) {
-          rowErrors.push(`Invalid genre: ${row['Genre*']}. Must be one of: ${availableGenres.join(', ')}`);
-        }
-      }
       
       // Check for duplicate accession numbers
       if (row['Accession Number*']) {
@@ -194,29 +178,26 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
       setImportProgress(Math.round(((i + 1) / totalRows) * 100));
       
       try {
-        // Map spreadsheet columns to API fields - now with new fields
-        const book = {
+        // Map spreadsheet columns to API fields for periodicals
+        const periodical = {
           title: row['Title*'],
-          author: row['Author*'],
           accessionNumber: row['Accession Number*'],
-          callNumber: row['Call Number'] || null,
           placeOfPublication: row['Place of Publication'] || null,
           publisher: row['Publisher'] || null,
           copyright: row['Copyright'] || null,
-          genre: row['Genre*'],
           dateRegistered: new Date().toISOString()
         };
         
-        // Call API to create book
-        const response = await api.post('/books/add', book);
+        // Call API to create periodical
+        const response = await api.post('/periodicals/add', periodical);
         
         // Store successful import
         successfulImports.push({
-          accessionNumber: book.accessionNumber,
-          title: book.title,
-          author: book.author,
-          callNumber: book.callNumber || 'N/A',
-          publisher: book.publisher || 'N/A'
+          accessionNumber: periodical.accessionNumber,
+          title: periodical.title,
+          publisher: periodical.publisher || 'N/A',
+          placeOfPublication: periodical.placeOfPublication || 'N/A',
+          copyright: periodical.copyright || 'N/A'
         });
         
         successful++;
@@ -326,7 +307,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
     XLSX.utils.book_append_sheet(wb, ws, 'Import Errors');
     
     // Generate and download the file
-    XLSX.writeFile(wb, 'book_import_errors.xlsx');
+    XLSX.writeFile(wb, 'periodical_import_errors.xlsx');
   };
 
   return (
@@ -343,7 +324,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
         p: 2,
         backgroundColor: '#f5f5f5',
       }}>
-        <Typography variant="h6">Bulk Import Books</Typography>
+        <Typography variant="h6">Bulk Import Periodicals</Typography>
         <IconButton onClick={onClose} disabled={isImporting}>
           <CloseIcon />
         </IconButton>
@@ -366,7 +347,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
             </Typography>
             <Box sx={{ mb: 3 }}>
               <Typography sx={{ mb: 1 }}>
-                Importing books... ({importProgress}%)
+                Importing periodicals... ({importProgress}%)
               </Typography>
               <LinearProgress 
                 variant="determinate" 
@@ -381,11 +362,11 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
         {activeStep === 0 && !isImporting && (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Upload Book Data File
+              Upload Periodical Data File
             </Typography>
             
             <Alert severity="info" sx={{ mb: 3, width: '100%' }}>
-              Please download our template file first, fill it with book data, then upload it.
+              Please download our template file first, fill it with periodical data, then upload it.
               Required fields are marked with an asterisk (*).
             </Alert>
             
@@ -439,7 +420,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
             
             {parsedData.length > 0 && (
               <Alert severity="success" sx={{ width: '100%' }}>
-                Successfully parsed {parsedData.length} book records.
+                Successfully parsed {parsedData.length} periodical records.
               </Alert>
             )}
           </Box>
@@ -449,7 +430,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
         {activeStep === 1 && !isImporting && (
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Validate Book Data
+              Validate Periodical Data
             </Typography>
             
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -464,13 +445,13 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <CheckCircleIcon color="success" sx={{ mr: 1 }} />
                   <Typography>
-                    Valid: {validationResults.filter(r => r.valid).length} books
+                    Valid: {validationResults.filter(r => r.valid).length} periodicals
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <ErrorIcon color="error" sx={{ mr: 1 }} />
                   <Typography>
-                    Invalid: {validationResults.filter(r => !r.valid).length} books
+                    Invalid: {validationResults.filter(r => !r.valid).length} periodicals
                   </Typography>
                 </Box>
               </Box>
@@ -482,12 +463,10 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                   <TableRow>
                     <TableCell>Row</TableCell>
                     <TableCell>Title</TableCell>
-                    <TableCell>Author</TableCell>
-                    <TableCell>Call Number</TableCell>
                     <TableCell>Accession Number</TableCell>
                     <TableCell>Publisher</TableCell>
+                    <TableCell>Place of Publication</TableCell>
                     <TableCell>Copyright</TableCell>
-                    <TableCell>Genre</TableCell>
                     <TableCell>Status</TableCell>
                   </TableRow>
                 </TableHead>
@@ -501,12 +480,10 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                     >
                       <TableCell>{result.row}</TableCell>
                       <TableCell>{result.data['Title*']}</TableCell>
-                      <TableCell>{result.data['Author*']}</TableCell>
-                      <TableCell>{result.data['Call Number'] || '-'}</TableCell>
                       <TableCell>{result.data['Accession Number*']}</TableCell>
                       <TableCell>{result.data['Publisher'] || '-'}</TableCell>
+                      <TableCell>{result.data['Place of Publication'] || '-'}</TableCell>
                       <TableCell>{result.data['Copyright'] || '-'}</TableCell>
-                      <TableCell>{result.data['Genre*']}</TableCell>
                       <TableCell>
                         {result.valid ? (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -546,7 +523,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                   sx={{ mb: 2 }}
                 >
                   <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                    {importResults.successful} books successfully imported
+                    {importResults.successful} periodicals successfully imported
                   </Typography>
                 </Alert>
                 
@@ -556,19 +533,19 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                       <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                         <TableCell>Accession Number</TableCell>
                         <TableCell>Title</TableCell>
-                        <TableCell>Author</TableCell>
-                        <TableCell>Call Number</TableCell>
                         <TableCell>Publisher</TableCell>
+                        <TableCell>Place of Publication</TableCell>
+                        <TableCell>Copyright</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {importResults.successfulImports.map((book, index) => (
+                      {importResults.successfulImports.map((periodical, index) => (
                         <TableRow key={index} hover>
-                          <TableCell>{book.accessionNumber}</TableCell>
-                          <TableCell>{book.title}</TableCell>
-                          <TableCell>{book.author}</TableCell>
-                          <TableCell>{book.callNumber}</TableCell>
-                          <TableCell>{book.publisher}</TableCell>
+                          <TableCell>{periodical.accessionNumber}</TableCell>
+                          <TableCell>{periodical.title}</TableCell>
+                          <TableCell>{periodical.publisher}</TableCell>
+                          <TableCell>{periodical.placeOfPublication}</TableCell>
+                          <TableCell>{periodical.copyright}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -586,8 +563,8 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                 Import completed
               </Typography>
               <Box sx={{ mt: 1 }}>
-                <Typography>Successfully imported: {importResults.successful} books</Typography>
-                <Typography>Failed to import: {importResults.failed} books</Typography>
+                <Typography>Successfully imported: {importResults.successful} periodicals</Typography>
+                <Typography>Failed to import: {importResults.failed} periodicals</Typography>
               </Box>
             </Alert>
             
@@ -644,7 +621,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                   mr: 2
                 }}
               >
-                Import More Books
+                Import More Periodicals
               </Button>
               <Button
                 variant="outlined"
@@ -692,7 +669,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
               color: '#000'
             }}
           >
-            {activeStep === 1 ? 'Import Books' : 'Next'}
+            {activeStep === 1 ? 'Import Periodicals' : 'Next'}
           </Button>
         </DialogActions>
       )}
@@ -700,6 +677,6 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
   );
 });
 
-BulkImportBooks.displayName = 'BulkImportBooks';
+BulkImportPeriodicals.displayName = 'BulkImportPeriodicals';
 
-export default BulkImportBooks;
+export default BulkImportPeriodicals;

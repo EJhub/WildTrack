@@ -16,6 +16,8 @@ import Grid from "@mui/material/Grid";
 import { styled } from "@mui/material/styles";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
+import CircularProgress from "@mui/material/CircularProgress";
+import api from "../../../utils/api"; // Import the API utility (adjust path if needed)
 
 // Styled components for consistent styling
 const StyledLabel = styled(Typography)(({ theme }) => ({
@@ -57,21 +59,34 @@ const AddEntry = (props) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   
-  // New state for book search
+  // Book search state
   const [bookSearchQuery, setBookSearchQuery] = useState("");
+  
+  // New periodical search state
+  const [periodicalSearchQuery, setPeriodicalSearchQuery] = useState("");
+  
+  // State for periodicals from API
+  const [periodicals, setPeriodicals] = useState([]);
+  const [loadingPeriodicals, setLoadingPeriodicals] = useState(false);
   
   // Get today's date in local timezone (Manila)
   const date = new Date();
   const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   
-  // Mock periodicals data (replace with actual data fetch if available)
-  const periodicals = [
-    { id: 1, title: "Forbes 2024" },
-    { id: 2, title: "Time Magazine" },
-    { id: 3, title: "National Geographic" },
-    { id: 4, title: "The Economist" },
-    { id: 5, title: "Scientific American" }
-  ];
+  // Fetch periodicals from the backend
+  const fetchPeriodicals = async () => {
+    setLoadingPeriodicals(true);
+    try {
+      const response = await api.get('/periodicals/all');
+      setPeriodicals(response.data);
+    } catch (error) {
+      console.error('Error fetching periodicals:', error);
+      // Fallback to empty array if fetch fails
+      setPeriodicals([]);
+    } finally {
+      setLoadingPeriodicals(false);
+    }
+  };
   
   // Reset form when dialog opens
   useEffect(() => {
@@ -90,10 +105,14 @@ const AddEntry = (props) => {
       setSelectedBook("");
       setSelectedPeriodical("");
       setBookSearchQuery("");
+      setPeriodicalSearchQuery(""); // Reset periodical search query
       setComment("");
       setRating(0);
       setError(null);
       setSuccess(null);
+      
+      // Fetch periodicals when the dialog opens
+      fetchPeriodicals();
     }
   }, [open]);
   
@@ -106,13 +125,20 @@ const AddEntry = (props) => {
       setSelectedBook("");
       setSelectedPeriodical("");
       setBookSearchQuery("");
+      setPeriodicalSearchQuery(""); // Reset periodical search query
     } else if (newActivity === "Read Book") {
       setComputerPurpose("");
       setSelectedPeriodical("");
+      setPeriodicalSearchQuery(""); // Reset periodical search query
     } else if (newActivity === "Read Periodical") {
       setComputerPurpose("");
       setSelectedBook("");
       setBookSearchQuery("");
+      
+      // Fetch periodicals if not already loaded
+      if (periodicals.length === 0 && !loadingPeriodicals) {
+        fetchPeriodicals();
+      }
     }
   };
   
@@ -128,9 +154,23 @@ const AddEntry = (props) => {
         (book.accessionNumber && book.accessionNumber.toLowerCase().includes(bookSearchQuery.toLowerCase())))
     : registeredBooks;
   
+  // Filter periodicals based on search query (title, author, and accession number)
+  const filteredPeriodicals = periodicalSearchQuery
+    ? periodicals.filter(periodical =>
+        periodical.title.toLowerCase().includes(periodicalSearchQuery.toLowerCase()) ||
+        (periodical.author && periodical.author.toLowerCase().includes(periodicalSearchQuery.toLowerCase())) ||
+        (periodical.accessionNumber && periodical.accessionNumber.toLowerCase().includes(periodicalSearchQuery.toLowerCase())))
+    : periodicals;
+  
   const handleBookSearchChange = (e) => {
     setBookSearchQuery(e.target.value);
     setSelectedBook(""); // Reset selected book when search changes
+  };
+  
+  // Handler for periodical search changes
+  const handlePeriodicalSearchChange = (e) => {
+    setPeriodicalSearchQuery(e.target.value);
+    setSelectedPeriodical(""); // Reset selected periodical when search changes
   };
   
   const handleFormSubmit = () => {
@@ -165,6 +205,7 @@ const AddEntry = (props) => {
     // Prepare submission data
     let details = "";
     let bookId = null;
+    let periodicalId = null;
     
     if (activity === "Used Computer") {
       details = computerPurpose;
@@ -175,10 +216,12 @@ const AddEntry = (props) => {
     } else if (activity === "Read Periodical") {
       const periodical = periodicals.find(p => p.id.toString() === selectedPeriodical);
       details = periodical ? periodical.title : "";
+      periodicalId = periodical ? periodical.id : null;
     }
     
     const journalEntry = {
-      id: bookId,  // If a book was selected, include its ID
+      bookId: bookId,  // If a book was selected, include its ID
+      periodicalId: periodicalId, // If a periodical was selected, include its ID
       // No entryNo field - will be auto-generated by the backend
       dateRead: today,
       activity,
@@ -378,30 +421,68 @@ const AddEntry = (props) => {
             </>
           )}
           
-          {/* Periodical Selection (conditional) */}
+          {/* Periodical Selection with Search (conditional) */}
           {activity === "Read Periodical" && (
             <>
+              {/* Periodical Search Bar */}
+              <Grid item xs={4}>
+                <StyledLabel>Search for a periodical:</StyledLabel>
+              </Grid>
+              <Grid item xs={8}>
+                <StyledInput
+                  placeholder="Search by title, author, or accession number..."
+                  value={periodicalSearchQuery}
+                  onChange={handlePeriodicalSearchChange}
+                  size="small"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                  disabled={loadingPeriodicals}
+                />
+              </Grid>
+              
+              {/* Periodical Dropdown */}
               <Grid item xs={4}>
                 <StyledLabel>Select a periodical:</StyledLabel>
               </Grid>
               <Grid item xs={8}>
-                <StyledSelect size="small">
-                  <Select
-                    value={selectedPeriodical}
-                    onChange={(e) => setSelectedPeriodical(e.target.value)}
-                    displayEmpty
-                    fullWidth
-                  >
-                    <MenuItem value="" disabled>
-                      Select a Periodical
-                    </MenuItem>
-                    {periodicals.map((periodical) => (
-                      <MenuItem key={periodical.id} value={periodical.id.toString()}>
-                        {periodical.title}
+                {loadingPeriodicals ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40px' }}>
+                    <CircularProgress size={24} />
+                    <Typography variant="body2" sx={{ ml: 2 }}>
+                      Loading periodicals...
+                    </Typography>
+                  </Box>
+                ) : (
+                  <StyledSelect size="small">
+                    <Select
+                      value={selectedPeriodical}
+                      onChange={(e) => setSelectedPeriodical(e.target.value)}
+                      displayEmpty
+                      fullWidth
+                    >
+                      <MenuItem value="" disabled>
+                        {filteredPeriodicals.length > 0 
+                          ? "Select a Periodical" 
+                          : "No periodicals match your search"}
                       </MenuItem>
-                    ))}
-                  </Select>
-                </StyledSelect>
+                      {filteredPeriodicals.map((periodical) => (
+                        <MenuItem key={periodical.id} value={periodical.id.toString()}>
+                          {periodical.title}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </StyledSelect>
+                )}
+                {!loadingPeriodicals && (
+                  <Typography variant="caption" sx={{ display: 'block', ml: 1, mt: 0.5 }}>
+                    {filteredPeriodicals.length} periodical(s) found
+                  </Typography>
+                )}
               </Grid>
             </>
           )}
