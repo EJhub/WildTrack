@@ -29,7 +29,7 @@ import CategoryIcon from '@mui/icons-material/Category';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import api from '../../../utils/api';
 
-const AddBookModal = ({ open, onClose, onSuccess, book = null, activeGenres = [] }) => {
+const AddandEditBookModal = ({ open, onClose, onSuccess, book = null, activeGenres = [] }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formFields, setFormFields] = useState({
     title: '',
@@ -197,13 +197,9 @@ const AddBookModal = ({ open, onClose, onSuccess, book = null, activeGenres = []
       </DialogTitle>
       
       <DialogContent sx={{ pt: 3, pb: 3 }}>
-        <Box component={Paper} elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-          <Typography variant="h6" gutterBottom sx={{ color: '#800000', fontWeight: 'bold', mb: 2 }}>
-            Basic Information
-          </Typography>
-          
+        <Box component={Paper} elevation={0} sx={{ p: 2, backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 autoFocus
                 label="Book Title"
@@ -217,6 +213,34 @@ const AddBookModal = ({ open, onClose, onSuccess, book = null, activeGenres = []
                   startAdornment: (
                     <InputAdornment position="start">
                       <BookIcon sx={{ color: '#800000' }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ 
+                  mb: 1,
+                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#800000',
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#800000',
+                  }
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Accession Number"
+                name="accessionNumber"
+                value={formFields.accessionNumber}
+                onChange={handleInputChange}
+                fullWidth
+                required
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <NumbersIcon sx={{ color: '#800000' }} />
                     </InputAdornment>
                   ),
                 }}
@@ -294,42 +318,6 @@ const AddBookModal = ({ open, onClose, onSuccess, book = null, activeGenres = []
                 </Select>
               </FormControl>
             </Grid>
-          </Grid>
-        </Box>
-        
-        <Box component={Paper} elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-          <Typography variant="h6" gutterBottom sx={{ color: '#800000', fontWeight: 'bold', mb: 2 }}>
-            Cataloging Information
-          </Typography>
-          
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Accession Number"
-                name="accessionNumber"
-                value={formFields.accessionNumber}
-                onChange={handleInputChange}
-                fullWidth
-                required
-                variant="outlined"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <NumbersIcon sx={{ color: '#800000' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ 
-                  mb: 1,
-                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#800000',
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#800000',
-                  }
-                }}
-              />
-            </Grid>
             
             <Grid item xs={12} sm={6}>
               <TextField
@@ -357,15 +345,7 @@ const AddBookModal = ({ open, onClose, onSuccess, book = null, activeGenres = []
                 }}
               />
             </Grid>
-          </Grid>
-        </Box>
-        
-        <Box component={Paper} elevation={0} sx={{ p: 2, backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-          <Typography variant="h6" gutterBottom sx={{ color: '#800000', fontWeight: 'bold', mb: 2 }}>
-            Publication Details
-          </Typography>
-          
-          <Grid container spacing={2}>
+            
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Publisher"
@@ -499,4 +479,4 @@ const AddBookModal = ({ open, onClose, onSuccess, book = null, activeGenres = []
   );
 };
 
-export default AddBookModal;
+export default AddandEditBookModal;

@@ -5,8 +5,8 @@ import BulkImportBooks from './components/BulkImportBooks';
 import BulkUpdateBooks from './components/BulkUpdateBooks';
 import BulkImportPeriodicals from './components/BulkImportPeriodicals';
 import BulkUpdatePeriodicals from './components/BulkUpdatePeriodicals';
-import AddBookModal from './components/AddBookModal';
-import AddPeriodicalModal from './components/AddPeriodicalModal';
+import AddBookModal from './components/AddandEditBookModal';
+import AddPeriodicalModal from './components/AddandEditPeriodicalModal';
 import {
   Box,
   Table,
