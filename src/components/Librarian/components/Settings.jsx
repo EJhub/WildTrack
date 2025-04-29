@@ -62,6 +62,18 @@ const Settings = ({ open, onClose }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  // Password validation states
+  const [passwordCriteria, setPasswordCriteria] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
+  const [passwordsMatch, setPasswordsMatch] = useState(false);
+  const [newPasswordFocused, setNewPasswordFocused] = useState(false);
+  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
+  
   // Alert/notification states
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -125,12 +137,38 @@ const Settings = ({ open, onClose }) => {
     }));
   };
   
+  // Validate password
+  const validatePassword = (password) => {
+    setPasswordCriteria({
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    });
+    
+    // Also check if passwords match whenever password changes
+    if (passwordData.confirmPassword) {
+      setPasswordsMatch(password === passwordData.confirmPassword);
+    }
+  };
+
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordData({
-      ...passwordData,
+    setPasswordData(prevData => ({
+      ...prevData,
       [name]: value,
-    });
+    }));
+    
+    // Validate password when changed
+    if (name === 'newPassword') {
+      validatePassword(value);
+    }
+    
+    // Check if passwords match when confirmPassword changes
+    if (name === 'confirmPassword') {
+      setPasswordsMatch(passwordData.newPassword === value && passwordData.newPassword !== '');
+    }
   };
   
   // Handle showing the confirmation dialog
@@ -282,6 +320,17 @@ const Settings = ({ open, onClose }) => {
       return;
     }
     
+    // Check if all password criteria are met
+    const allCriteriaMet = Object.values(passwordCriteria).every(criterion => criterion === true);
+    if (!allCriteriaMet) {
+      setSnackbar({
+        open: true,
+        message: 'Password does not meet all requirements!',
+        severity: 'error'
+      });
+      return;
+    }
+    
     try {
       await api.put("/users/change-password", {
         id: user.id,
@@ -295,6 +344,16 @@ const Settings = ({ open, onClose }) => {
         newPassword: '',
         confirmPassword: ''
       });
+      
+      // Reset password validation states
+      setPasswordCriteria({
+        length: false,
+        uppercase: false,
+        lowercase: false,
+        number: false,
+        special: false
+      });
+      setPasswordsMatch(false);
       
       // Show success message
       setSnackbar({
@@ -586,6 +645,8 @@ const Settings = ({ open, onClose }) => {
                     value={passwordData.newPassword}
                     onChange={handlePasswordChange}
                     size="small"
+                    onFocus={() => setNewPasswordFocused(true)}
+                    onBlur={() => setNewPasswordFocused(false)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -599,6 +660,37 @@ const Settings = ({ open, onClose }) => {
                       ),
                     }}
                   />
+                  {/* Password requirements */}
+                  {(newPasswordFocused || passwordData.newPassword) && (
+                    <Box sx={{ mt: 1, mb: 1, pl: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        Password requirements:
+                      </Typography>
+                      {[
+                        { key: 'length', label: 'At least 8 characters' },
+                        { key: 'uppercase', label: 'At least one uppercase letter' },
+                        { key: 'lowercase', label: 'At least one lowercase letter' },
+                        { key: 'number', label: 'At least one number' },
+                        { key: 'special', label: 'At least one special character' }
+                      ].map((item) => (
+                        <Box key={item.key} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              bgcolor: passwordCriteria[item.key] ? 'success.main' : 'error.main',
+                              mr: 1
+                            }}
+                          />
+                          <Typography variant="caption" color={passwordCriteria[item.key] ? 'success.main' : 'text.secondary'}>
+                            {item.label}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
                 </Box>
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="body2" sx={{ mb: 0.5 }}>Confirm New Password:</Typography>
@@ -609,6 +701,8 @@ const Settings = ({ open, onClose }) => {
                     value={passwordData.confirmPassword}
                     onChange={handlePasswordChange}
                     size="small"
+                    onFocus={() => setConfirmPasswordFocused(true)}
+                    onBlur={() => setConfirmPasswordFocused(false)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -622,6 +716,28 @@ const Settings = ({ open, onClose }) => {
                       ),
                     }}
                   />
+                  {/* Password match indicator */}
+                  {(confirmPasswordFocused || passwordData.confirmPassword) && (
+                    <Box sx={{ mt: 1, pl: 1 }}>
+                      <Typography 
+                        variant="caption" 
+                        color={passwordsMatch ? 'success.main' : 'error.main'}
+                        sx={{ display: 'flex', alignItems: 'center' }}
+                      >
+                        <Box
+                          component="span"
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: passwordsMatch ? 'success.main' : 'error.main',
+                            mr: 1
+                          }}
+                        />
+                        {passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   <Button

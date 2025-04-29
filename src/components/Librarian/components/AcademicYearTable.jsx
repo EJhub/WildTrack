@@ -12,10 +12,17 @@ import {
   Button,
   TablePagination,
   CircularProgress,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
+  Stack,
+  Chip,
 } from '@mui/material';
 import AddAcademicYear from './AddAcademicYear';
 import ViewAcademicYear from './ViewAcademicYear';
 import AddIcon from '@mui/icons-material/Add';
+import FilterListIcon from '@mui/icons-material/FilterList';
 // Import API utility
 import api from '../../../utils/api';
 
@@ -27,19 +34,20 @@ const AcademicYearTable = ({ searchTerm = '' }) => {
     const [selectedAcademicYear, setSelectedAcademicYear] = useState(null);
     const [academicYearData, setAcademicYearData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState('All'); // New state for status filter
     
-    // Filter data based on search term
+    // Filter data based on search term and status filter
     const filteredData = academicYearData.filter((year) => {
-      if (!searchTerm) return true;
+      // First apply search term filter
+      const matchesSearch = !searchTerm || 
+        `${year.startYear}-${year.endYear}`.toLowerCase().includes(searchTerm.toLowerCase().trim()) || 
+        (year.status && year.status.toLowerCase().includes(searchTerm.toLowerCase().trim()));
       
-      const term = searchTerm.toLowerCase().trim();
-      const yearString = `${year.startYear}-${year.endYear}`.toLowerCase();
+      // Then apply status filter
+      const matchesStatus = statusFilter === 'All' || year.status === statusFilter;
       
-      // Search by year range or quarters or status
-      return (
-        yearString.includes(term) || 
-        (year.status && year.status.toLowerCase().includes(term))
-      );
+      // Return true only if both conditions are met
+      return matchesSearch && matchesStatus;
     });
   
     useEffect(() => {
@@ -47,9 +55,9 @@ const AcademicYearTable = ({ searchTerm = '' }) => {
     }, []);
     
     useEffect(() => {
-      // Reset to first page when search term changes
+      // Reset to first page when search term or status filter changes
       setPage(0);
-    }, [searchTerm]);
+    }, [searchTerm, statusFilter]);
   
     const fetchAcademicYearData = async () => {
       try {
@@ -107,6 +115,11 @@ const AcademicYearTable = ({ searchTerm = '' }) => {
       }
     };
 
+    // Handler for status filter change
+    const handleStatusFilterChange = (event) => {
+      setStatusFilter(event.target.value);
+    };
+
     const formatQuarterDates = (year) => {
       if (!year) return 'N/A';
       
@@ -118,12 +131,85 @@ const AcademicYearTable = ({ searchTerm = '' }) => {
 
     return (
       <Box sx={{ flexGrow: 1, backgroundColor: '#ffffff' }}>
-        {/* Top section with search result count */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        {/* Top section with search result count and status filter */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 2,
+          flexWrap: 'wrap',
+          gap: 2
+        }}>
           <Typography variant="body2" color="text.secondary">
             {filteredData.length} {filteredData.length === 1 ? 'academic year' : 'academic years'} found
           </Typography>
+          
+          {/* Status filter component */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'medium', mr: 1 }}>
+              Filter by:
+            </Typography>
+            <FormControl 
+              size="small" 
+              sx={{ 
+                minWidth: 150,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '100px',
+                  backgroundColor: '#fff',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                }
+              }}
+            >
+              <Select
+                value={statusFilter}
+                onChange={handleStatusFilterChange}
+                displayEmpty
+                sx={{ height: 40 }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      borderRadius: '10px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    },
+                  },
+                }}
+                startAdornment={
+                  <FilterListIcon fontSize="small" sx={{ mr: 1, color: '#666' }} />
+                }
+              >
+                <MenuItem value="All">All Statuses</MenuItem>
+                <MenuItem value="Active">Active</MenuItem>
+                <MenuItem value="Archived">Archived</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
+        
+        {/* Active filters display */}
+        {statusFilter !== 'All' && (
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+            <Typography variant="body2" sx={{ mr: 1 }}>
+              Active filters:
+            </Typography>
+            <Chip 
+              label={`Status: ${statusFilter}`}
+              onDelete={() => setStatusFilter('All')}
+              size="small"
+              sx={{
+                backgroundColor: statusFilter === 'Active' ? '#E9F7EF' : '#FDEDEC',
+                color: statusFilter === 'Active' ? '#196F3D' : '#943126',
+                borderRadius: '100px',
+                fontWeight: 'medium',
+                '& .MuiChip-deleteIcon': {
+                  color: statusFilter === 'Active' ? '#196F3D' : '#943126',
+                  '&:hover': {
+                    color: statusFilter === 'Active' ? '#0E4023' : '#631E18',
+                  }
+                }
+              }}
+            />
+          </Box>
+        )}
         
         {/* Table Section */}
         <TableContainer
@@ -180,7 +266,7 @@ const AcademicYearTable = ({ searchTerm = '' }) => {
               {filteredData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center">
-                    {searchTerm ? 'No academic years match your search criteria.' : 'No academic years found.'}
+                    {searchTerm || statusFilter !== 'All' ? 'No academic years match your filter criteria.' : 'No academic years found.'}
                   </TableCell>
                 </TableRow>
               ) : (

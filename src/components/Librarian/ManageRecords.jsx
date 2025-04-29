@@ -219,23 +219,17 @@ const LibrarianManageRecords = () => {
     return `${String(formattedHours).padStart(2, '0')}:${minutes ? minutes.trim() : '00'}:00`;
   }, []);
 
-  // Handle Search with improved event handling
+  // Handle Search - updated to filter as you type (like LibrarianManageBooks)
   const handleSearch = useCallback((e) => {
     preventDefaultAndStop(e);
-    setSearchText(e.target.value);
-  }, [preventDefaultAndStop]);
-
-  // Handle Search Submit - improved to filter data
-  const handleSearchSubmit = useCallback((e) => {
-    preventDefaultAndStop(e);
-    setTableRefreshing(true); // Start table refreshing
-    console.log('Searching for:', searchText);
+    const term = e.target.value;
+    setSearchText(term);
     
-    // Apply search to filter data
+    // Apply search to filter data immediately as user types
     let filteredData = [...originalData];
     
-    if (searchText.trim()) {
-      const searchLower = searchText.toLowerCase();
+    if (term.trim()) {
+      const searchLower = term.toLowerCase();
       filteredData = filteredData.filter(student => 
         // Search through ID
         student.idNumber?.toString().toLowerCase().includes(searchLower) ||
@@ -248,8 +242,7 @@ const LibrarianManageRecords = () => {
     
     setData(filteredData);
     setPage(0); // Reset to first page after search
-    setTableRefreshing(false); // Stop table refreshing
-  }, [searchText, originalData, preventDefaultAndStop]);
+  }, [originalData, preventDefaultAndStop]);
 
   // Reset all filters function
   const handleResetFilters = useCallback((e) => {
@@ -276,10 +269,10 @@ const LibrarianManageRecords = () => {
     setTableRefreshing(true); // Start table refreshing
     console.log('Applying filters:', { dateFrom, dateTo, academicYear });
     
-    // Start with original or search-filtered data
+    // Start with original data
     let filteredData = [...originalData];
     
-    // Apply search text filter if present
+    // Apply search text filter if present (matching the handleSearch filter logic)
     if (searchText.trim()) {
       const searchLower = searchText.toLowerCase();
       filteredData = filteredData.filter(student => 
@@ -631,7 +624,7 @@ const LibrarianManageRecords = () => {
             Manage Records
           </Typography>
 
-          {/* Search and Filters Section - Changed from form to div */}
+          {/* Search Section - Updated from LibrarianManageBooks */}
           <Box
             sx={{
               display: 'flex',
@@ -643,22 +636,19 @@ const LibrarianManageRecords = () => {
           >
             <TextField
               variant="outlined"
-              placeholder="Type here..."
+              placeholder="Search records..."
               size="small"
               value={searchText}
               onChange={handleSearch}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  preventDefaultAndStop(e);
-                  handleSearchSubmit(e);
-                } else {
-                  preventSubmitOnEnter(e);
-                }
-              }}
+              onKeyDown={preventSubmitOnEnter}
               onClick={preventDefaultAndStop}
               sx={{
-                backgroundColor: '#fff',
-                borderRadius: '15px',
+                borderRadius: '100px',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '100px',
+                  backgroundColor: '#fff',
+                  boxShadow: '0 4px 8px -2px rgba(128, 128, 128, 0.2)',
+                },
                 flexGrow: 1,
                 maxWidth: { xs: '100%', sm: '400px' },
               }}
@@ -666,17 +656,6 @@ const LibrarianManageRecords = () => {
                 startAdornment: (
                   <InputAdornment position="start">
                     <SearchIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton 
-                      onClick={handleSearchSubmit}
-                      size="small"
-                      type="button"
-                    >
-                      <SearchIcon />
-                    </IconButton>
                   </InputAdornment>
                 ),
               }}

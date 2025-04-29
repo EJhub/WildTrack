@@ -2,9 +2,7 @@ import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect } f
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import BulkImportBooks from './components/BulkImportBooks';
-import BulkUpdateBooks from './components/BulkUpdateBooks';
 import BulkImportPeriodicals from './components/BulkImportPeriodicals';
-import BulkUpdatePeriodicals from './components/BulkUpdatePeriodicals';
 import BulkDeleteBooks from './components/BulkDeleteBooks';
 import BulkDeletePeriodicals from './components/BulkDeletePeriodicals';
 import AddBookModal from './components/AddandEditBookModal';
@@ -37,7 +35,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from '../../utils/api'; // Import the API utility
@@ -64,11 +61,9 @@ const LibrarianManageBooks = () => {
   const [openAddBookDialog, setOpenAddBookDialog] = useState(false);
   const [openAddPeriodicalDialog, setOpenAddPeriodicalDialog] = useState(false);
 
-  // Bulk import/update states
+  // Bulk import states
   const [isBulkImportBooksOpen, setIsBulkImportBooksOpen] = useState(false);
-  const [isBulkUpdateBooksOpen, setIsBulkUpdateBooksOpen] = useState(false);
   const [isBulkImportPeriodicalsOpen, setIsBulkImportPeriodicalsOpen] = useState(false);
-  const [isBulkUpdatePeriodicalsOpen, setIsBulkUpdatePeriodicalsOpen] = useState(false);
   
   // Bulk delete states
   const [isBulkDeleteBooksOpen, setIsBulkDeleteBooksOpen] = useState(false);
@@ -79,9 +74,7 @@ const LibrarianManageBooks = () => {
   
   // Refs for bulk operations
   const bulkImportBooksRef = useRef(null);
-  const bulkUpdateBooksRef = useRef(null);
   const bulkImportPeriodicalsRef = useRef(null);
-  const bulkUpdatePeriodicalsRef = useRef(null);
   const bulkDeleteBooksRef = useRef(null);
   const bulkDeletePeriodicalsRef = useRef(null);
 
@@ -254,15 +247,6 @@ const LibrarianManageBooks = () => {
       setIsBulkImportBooksOpen(true);
     } else {
       setIsBulkImportPeriodicalsOpen(true);
-    }
-  };
-
-  // Handle bulk update modal opening based on active tab
-  const handleOpenBulkUpdate = () => {
-    if (activeTab === 'books') {
-      setIsBulkUpdateBooksOpen(true);
-    } else {
-      setIsBulkUpdatePeriodicalsOpen(true);
     }
   };
 
@@ -594,26 +578,6 @@ const LibrarianManageBooks = () => {
               >
                 <UploadFileIcon sx={{ marginRight: 1, fontSize: '16px' }} />
                 Bulk Import
-              </Button>
-
-              {/* Bulk Update Button */}
-              <Button
-                variant="contained"
-                onClick={handleOpenBulkUpdate}
-                sx={{
-                  fontWeight: 'bold',
-                  padding: '10px 15px',
-                  fontSize: '11px', 
-                  borderRadius: '50px',
-                  color: '#FFEB3B',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
-                  backgroundColor: '#800000',
-                  border: '1px solid #800000',
-                  '&:hover': { backgroundColor: '#940000' },
-                }}
-              >
-                <SystemUpdateAltIcon sx={{ marginRight: 1, fontSize: '16px' }} />
-                Bulk Update
               </Button>
               
               {/* Bulk Delete Button */}
@@ -1238,15 +1202,6 @@ const LibrarianManageBooks = () => {
         ref={bulkImportBooksRef}
       />
 
-      {/* Bulk Update Books Dialog */}
-      <BulkUpdateBooks
-        open={isBulkUpdateBooksOpen}
-        onClose={() => setIsBulkUpdateBooksOpen(false)}
-        onSuccess={handleOperationSuccess}
-        activeGenres={activeGenres}
-        ref={bulkUpdateBooksRef}
-      />
-
       {/* Bulk Import Periodicals Dialog */}
       <BulkImportPeriodicals
         open={isBulkImportPeriodicalsOpen}
@@ -1255,14 +1210,6 @@ const LibrarianManageBooks = () => {
         initialStep={bulkImportStep}
         onStepChange={handleBulkImportStepChange}
         ref={bulkImportPeriodicalsRef}
-      />
-
-      {/* Bulk Update Periodicals Dialog */}
-      <BulkUpdatePeriodicals
-        open={isBulkUpdatePeriodicalsOpen}
-        onClose={() => setIsBulkUpdatePeriodicalsOpen(false)}
-        onSuccess={handleOperationSuccess}
-        ref={bulkUpdatePeriodicalsRef}
       />
       
       {/* Bulk Delete Books Dialog */}

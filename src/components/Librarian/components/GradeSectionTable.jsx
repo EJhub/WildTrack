@@ -13,10 +13,15 @@ import {
   Collapse,
   CircularProgress,
   Typography,
-  Stack
+  Stack,
+  FormControl,
+  Select,
+  MenuItem,
+  Chip
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import AddGradeSection from './AddGradeSection';
 import AddSectionModal from './AddSectionModal';
 import ViewSectionModal from './ViewSectionModal';
@@ -245,6 +250,7 @@ const GradeSectionTable = ({ searchTerm = '' }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filteredGrades, setFilteredGrades] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('All'); // New state for status filter
 
   const fetchGradeSections = async () => {
     try {
@@ -292,7 +298,7 @@ const GradeSectionTable = ({ searchTerm = '' }) => {
       });
 
       setGradeSections(groupedData);
-      filterGrades(groupedData, searchTerm);
+      applyFilters(groupedData, searchTerm, statusFilter);
     } catch (error) {
       console.error('Error fetching grade sections:', error);
       setError(error.message || 'Failed to fetch grade sections');
@@ -301,43 +307,57 @@ const GradeSectionTable = ({ searchTerm = '' }) => {
     }
   };
 
-  // Filter grades based on search term
-  const filterGrades = (grades, term) => {
-    if (!term) {
-      setFilteredGrades(grades);
-      return;
+  // Updated filtering function to consider both search term and status filter
+  const applyFilters = (grades, term, status) => {
+    let filtered = [...grades];
+    
+    // Apply search term filter
+    if (term) {
+      const lowercaseTerm = term.toLowerCase().trim();
+      
+      // Find grades that match directly
+      const directlyMatchingGrades = grades.filter(grade => 
+        grade.grade.toLowerCase().includes(lowercaseTerm) ||
+        grade.status.toLowerCase().includes(lowercaseTerm)
+      );
+      
+      // Find grades that have sections matching the search term
+      const gradesWithMatchingSections = grades.filter(grade => 
+        !directlyMatchingGrades.includes(grade) && // Skip already included grades
+        grade.sections.some(section => 
+          section.sectionName.toLowerCase().includes(lowercaseTerm) ||
+          (section.advisor && section.advisor.toLowerCase().includes(lowercaseTerm)) ||
+          section.status.toLowerCase().includes(lowercaseTerm)
+        )
+      );
+      
+      // Combine both types of matches
+      filtered = [...directlyMatchingGrades, ...gradesWithMatchingSections];
     }
     
-    const lowercaseTerm = term.toLowerCase().trim();
+    // Apply status filter
+    if (status !== 'All') {
+      filtered = filtered.filter(grade => grade.status === status.toLowerCase());
+    }
     
-    // Find grades that match directly
-    const directlyMatchingGrades = grades.filter(grade => 
-      grade.grade.toLowerCase().includes(lowercaseTerm) ||
-      grade.status.toLowerCase().includes(lowercaseTerm)
-    );
-    
-    // Find grades that have sections matching the search term
-    const gradesWithMatchingSections = grades.filter(grade => 
-      !directlyMatchingGrades.includes(grade) && // Skip already included grades
-      grade.sections.some(section => 
-        section.sectionName.toLowerCase().includes(lowercaseTerm) ||
-        (section.advisor && section.advisor.toLowerCase().includes(lowercaseTerm)) ||
-        section.status.toLowerCase().includes(lowercaseTerm)
-      )
-    );
-    
-    // Combine both types of matches
-    setFilteredGrades([...directlyMatchingGrades, ...gradesWithMatchingSections]);
+    setFilteredGrades(filtered);
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (event) => {
+    const newStatus = event.target.value;
+    setStatusFilter(newStatus);
+    applyFilters(gradeSections, searchTerm, newStatus);
   };
 
   useEffect(() => {
     fetchGradeSections();
   }, []);
 
-  // Update filtered grades when search term changes
+  // Update filtered grades when search term or status filter changes
   useEffect(() => {
-    filterGrades(gradeSections, searchTerm);
-  }, [searchTerm, gradeSections]);
+    applyFilters(gradeSections, searchTerm, statusFilter);
+  }, [searchTerm, statusFilter, gradeSections]);
 
   const handleArchiveGrade = async (gradeLevel) => {
     try {
@@ -396,12 +416,85 @@ const GradeSectionTable = ({ searchTerm = '' }) => {
 
   return (
     <Box sx={{ width: '100%', mb: 10 }}>
-      {/* Search result count */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+      {/* Top section with search result count and status filter */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 2,
+        flexWrap: 'wrap',
+        gap: 2
+      }}>
         <Typography variant="body2" color="text.secondary">
           {filteredGrades.length} {filteredGrades.length === 1 ? 'grade level' : 'grade levels'} found
         </Typography>
+        
+        {/* Status filter component */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 'medium', mr: 1 }}>
+            Filter by status:
+          </Typography>
+          <FormControl 
+            size="small" 
+            sx={{ 
+              minWidth: 150,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '100px',
+                backgroundColor: '#fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+              }
+            }}
+          >
+            <Select
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              displayEmpty
+              sx={{ height: 40 }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    borderRadius: '10px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  },
+                },
+              }}
+              startAdornment={
+                <FilterListIcon fontSize="small" sx={{ mr: 1, color: '#666' }} />
+              }
+            >
+              <MenuItem value="All">All Statuses</MenuItem>
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="archived">Archived</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
       </Box>
+      
+      {/* Active filters display */}
+      {statusFilter !== 'All' && (
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ mr: 1 }}>
+            Active filters:
+          </Typography>
+          <Chip 
+            label={`Status: ${statusFilter}`}
+            onDelete={() => setStatusFilter('All')}
+            size="small"
+            sx={{
+              backgroundColor: statusFilter === 'active' ? '#E9F7EF' : '#FDEDEC',
+              color: statusFilter === 'active' ? '#196F3D' : '#943126',
+              borderRadius: '100px',
+              fontWeight: 'medium',
+              '& .MuiChip-deleteIcon': {
+                color: statusFilter === 'active' ? '#196F3D' : '#943126',
+                '&:hover': {
+                  color: statusFilter === 'active' ? '#0E4023' : '#631E18',
+                }
+              }
+            }}
+          />
+        </Box>
+      )}
 
       <TableContainer component={Paper} sx={{ borderRadius: '15px', boxShadow: 3 }}>
         <Table>
@@ -431,7 +524,7 @@ const GradeSectionTable = ({ searchTerm = '' }) => {
             ) : (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  {searchTerm ? 'No grade levels match your search criteria.' : 'No grade levels found.'}
+                  {searchTerm || statusFilter !== 'All' ? 'No grade levels match your filter criteria.' : 'No grade levels found.'}
                 </TableCell>
               </TableRow>
             )}

@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress, // Added CircularProgress import
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -54,11 +54,15 @@ const StudentLibraryHours = () => {
   // Sort state
   const [orderBy, setOrderBy] = useState("date"); // Default sort by date
   const [order, setOrder] = useState("asc"); // Default sort direction (ascending)
-  // Progress summary state
+  
+  // Progress summary state - Modified to include current requirement specific data
   const [progressSummary, setProgressSummary] = useState({
     totalMinutesRequired: 0,
     totalMinutesRendered: 0,
-    currentSubject: "--"
+    currentSubject: "--",
+    currentRequiredMinutes: 0,
+    currentMinutesRendered: 0,
+    currentMinutesRemaining: 0
   });
   
   // Use AuthContext to access user information
@@ -165,7 +169,7 @@ const StudentLibraryHours = () => {
     });
   };
 
-  // Fetch progress data function
+  // MODIFIED: Fetch progress data function to get current requirement details
   const fetchProgressData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -194,7 +198,7 @@ const StudentLibraryHours = () => {
         }
       );
       
-      // Fetch detailed progress to get current subject
+      // Fetch detailed progress to get current subject and requirement details
       const progressResponse = await api.get(
         `/library-progress/${user.idNumber}`,
         {
@@ -209,11 +213,27 @@ const StudentLibraryHours = () => {
         req => !req.isCompleted
       );
       
-      setProgressSummary({
-        totalMinutesRequired: summaryResponse.data.totalMinutesRequired || 0,
-        totalMinutesRendered: summaryResponse.data.totalMinutesRendered || 0,
-        currentSubject: firstIncompleteRequirement ? firstIncompleteRequirement.subject : "--"
-      });
+      // Update the progress summary with the current requirement details
+      if (firstIncompleteRequirement) {
+        setProgressSummary({
+          totalMinutesRequired: summaryResponse.data.totalMinutesRequired || 0,
+          totalMinutesRendered: summaryResponse.data.totalMinutesRendered || 0,
+          currentSubject: firstIncompleteRequirement.subject,
+          currentRequiredMinutes: firstIncompleteRequirement.requiredMinutes || 0,
+          currentMinutesRendered: firstIncompleteRequirement.minutesRendered || 0,
+          currentMinutesRemaining: firstIncompleteRequirement.remainingMinutes || 0
+        });
+      } else {
+        // No incomplete requirements found
+        setProgressSummary({
+          totalMinutesRequired: summaryResponse.data.totalMinutesRequired || 0,
+          totalMinutesRendered: summaryResponse.data.totalMinutesRendered || 0,
+          currentSubject: "--",
+          currentRequiredMinutes: 0,
+          currentMinutesRendered: 0,
+          currentMinutesRemaining: 0
+        });
+      }
     } catch (error) {
       console.error("Error fetching progress data:", error);
     }
@@ -571,9 +591,6 @@ const StudentLibraryHours = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-  
-  // Calculate minutes remaining
-  const minutesRemaining = Math.max(0, progressSummary.totalMinutesRequired - progressSummary.totalMinutesRendered);
 
   // Common style for sortable table headers
   const sortableHeaderStyle = {
@@ -664,7 +681,7 @@ const StudentLibraryHours = () => {
               />
             </Box>
             
-            {/* Summary Information */}
+            {/* Summary Information - MODIFIED to show current requirement details */}
             <Box sx={{ 
               display: "flex", 
               gap: 2,
@@ -706,7 +723,7 @@ const StudentLibraryHours = () => {
                   MINUTES REMAINING
                 </Typography>
                 <Typography variant="body1" color="#000" fontWeight="medium">
-                  {minutesRemaining}
+                  {progressSummary.currentMinutesRemaining}
                 </Typography>
               </Paper>
               
@@ -725,7 +742,7 @@ const StudentLibraryHours = () => {
                   MINUTES RENDERED
                 </Typography>
                 <Typography variant="body1" color="#000" fontWeight="medium">
-                  {progressSummary.totalMinutesRendered}
+                  {progressSummary.currentMinutesRendered}
                 </Typography>
               </Paper>
             </Box>
@@ -818,145 +835,145 @@ const StudentLibraryHours = () => {
           </Box>
 
           <TableContainer
-  component={Paper}
-  sx={{
-    borderRadius: '15px',
-    boxShadow: 3,
-    overflow: 'visible',
-    marginTop: 3,
-    marginBottom: 7,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-  }}
->
-  <Table sx={{ minWidth: 650 }}>
-    <TableHead>
-      <TableRow>
-        <TableCell 
-          onClick={() => handleRequestSort("date")}
-          sx={sortableHeaderStyle}
-        >
-          <Tooltip title="Sort by date">
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              Date <SortIndicator column="date" />
-            </Box>
-          </Tooltip>
-        </TableCell>
-        <TableCell 
-          onClick={() => handleRequestSort("timeIn")}
-          sx={sortableHeaderStyle}
-        >
-          <Tooltip title="Sort by time in">
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              Time In <SortIndicator column="timeIn" />
-            </Box>
-          </Tooltip>
-        </TableCell>
-        <TableCell 
-          onClick={() => handleRequestSort("bookTitle")}
-          sx={sortableHeaderStyle}
-        >
-          <Tooltip title="Sort by book title">
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              Book Title <SortIndicator column="bookTitle" />
-            </Box>
-          </Tooltip>
-        </TableCell>
-        <TableCell 
-          onClick={() => handleRequestSort("timeOut")}
-          sx={sortableHeaderStyle}
-        >
-          <Tooltip title="Sort by time out">
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              Time Out <SortIndicator column="timeOut" />
-            </Box>
-          </Tooltip>
-        </TableCell>
-        <TableCell 
-          onClick={() => handleRequestSort("minutes")}
-          sx={sortableHeaderStyle}
-        >
-          <Tooltip title="Sort by minutes">
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              Minutes <SortIndicator column="minutes" />
-            </Box>
-          </Tooltip>
-        </TableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      {displayedHours.length === 0 ? (
-        <TableRow>
-          <TableCell colSpan={5} align="center">
-            No library hours found matching your criteria
-          </TableCell>
-        </TableRow>
-      ) : (
-        <>
-          {/* Display actual data rows */}
-          {displayedHours.map((entry) => (
-            <TableRow key={entry.id} sx={{ verticalAlign: "top" }}>
-              <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
-              <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
-              <TableCell sx={{ verticalAlign: "top" }}>
-                {entry.bookTitle ? (
-                  <Button
-                    onClick={() => handleBookTitleClick(entry)}
-                    color="primary"
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: entry.summary ? "bold" : "normal",
-                      "&:hover": {
-                        textDecoration: "underline",
-                        backgroundColor: "transparent",
-                      },
-                      padding: "0",
-                      justifyContent: "flex-start",
-                    }}
+            component={Paper}
+            sx={{
+              borderRadius: '15px',
+              boxShadow: 3,
+              overflow: 'visible',
+              marginTop: 3,
+              marginBottom: 7,
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+            }}
+          >
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell 
+                    onClick={() => handleRequestSort("date")}
+                    sx={sortableHeaderStyle}
                   >
-                    {entry.bookTitle}
-                  </Button>
+                    <Tooltip title="Sort by date">
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        Date <SortIndicator column="date" />
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleRequestSort("timeIn")}
+                    sx={sortableHeaderStyle}
+                  >
+                    <Tooltip title="Sort by time in">
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        Time In <SortIndicator column="timeIn" />
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleRequestSort("bookTitle")}
+                    sx={sortableHeaderStyle}
+                  >
+                    <Tooltip title="Sort by book title">
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        Book Title <SortIndicator column="bookTitle" />
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleRequestSort("timeOut")}
+                    sx={sortableHeaderStyle}
+                  >
+                    <Tooltip title="Sort by time out">
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        Time Out <SortIndicator column="timeOut" />
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell 
+                    onClick={() => handleRequestSort("minutes")}
+                    sx={sortableHeaderStyle}
+                  >
+                    <Tooltip title="Sort by minutes">
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        Minutes <SortIndicator column="minutes" />
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {displayedHours.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      No library hours found matching your criteria
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  "--"
+                  <>
+                    {/* Display actual data rows */}
+                    {displayedHours.map((entry) => (
+                      <TableRow key={entry.id} sx={{ verticalAlign: "top" }}>
+                        <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
+                        <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
+                        <TableCell sx={{ verticalAlign: "top" }}>
+                          {entry.bookTitle ? (
+                            <Button
+                              onClick={() => handleBookTitleClick(entry)}
+                              color="primary"
+                              sx={{
+                                textTransform: "none",
+                                fontWeight: entry.summary ? "bold" : "normal",
+                                "&:hover": {
+                                  textDecoration: "underline",
+                                  backgroundColor: "transparent",
+                                },
+                                padding: "0",
+                                justifyContent: "flex-start",
+                              }}
+                            >
+                              {entry.bookTitle}
+                            </Button>
+                          ) : (
+                            "--"
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ verticalAlign: "top" }}>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
+                        <TableCell sx={{ verticalAlign: "top" }}>{calculateMinutes(entry.timeIn, entry.timeOut)}</TableCell>
+                      </TableRow>
+                    ))}
+                    
+                    {/* Only add empty rows when rowsPerPage is 5 (default) and we have fewer rows */}
+                    {rowsPerPage === 5 && displayedHours.length > 0 && displayedHours.length < 5 && 
+                      Array.from({ length: 5 - displayedHours.length }).map((_, index) => (
+                        <TableRow key={`empty-${index}`} sx={{ height: '53px' }}>
+                          <TableCell colSpan={5} sx={{ border: 'none' }}></TableCell>
+                        </TableRow>
+                      ))
+                    }
+                  </>
                 )}
-              </TableCell>
-              <TableCell sx={{ verticalAlign: "top" }}>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
-              <TableCell sx={{ verticalAlign: "top" }}>{calculateMinutes(entry.timeIn, entry.timeOut)}</TableCell>
-            </TableRow>
-          ))}
-          
-          {/* Only add empty rows when rowsPerPage is 5 (default) and we have fewer rows */}
-          {rowsPerPage === 5 && displayedHours.length > 0 && displayedHours.length < 5 && 
-            Array.from({ length: 5 - displayedHours.length }).map((_, index) => (
-              <TableRow key={`empty-${index}`} sx={{ height: '53px' }}>
-                <TableCell colSpan={5} sx={{ border: 'none' }}></TableCell>
-              </TableRow>
-            ))
-          }
-        </>
-      )}
-    </TableBody>
-  </Table>
+              </TableBody>
+            </Table>
 
-  <TablePagination
-    rowsPerPageOptions={[5, 10, 25]}
-    component="div"
-    count={filteredHours.length}
-    rowsPerPage={rowsPerPage}
-    page={page}
-    onPageChange={handleChangePage}
-    onRowsPerPageChange={handleChangeRowsPerPage}
-    sx={{
-      paddingTop: 2,
-      paddingBottom: 2,
-      backgroundColor: "transparent",
-      fontWeight: "bold",
-      display: "flex",
-      justifyContent: "center",
-      width: "100%",
-      position: "relative",
-    }}
-  />
-</TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={filteredHours.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              sx={{
+                paddingTop: 2,
+                paddingBottom: 2,
+                backgroundColor: "transparent",
+                fontWeight: "bold",
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                position: "relative",
+              }}
+            />
+          </TableContainer>
         </Box>
       </Box>
 
