@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Keep for potential future use
 import PersonIcon from "@mui/icons-material/Person";
 import {
  Box,
@@ -14,7 +15,7 @@ import {
  Grid,
 } from "@mui/material";
 import LoginNavBar from "./component/AppBar";
-import api from "../../utils/api"; // Changed from axios to the custom API utility
+import api from "../../utils/api";
 
 // Add this function to get the base URL depending on environment
 const getBaseURL = () => {
@@ -48,6 +49,7 @@ const formatPHDate = (date) => {
 };
 
 function InputIdLogin() {
+ const navigate = useNavigate(); // Keep for potential future use
  const [idInput, setIdInput] = useState("");
  const [studentDetails, setStudentDetails] = useState({
    name: "",
@@ -124,11 +126,13 @@ function InputIdLogin() {
        return updatedLogins.slice(0, 5);
      });
 
+     // Clear any previous errors
      setError(null);
      setIdInput(""); // Clear the input field
    } catch (err) {
      console.error("Error:", err);
-     setError(err.response?.data?.error || "Student not found. Please check the ID number.");
+     const errorMessage = err.response?.data?.error || "Student not found. Please check the ID number.";
+     setError(errorMessage);
    }
  };
 

@@ -297,11 +297,6 @@ const LibrarianManageBooks = () => {
     setOpenSearchDialog(false);
   };
   
-  // Function to handle row click and select a book
-  const handleRowClick = (book) => {
-    handleViewBook(book);
-  };
-  
   // Function to close search dialog
   const handleCloseSearchDialog = () => {
     setOpenSearchDialog(false);
@@ -699,11 +694,10 @@ const LibrarianManageBooks = () => {
                       <TableRow
                         key={book.id || index}
                         hover
-                        onClick={() => handleViewBook(book)}
                         sx={{
                           backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF',
                           '&:hover': { backgroundColor: '#FCEAEA' },
-                          cursor: 'pointer',
+                          cursor: 'default',
                         }}
                       >
                         <TableCell align="center">{book.title}</TableCell>
@@ -717,44 +711,39 @@ const LibrarianManageBooks = () => {
                         <TableCell align="center">{formatDate(book.dateRegistered)}</TableCell>
                         <TableCell align="center" sx={{ position: 'sticky', right: 0, backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF', zIndex: 2 }}>
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                            <Tooltip title="Edit">
-                              <Button
-                                size="small" 
-                                onClick={(e) => handleEditClick(e, book, 'book')}
-                                sx={{ 
+                            <Button
+                              variant="outlined"
+                              sx={{
+                                color: '#800000',
+                                backgroundColor: '#F5B400',
+                                border: '1px solid #FFEB3B',
+                                marginRight: 1,
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                  backgroundColor: '#FFEB3B',
                                   color: '#800000',
-                                  backgroundColor: '#F5B400',
-                                  border: '1px solid #FFEB3B',
-                                  minWidth: '32px',
-                                  padding: '4px',
-                                  '&:hover': { 
-                                    backgroundColor: '#FFEB3B',
-                                    color: '#800000',
-                                  }
-                                }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <Button
-                                size="small" 
-                                onClick={(e) => handleDeleteClick(e, book, 'book')}
-                                sx={{ 
-                                  color: '#FFEB3B',
-                                  backgroundColor: '#EE4242',
-                                  border: '1px solid #d32f2f',
-                                  minWidth: '32px',
-                                  padding: '4px',
-                                  '&:hover': { 
-                                    backgroundColor: '#b71c1c',
-                                    color: '#FFEB3B',
-                                  }
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </Button>
-                            </Tooltip>
+                                },
+                              }}
+                              onClick={(e) => handleEditClick(e, book, 'book')}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              sx={{
+                                color: '#fff',
+                                backgroundColor: '#8C383E',
+                                border: '1px solid #FFEB3B',
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                  backgroundColor: '#8B0000',
+                                  color: '#fff',
+                                },
+                              }}
+                              onClick={(e) => handleDeleteClick(e, book, 'book')}
+                            >
+                              Delete
+                            </Button>
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -797,11 +786,10 @@ const LibrarianManageBooks = () => {
                       <TableRow
                         key={periodical.id || index}
                         hover
-                        onClick={() => handleViewBook(periodical)}
                         sx={{
                           backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF',
                           '&:hover': { backgroundColor: '#FCEAEA' },
-                          cursor: 'pointer',
+                          cursor: 'default',
                         }}
                       >
                         <TableCell align="center">{periodical.accessionNumber}</TableCell>
@@ -811,44 +799,39 @@ const LibrarianManageBooks = () => {
                         <TableCell align="center">{periodical.copyright || 'N/A'}</TableCell>
                         <TableCell align="center" sx={{ position: 'sticky', right: 0, backgroundColor: index % 2 === 0 ? '#FFF8F8' : '#FFFFFF', zIndex: 2 }}>
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                            <Tooltip title="Edit">
-                              <Button 
-                                size="small" 
-                                onClick={(e) => handleEditClick(e, periodical, 'periodical')}
-                                sx={{ 
+                            <Button
+                              variant="outlined"
+                              sx={{
+                                color: '#800000',
+                                backgroundColor: '#F5B400',
+                                border: '1px solid #FFEB3B',
+                                marginRight: 1,
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                  backgroundColor: '#FFEB3B',
                                   color: '#800000',
-                                  backgroundColor: '#F5B400',
-                                  border: '1px solid #FFEB3B',
-                                  minWidth: '32px',
-                                  padding: '4px',
-                                  '&:hover': { 
-                                    backgroundColor: '#FFEB3B',
-                                    color: '#800000',
-                                  }
-                                }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <Button
-                                size="small" 
-                                onClick={(e) => handleDeleteClick(e, periodical, 'periodical')}
-                                sx={{ 
-                                  color: '#FFEB3B',
-                                  backgroundColor: '#EE4242',
-                                  border: '1px solid #d32f2f',
-                                  minWidth: '32px',
-                                  padding: '4px',
-                                  '&:hover': { 
-                                    backgroundColor: '#b71c1c',
-                                    color: '#FFEB3B',
-                                  }
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </Button>
-                            </Tooltip>
+                                },
+                              }}
+                              onClick={(e) => handleEditClick(e, periodical, 'periodical')}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              sx={{
+                                color: '#fff',
+                                backgroundColor: '#8C383E',
+                                border: '1px solid #FFEB3B',
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                  backgroundColor: '#8B0000',
+                                  color: '#fff',
+                                },
+                              }}
+                              onClick={(e) => handleDeleteClick(e, periodical, 'periodical')}
+                            >
+                              Delete
+                            </Button>
                           </Box>
                         </TableCell>
                       </TableRow>
