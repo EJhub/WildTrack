@@ -203,21 +203,6 @@ const ActivityLogView = ({ currentView, setCurrentView }) => {
               {filteredLogs.length} {filteredLogs.length === 1 ? 'result' : 'results'}
             </Typography>
           )}
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleRefresh}
-            sx={{
-              color: '#800000',
-              borderColor: '#800000',
-              '&:hover': {
-                backgroundColor: '#f5f5f5',
-                borderColor: '#800000',
-              }
-            }}
-          >
-            Refresh
-          </Button>
         </Box>
 
         {/* Right side - Toggle Buttons */}

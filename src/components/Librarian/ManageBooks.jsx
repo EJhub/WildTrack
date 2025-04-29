@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
 import BulkImportBooks from './components/BulkImportBooks';
 import BulkUpdateBooks from './components/BulkUpdateBooks';
 import BulkImportPeriodicals from './components/BulkImportPeriodicals';
 import BulkUpdatePeriodicals from './components/BulkUpdatePeriodicals';
+import BulkDeleteBooks from './components/BulkDeleteBooks';
+import BulkDeletePeriodicals from './components/BulkDeletePeriodicals';
 import AddBookModal from './components/AddandEditBookModal';
 import AddPeriodicalModal from './components/AddandEditPeriodicalModal';
 import {
@@ -67,6 +69,11 @@ const LibrarianManageBooks = () => {
   const [isBulkUpdateBooksOpen, setIsBulkUpdateBooksOpen] = useState(false);
   const [isBulkImportPeriodicalsOpen, setIsBulkImportPeriodicalsOpen] = useState(false);
   const [isBulkUpdatePeriodicalsOpen, setIsBulkUpdatePeriodicalsOpen] = useState(false);
+  
+  // Bulk delete states
+  const [isBulkDeleteBooksOpen, setIsBulkDeleteBooksOpen] = useState(false);
+  const [isBulkDeletePeriodicalsOpen, setIsBulkDeletePeriodicalsOpen] = useState(false);
+  
   const [bulkImportStep, setBulkImportStep] = useState(0);
   const [tableRefreshing, setTableRefreshing] = useState(false);
   
@@ -75,6 +82,8 @@ const LibrarianManageBooks = () => {
   const bulkUpdateBooksRef = useRef(null);
   const bulkImportPeriodicalsRef = useRef(null);
   const bulkUpdatePeriodicalsRef = useRef(null);
+  const bulkDeleteBooksRef = useRef(null);
+  const bulkDeletePeriodicalsRef = useRef(null);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -257,9 +266,34 @@ const LibrarianManageBooks = () => {
     }
   };
 
+  // Handle bulk delete modal opening based on active tab
+  const handleOpenBulkDelete = () => {
+    if (activeTab === 'books') {
+      setIsBulkDeleteBooksOpen(true);
+    } else {
+      setIsBulkDeletePeriodicalsOpen(true);
+    }
+  };
+
   // Handle bulk operations success
-  const handleOperationSuccess = () => {
-    toast.success(`Bulk operation completed successfully!`);
+  const handleOperationSuccess = (result) => {
+    if (result && result.type) {
+      // Handle bulk delete results
+      if (result.successful > 0) {
+        if (result.type === 'books') {
+          toast.success(`Successfully deleted ${result.successful} books!`);
+        } else if (result.type === 'periodicals') {
+          toast.success(`Successfully deleted ${result.successful} periodicals!`);
+        }
+      }
+      
+      if (result.failed > 0) {
+        toast.warning(`Failed to delete ${result.failed} items.`);
+      }
+    } else {
+      // Generic success message for other operations
+      toast.success(`Bulk operation completed successfully!`);
+    }
     refreshTableData();
   };
 
@@ -580,6 +614,26 @@ const LibrarianManageBooks = () => {
               >
                 <SystemUpdateAltIcon sx={{ marginRight: 1, fontSize: '16px' }} />
                 Bulk Update
+              </Button>
+              
+              {/* Bulk Delete Button */}
+              <Button
+                variant="contained"
+                onClick={handleOpenBulkDelete}
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 15px',
+                  fontSize: '11px', 
+                  borderRadius: '50px',
+                  color: '#FFEB3B',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                  backgroundColor: '#EE4242',
+                  border: '1px solid #d32f2f',
+                  '&:hover': { backgroundColor: '#b71c1c' },
+                }}
+              >
+                <DeleteIcon sx={{ marginRight: 1, fontSize: '16px' }} />
+                Bulk Delete
               </Button>
             </Box>
           </Box>
@@ -1209,6 +1263,22 @@ const LibrarianManageBooks = () => {
         onClose={() => setIsBulkUpdatePeriodicalsOpen(false)}
         onSuccess={handleOperationSuccess}
         ref={bulkUpdatePeriodicalsRef}
+      />
+      
+      {/* Bulk Delete Books Dialog */}
+      <BulkDeleteBooks
+        open={isBulkDeleteBooksOpen}
+        onClose={() => setIsBulkDeleteBooksOpen(false)}
+        onSuccess={handleOperationSuccess}
+        ref={bulkDeleteBooksRef}
+      />
+      
+      {/* Bulk Delete Periodicals Dialog */}
+      <BulkDeletePeriodicals
+        open={isBulkDeletePeriodicalsOpen}
+        onClose={() => setIsBulkDeletePeriodicalsOpen(false)}
+        onSuccess={handleOperationSuccess}
+        ref={bulkDeletePeriodicalsRef}
       />
     </>
   );

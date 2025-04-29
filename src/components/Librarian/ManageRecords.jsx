@@ -414,24 +414,18 @@ const LibrarianManageRecords = () => {
 
   // Improved Update Modal Component with local state to prevent refresh issues
   const UpdateModal = () => {
-    // Create local state for form values
+    // Create local state for form values - removed idNumber, date, minutes
     const [formValues, setFormValues] = useState({
-      idNumber: '',
-      date: '',
       timeIn: '',
-      timeOut: '',
-      minutes: 0
+      timeOut: ''
     });
     
-    // Set initial values when modal opens
+    // Set initial values when modal opens - only keeping timeIn and timeOut
     useEffect(() => {
       if (currentRecord) {
         setFormValues({
-          idNumber: currentRecord.idNumber || '',
-          date: currentRecord.latestLibraryHourDate || '',
           timeIn: currentRecord.latestTimeIn || '',
-          timeOut: currentRecord.latestTimeOut || '',
-          minutes: currentRecord.totalMinutes || 0
+          timeOut: currentRecord.latestTimeOut || ''
         });
       }
     }, [currentRecord]);
@@ -445,6 +439,7 @@ const LibrarianManageRecords = () => {
     };
     
     // Only update the actual record when submit button is clicked
+    // Preserve original values for fields we're not showing
     const submitChanges = (e) => {
       if (e) {
         e.preventDefault();
@@ -452,12 +447,11 @@ const LibrarianManageRecords = () => {
       }
       
       // Update the currentRecord with local form values
+      // Keeping the original idNumber, date and minutes values
       const updatedRecord = {
         ...currentRecord,
-        latestLibraryHourDate: formValues.date,
         latestTimeIn: formValues.timeIn,
-        latestTimeOut: formValues.timeOut,
-        totalMinutes: formValues.minutes
+        latestTimeOut: formValues.timeOut
       };
       
       // Call the existing update handler with the updated record
@@ -483,38 +477,36 @@ const LibrarianManageRecords = () => {
           disableEnforceFocus
           disableAutoFocus
           disableEscapeKeyDown
+          PaperProps={{
+            sx: {
+              borderRadius: '8px',
+              width: '400px',
+              maxWidth: '90vw'
+            }
+          }}
         >
-          <DialogTitle>Update Library Hours Record</DialogTitle>
-          <DialogContent>
+          <DialogTitle sx={{ 
+            backgroundColor: '#F8C400', 
+            color: 'black',
+            fontWeight: 'bold',
+            borderBottom: '1px solid #ddd'
+          }}>
+            Update Library Hours Record
+          </DialogTitle>
+          <DialogContent sx={{ padding: '24px 24px 16px' }}>
             {error && (
               <Typography color="error" sx={{ marginBottom: 2 }}>
                 {error}
               </Typography>
             )}
             
-            <TextField
-              label="ID Number"
-              value={formValues.idNumber}
-              fullWidth
-              disabled
-              sx={{ marginBottom: 2, marginTop: 2 }}
-              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-            />
+            <Typography variant="body2" sx={{ marginBottom: 2, color: '#666' }}>
+              Student ID: {currentRecord.idNumber} | {`${currentRecord.firstName || ''} ${currentRecord.lastName || ''}`}
+            </Typography>
             
-            <TextField
-              label="Date"
-              type="date"
-              value={formValues.date}
-              onChange={(e) => {
-                e.preventDefault();
-                handleInputChange('date', e.target.value);
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-              fullWidth
-              sx={{ marginBottom: 2 }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ autoComplete: "off" }}
-            />
+            <Typography variant="body2" sx={{ marginBottom: 3, color: '#666' }}>
+              Date: {currentRecord.latestLibraryHourDate}
+            </Typography>
             
             <TextField
               label="Time In"
@@ -525,7 +517,12 @@ const LibrarianManageRecords = () => {
               }}
               onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
               fullWidth
-              sx={{ marginBottom: 2 }}
+              sx={{ 
+                marginBottom: 3,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
+              }}
               inputProps={{ autoComplete: "off" }}
             />
             
@@ -538,31 +535,34 @@ const LibrarianManageRecords = () => {
               }}
               onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
               fullWidth
-              sx={{ marginBottom: 2 }}
-              inputProps={{ autoComplete: "off" }}
-            />
-            
-            <TextField
-              label="Total Minutes"
-              type="number"
-              value={formValues.minutes}
-              onChange={(e) => {
-                e.preventDefault();
-                handleInputChange('minutes', parseInt(e.target.value, 10) || 0);
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
               }}
-              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-              fullWidth
               inputProps={{ autoComplete: "off" }}
             />
           </DialogContent>
               
-          <DialogActions>
+          <DialogActions sx={{ padding: '16px 24px 24px', justifyContent: 'center' }}>
             <Button 
               onClick={(e) => {
                 e.preventDefault();
                 setOpen(false);
               }}
               type="button"
+              variant="outlined"
+              sx={{
+                borderRadius: '8px',
+                color: 'black',
+                borderColor: '#ccc',
+                fontWeight: 'medium',
+                minWidth: '100px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                  borderColor: '#aaa',
+                },
+              }}
             >
               Cancel
             </Button>
@@ -571,6 +571,17 @@ const LibrarianManageRecords = () => {
               onClick={submitChanges}
               color="primary"
               type="button"
+              variant="contained"
+              sx={{
+                borderRadius: '8px',
+                backgroundColor: '#FFDF16',
+                color: 'black',
+                fontWeight: 'bold',
+                minWidth: '100px',
+                '&:hover': {
+                  backgroundColor: '#FFEB3B',
+                },
+              }}
             >
               Update
             </Button>
@@ -877,7 +888,7 @@ const LibrarianManageRecords = () => {
                     Time-Out
                   </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    Completed Minutes
+                    Total Minutes Completed
                   </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', borderTopRightRadius: '5px', color: 'black', backgroundColor: '#F8C400' }}>
                     Action

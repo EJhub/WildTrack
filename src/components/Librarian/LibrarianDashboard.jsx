@@ -27,6 +27,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 // Component Imports
 import NavBar from './components/NavBar';
 import SideBar from './components/SideBar';
+import ActiveStudentsDialog from './components/ActiveStudentsDialog';
 
 const LibrarianDashboard = () => {
   // States
@@ -83,6 +84,9 @@ const LibrarianDashboard = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  
+  // Active Students Dialog State
+  const [activeStudentsDialogOpen, setActiveStudentsDialogOpen] = useState(false);
 
   // Function to sort grade levels in the correct order
   const sortGradeLevels = (grades) => {
@@ -325,6 +329,15 @@ const LibrarianDashboard = () => {
     setDialogOpen(false);
   };
   
+  // Active Students Dialog handlers
+  const handleOpenActiveStudentsDialog = () => {
+    setActiveStudentsDialogOpen(true);
+  };
+  
+  const handleCloseActiveStudentsDialog = () => {
+    setActiveStudentsDialogOpen(false);
+  };
+  
   const handleConfirmAction = async () => {
     if (!currentRequirement || !actionType) return;
     
@@ -367,10 +380,11 @@ const LibrarianDashboard = () => {
     setSnackbarOpen(false);
   };
 
-  // Format date for display
+  // Format date for display - FIXED to handle timezone correctly
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
+    // Add time component to ensure correct date parsing
+    const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -623,7 +637,14 @@ const LibrarianDashboard = () => {
                   boxShadow: 3,
                   backgroundColor: "rgba(255, 255, 255, 0.9)",
                   border: '2px solid #8C383E',
+                  cursor: 'pointer', // Add cursor pointer to indicate it's clickable
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    transform: 'scale(1.02)',
+                    boxShadow: 4
+                  }
                 }}
+                onClick={handleOpenActiveStudentsDialog} // Add click handler
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, }}>
                   <AccessTimeIcon sx={{ color: '#8C383E', fontSize: 40, mr: 2 }} />
@@ -1257,12 +1278,12 @@ const LibrarianDashboard = () => {
             variant="contained"
             disabled={actionInProgress}
             sx={{ 
-              backgroundColor: '#FFD700', 
-              color: '#000000', 
+              backgroundColor: '#FF0000', 
+              color: '#ffffff', 
               fontWeight: 'bold',
               width: '80px',
               borderRadius: '15px',
-              '&:hover': { backgroundColor: '#FFC107' }
+              '&:hover': { backgroundColor: '#db0000' }
             }}
           >
             No
@@ -1288,6 +1309,12 @@ const LibrarianDashboard = () => {
           </Button>
         </Box>
       </Dialog>
+      
+      {/* Active Students Dialog */}
+      <ActiveStudentsDialog 
+        open={activeStudentsDialogOpen} 
+        onClose={handleCloseActiveStudentsDialog}
+      />
       
       {/* Snackbar for notifications */}
       <Snackbar
