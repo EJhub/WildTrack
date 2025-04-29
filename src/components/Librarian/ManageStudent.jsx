@@ -827,13 +827,13 @@ const ManageStudent = () => {
                               <Button
                                 variant="outlined"
                                 sx={{
-                                  color: '#800000',
-                                  backgroundColor: '#F5B400',
+                                  color: '#fff',
+                                  backgroundColor: '#8C383E',
                                   border: '1px solid #FFEB3B',
                                   fontWeight: 'bold',
                                   '&:hover': {
-                                    backgroundColor: '#FFEB3B',
-                                    color: '#800000',
+                                    backgroundColor: '#8B0000',
+                                    color: '#fff',
                                   },
                                 }}
                                 onClick={() => {

@@ -360,21 +360,21 @@ const Journal = () => {
         console.error("User information not available.");
         return;
       }
-
+  
       const encodedIdNumber = encodeURIComponent(user.idNumber);
       
       // Set token in API utility headers
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
-
+  
       let response;
       
       // Handle different types of journal entries
-      if (journal.activity === "Read Book" && journal.id) {
-        // For book reading
+      if (journal.activity === "Read Book" && journal.bookId) {
+        // For book reading - FIXED: using bookId instead of id
         response = await api.put(
-          `/journals/${journal.id}/add-to-journal/${encodedIdNumber}`,
+          `/journals/${journal.bookId}/add-to-journal/${encodedIdNumber}`,
           {
             dateRead: journal.dateRead,
             rating: journal.rating,
@@ -382,7 +382,7 @@ const Journal = () => {
           }
         );
       } else if (journal.activity === "Used Computer") {
-        // For computer usage - removed bookTitle field
+        // For computer usage
         response = await api.post(
           `/journals/computer-usage/${encodedIdNumber}`,
           {
@@ -392,7 +392,7 @@ const Journal = () => {
           }
         );
       } else if (journal.activity === "Read Periodical") {
-        // For periodical reading - removed bookTitle field
+        // For periodical reading
         response = await api.post(
           `/journals/periodical/${encodedIdNumber}`,
           {
@@ -405,7 +405,7 @@ const Journal = () => {
         console.error("Invalid journal entry type");
         return;
       }
-  
+    
       if (response.status === 200) {
         // Show success toast notification
         toast.success("Journal entry added successfully!");

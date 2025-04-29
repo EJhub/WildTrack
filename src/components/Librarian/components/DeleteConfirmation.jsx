@@ -66,9 +66,9 @@ const DeleteConfirmation = ({ open, onClose, onConfirm }) => {
           variant="contained"
           onClick={onConfirm}
           sx={{
-            backgroundColor: '#CD5C5C',
+            backgroundColor: '#FF0000',
             color: '#FFF',
-            '&:hover': { backgroundColor: '#B22222' },
+            '&:hover': { backgroundColor: '#db0000' },
           }}
         >
           Yes

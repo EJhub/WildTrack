@@ -1349,7 +1349,8 @@ const TeacherDashboard = () => {
                         {row.minutes}
                       </TableCell>
                       <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {new Date(row.deadline).toLocaleDateString()}
+                        {/* FIX: Add 'T00:00:00' to ensure proper date parsing */}
+                        {new Date(row.deadline + 'T00:00:00').toLocaleDateString()}
                       </TableCell>
                       <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
                         {getStatusChip(row.approvalStatus)}

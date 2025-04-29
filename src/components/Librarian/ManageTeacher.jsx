@@ -457,7 +457,7 @@ const LibrarianManageTeacher = () => {
                                 fontWeight: 'bold',
                                 '&:hover': {
                                   backgroundColor: '#8B0000',
-                                  color: '#800000',
+                                  color: '#fff',
                                 },
                               }}
                             >

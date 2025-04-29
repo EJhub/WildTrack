@@ -31,7 +31,7 @@ const LibrarianSideBar = () => {
  
   const getListItemStyles = (path) => ({
     paddingY: isSmallScreen ? '0.5rem' : '1.5rem',
-    color: '#000',
+    color: '#fff', // Changed from '#000' to '#fff' to make text white
     textAlign: 'center',
     fontWeight: location.pathname === path ? 'bold' : 'normal',
     position: 'relative',
@@ -135,6 +135,7 @@ const LibrarianSideBar = () => {
                   align: 'center',
                   fontWeight:
                     location.pathname === '/librarian/Home' ? 'bold' : 'normal',
+                  color: '#fff', // Added explicit white color to the text
                 }}
               />
             </ListItem>
@@ -154,6 +155,7 @@ const LibrarianSideBar = () => {
                     '/librarian/LibrarianCompletedHours'
                       ? 'bold'
                       : 'normal',
+                  color: '#fff', // Added explicit white color to the text
                 }}
               />
             </ListItem>
@@ -172,6 +174,7 @@ const LibrarianSideBar = () => {
                     location.pathname === '/librarian/LibrarianAnalytics'
                       ? 'bold'
                       : 'normal',
+                  color: '#fff', // Added explicit white color to the text
                 }}
               />
             </ListItem>
@@ -201,7 +204,10 @@ const LibrarianSideBar = () => {
                 >
                   <ListItemText 
                     primary={isSmallScreen ? 'S' : 'Student'} 
-                    primaryTypographyProps={{align: 'center'}}
+                    primaryTypographyProps={{
+                      align: 'center',
+                      color: '#fff', // Added explicit white color to the text
+                    }}
                   />
                 </ListItem>
   
@@ -213,7 +219,10 @@ const LibrarianSideBar = () => {
                 >
                   <ListItemText 
                     primary={isSmallScreen ? 'T' : 'Teacher'} 
-                    primaryTypographyProps={{align: 'center'}}
+                    primaryTypographyProps={{
+                      align: 'center',
+                      color: '#fff', // Added explicit white color to the text
+                    }}
                   />
                 </ListItem>
   
@@ -225,7 +234,10 @@ const LibrarianSideBar = () => {
                 >
                   <ListItemText 
                     primary={isSmallScreen ? 'R' : 'Records'} 
-                    primaryTypographyProps={{align: 'center'}}
+                    primaryTypographyProps={{
+                      align: 'center',
+                      color: '#fff', // Added explicit white color to the text
+                    }}
                   />
                 </ListItem>
   
@@ -237,7 +249,10 @@ const LibrarianSideBar = () => {
                 >
                   <ListItemText 
                     primary={isSmallScreen ? 'B' : 'Books'} 
-                    primaryTypographyProps={{align: 'center'}}
+                    primaryTypographyProps={{
+                      align: 'center',
+                      color: '#fff', // Added explicit white color to the text
+                    }}
                   />
                 </ListItem>
   
@@ -249,7 +264,10 @@ const LibrarianSideBar = () => {
                 >
                   <ListItemText 
                     primary={isSmallScreen ? 'G' : 'Genre'} 
-                    primaryTypographyProps={{align: 'center'}}
+                    primaryTypographyProps={{
+                      align: 'center',
+                      color: '#fff', // Added explicit white color to the text
+                    }}
                   />
                 </ListItem>
               </>

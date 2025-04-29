@@ -10,6 +10,7 @@ import {
   Snackbar,
   Avatar,
   Modal,
+  Grid
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -40,7 +41,9 @@ const Settings = ({ open, onClose }) => {
   
   // Form states
   const [profileData, setProfileData] = useState({
-    name: '',
+    firstName: '',
+    middleName: '',
+    lastName: '',
     employeeId: '',
     position: '',
     department: '',
@@ -70,7 +73,9 @@ const Settings = ({ open, onClose }) => {
   useEffect(() => {
     if (user) {
       setProfileData({
-        name: `${user.firstName || ''} ${user.lastName || ''}`,
+        firstName: user.firstName || '',
+        middleName: user.middleName || '',
+        lastName: user.lastName || '',
         employeeId: user.idNumber || '',
         position: user.position || 'Elementary School Librarian',
         department: user.department || 'BasicEd - Elementary School',
@@ -88,7 +93,9 @@ const Settings = ({ open, onClose }) => {
           const userData = response.data;
           
           setProfileData({
-            name: `${userData.firstName || ''} ${userData.lastName || ''}`,
+            firstName: userData.firstName || '',
+            middleName: userData.middleName || '',
+            lastName: userData.lastName || '',
             employeeId: userData.idNumber || '',
             position: userData.position || '',
             department: userData.department || '',
@@ -232,15 +239,11 @@ const Settings = ({ open, onClose }) => {
   // The updated profile update function that uses the librarian API
   const handleProfileUpdate = async () => {
     try {
-      // Parse the full name to get first and last name
-      const nameParts = profileData.name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-      
       // Build the request body with all required User fields
       const userUpdateData = {
-        firstName: firstName,
-        lastName: lastName,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        middleName: profileData.middleName,
         idNumber: profileData.employeeId,
         role: 'Librarian', // This is required for the librarian controller validation
         position: profileData.position,
@@ -317,15 +320,17 @@ const Settings = ({ open, onClose }) => {
   };
   
   // Handle closing the RegisterLibrarian dialog
-  const handleCloseRegisterModal = () => {
+  const handleCloseRegisterModal = (success = false) => {
     setRegisterModalOpen(false);
     
-    // Optionally show a success message
-    setSnackbar({
-      open: true,
-      message: 'Librarian registered successfully!',
-      severity: 'success'
-    });
+    // Only show success message if registration was successful
+    if (success) {
+      setSnackbar({
+        open: true,
+        message: 'Librarian registered successfully!',
+        severity: 'success'
+      });
+    }
   };
   
   const handleCloseSnackbar = () => {
@@ -436,7 +441,7 @@ const Settings = ({ open, onClose }) => {
                 {/* Profile Picture Box - Updated with Avatar */}
                 <Box sx={{ mr: 3, width: '170px', height: '170px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <Avatar
-                    alt={profileData.name}
+                    alt={`${profileData.firstName} ${profileData.lastName}`}
                     src={profileData.profilePictureUrl ? 
                       `${getBaseURL()}${profileData.profilePictureUrl}` : 
                       "/default-avatar.png"
@@ -452,16 +457,41 @@ const Settings = ({ open, onClose }) => {
                   />
                 </Box>
                 <Box sx={{ flex: 1 }}>
+                  {/* Replaced single name field with separate first, middle, last name fields */}
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" sx={{ mb: 0.5 }}>Name:</Typography>
-                    <TextField
-                      fullWidth
-                      name="name"
-                      value={profileData.name}
-                      onChange={handleProfileChange}
-                      size="small"
-                     
-                    />
+                    <Grid container spacing={2}>
+                      <Grid item xs={4}>
+                        <TextField
+                          fullWidth
+                          name="firstName"
+                          placeholder="First Name"
+                          value={profileData.firstName}
+                          onChange={handleProfileChange}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={4}>
+                        <TextField
+                          fullWidth
+                          name="middleName"
+                          placeholder="Middle Name"
+                          value={profileData.middleName}
+                          onChange={handleProfileChange}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={4}>
+                        <TextField
+                          fullWidth
+                          name="lastName"
+                          placeholder="Last Name"
+                          value={profileData.lastName}
+                          onChange={handleProfileChange}
+                          size="small"
+                        />
+                      </Grid>
+                    </Grid>
                   </Box>
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" sx={{ mb: 0.5 }}>Employee ID Number:</Typography>
@@ -471,7 +501,6 @@ const Settings = ({ open, onClose }) => {
                       value={profileData.employeeId}
                       onChange={handleProfileChange}
                       size="small"
-                      
                     />
                   </Box>
                   <Box sx={{ mb: 2 }}>
@@ -642,7 +671,7 @@ const Settings = ({ open, onClose }) => {
         onClose={() => setConfirmDialogOpen(false)}
         onConfirm={handleProfileUpdate}
         title="Confirm Update"
-        message="Are you sure you want to update your position and department information?"
+        message="Are you sure you want to update your profile information?"
       />
       
       {/* Confirmation Dialog for Profile Picture Removal */}
