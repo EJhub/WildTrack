@@ -42,6 +42,12 @@ const AddandEditBookModal = ({ open, onClose, onSuccess, book = null, activeGenr
     genre: '',
     dateRegistered: new Date().toISOString()
   });
+  
+  // Get current year for validation
+  const currentYear = new Date().getFullYear();
+  
+  // Generate year options from 1800 to current year
+  const yearOptions = Array.from({ length: currentYear - 1799 }, (_, i) => currentYear - i);
 
   useEffect(() => {
     // When book prop changes, update the form fields
@@ -193,7 +199,7 @@ const AddandEditBookModal = ({ open, onClose, onSuccess, book = null, activeGenr
         }}
       >
         <BookIcon sx={{ mr: 1 }} />
-        {isEditing ? 'Edit Book Details' : 'Add New Book'}
+        {isEditing ? 'Update Book Details' : 'Add New Book'}
       </DialogTitle>
       
       <DialogContent sx={{ pt: 3, pb: 3 }}>
@@ -401,20 +407,9 @@ const AddandEditBookModal = ({ open, onClose, onSuccess, book = null, activeGenr
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <TextField
-                label="Copyright Year"
-                name="copyright"
-                value={formFields.copyright}
-                onChange={handleInputChange}
-                fullWidth
+              <FormControl 
+                fullWidth 
                 variant="outlined"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CopyrightIcon sx={{ color: '#800000' }} />
-                    </InputAdornment>
-                  ),
-                }}
                 sx={{ 
                   mb: 1,
                   '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
@@ -424,7 +419,34 @@ const AddandEditBookModal = ({ open, onClose, onSuccess, book = null, activeGenr
                     color: '#800000',
                   }
                 }}
-              />
+              >
+                <InputLabel>Copyright Year</InputLabel>
+                <Select
+                  name="copyright"
+                  value={formFields.copyright}
+                  onChange={handleInputChange}
+                  label="Copyright Year"
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <CopyrightIcon sx={{ color: '#800000', ml: 1 }} />
+                    </InputAdornment>
+                  }
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300
+                      }
+                    }
+                  }}
+                >
+                  <MenuItem value=""><em>None</em></MenuItem>
+                  {yearOptions.map(year => (
+                    <MenuItem key={year} value={year.toString()}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
         </Box>

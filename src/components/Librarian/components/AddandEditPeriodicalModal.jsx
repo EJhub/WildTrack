@@ -11,7 +11,11 @@ import {
   Box,
   Divider,
   Paper,
-  InputAdornment
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -31,6 +35,12 @@ const AddandEditPeriodicalModal = ({ open, onClose, onSuccess, periodical = null
     placeOfPublication: '',
     copyright: ''
   });
+  
+  // Get current year for validation
+  const currentYear = new Date().getFullYear();
+  
+  // Generate year options from 1800 to current year
+  const yearOptions = Array.from({ length: currentYear - 1799 }, (_, i) => currentYear - i);
 
   useEffect(() => {
     // When periodical prop changes, update the form fields
@@ -153,7 +163,7 @@ const AddandEditPeriodicalModal = ({ open, onClose, onSuccess, periodical = null
         }}
       >
         <BookIcon sx={{ mr: 1 }} />
-        {isEditing ? 'Edit Periodical Details' : 'Add New Periodical'}
+        {isEditing ? 'Update Periodical Details' : 'Add New Periodical'}
       </DialogTitle>
       
       <DialogContent sx={{ pt: 3, pb: 3 }}>
@@ -216,7 +226,7 @@ const AddandEditPeriodicalModal = ({ open, onClose, onSuccess, periodical = null
               />
             </Grid>
             
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 label="Publisher"
                 name="publisher"
@@ -243,6 +253,49 @@ const AddandEditPeriodicalModal = ({ open, onClose, onSuccess, periodical = null
               />
             </Grid>
             
+            <Grid item xs={12} sm={6}>
+              <FormControl 
+                fullWidth 
+                variant="outlined"
+                sx={{ 
+                  mb: 1,
+                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#800000',
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#800000',
+                  }
+                }}
+              >
+                <InputLabel>Copyright Year</InputLabel>
+                <Select
+                  name="copyright"
+                  value={formFields.copyright}
+                  onChange={handleInputChange}
+                  label="Copyright Year"
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <CopyrightIcon sx={{ color: '#800000', ml: 1 }} />
+                    </InputAdornment>
+                  }
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300
+                      }
+                    }
+                  }}
+                >
+                  <MenuItem value=""><em>None</em></MenuItem>
+                  {yearOptions.map(year => (
+                    <MenuItem key={year} value={year.toString()}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
             <Grid item xs={12}>
               <TextField
                 label="Place of Publication"
@@ -255,33 +308,6 @@ const AddandEditPeriodicalModal = ({ open, onClose, onSuccess, periodical = null
                   startAdornment: (
                     <InputAdornment position="start">
                       <LocationOnIcon sx={{ color: '#800000' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ 
-                  mb: 1,
-                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#800000',
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#800000',
-                  }
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                label="Copyright Year"
-                name="copyright"
-                value={formFields.copyright}
-                onChange={handleInputChange}
-                fullWidth
-                variant="outlined"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CopyrightIcon sx={{ color: '#800000' }} />
                     </InputAdornment>
                   ),
                 }}

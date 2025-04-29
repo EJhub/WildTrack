@@ -33,7 +33,7 @@ import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import AddBook from "./components/Addbook";
 import { AuthContext } from '../AuthContext';
-import api from "../../utils/api"; // Import the API utility
+import api from "../../utils/api"; 
 
 const StudentLibraryHours = () => {
   const [libraryHours, setLibraryHours] = useState([]);
@@ -55,7 +55,7 @@ const StudentLibraryHours = () => {
   const [orderBy, setOrderBy] = useState("date"); // Default sort by date
   const [order, setOrder] = useState("asc"); // Default sort direction (ascending)
   
-  // Progress summary state - Modified to include current requirement specific data
+  // Progress summary state
   const [progressSummary, setProgressSummary] = useState({
     totalMinutesRequired: 0,
     totalMinutesRendered: 0,
@@ -169,7 +169,7 @@ const StudentLibraryHours = () => {
     });
   };
 
-  // MODIFIED: Fetch progress data function to get current requirement details
+  // Fetch progress data function
   const fetchProgressData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -178,7 +178,6 @@ const StudentLibraryHours = () => {
         return;
       }
       
-      // Check for new requirements first, even if all existing ones are completed
       await api.get(
         `/library-progress/check-new-requirements/${user.idNumber}`,
         {
@@ -188,7 +187,6 @@ const StudentLibraryHours = () => {
         }
       );
       
-      // Get summary data using auto-init endpoint
       const summaryResponse = await api.get(
         `/library-progress/summary-with-init/${user.idNumber}`,
         {
@@ -198,7 +196,6 @@ const StudentLibraryHours = () => {
         }
       );
       
-      // Fetch detailed progress to get current subject and requirement details
       const progressResponse = await api.get(
         `/library-progress/${user.idNumber}`,
         {
@@ -253,7 +250,6 @@ const StudentLibraryHours = () => {
       // Fetch library hours using user ID from AuthContext
       const fetchLibraryHours = async () => {
         try {
-          // Use user.idNumber from AuthContext instead of URL params
           const idNumber = user.idNumber;
           const token = localStorage.getItem("token");
 
@@ -272,7 +268,6 @@ const StudentLibraryHours = () => {
             }
           );
           setLibraryHours(response.data);
-          // Filtering and sorting will be applied by useEffect
         } catch (error) {
           console.error("Error fetching library hours:", error);
           toast.error("Failed to fetch library hours.");
@@ -304,6 +299,7 @@ const StudentLibraryHours = () => {
     setSelectedEntry(null);
   };
 
+  // Updated handleSubmit function to handle requiresBookAssignment flag
   const handleSubmit = async (bookDetails) => {
     if (!bookDetails || !bookDetails.id) {
       toast.error("Failed to assign book. Invalid data.");
@@ -313,8 +309,14 @@ const StudentLibraryHours = () => {
     try {
       const token = localStorage.getItem("token");
   
-      // Find the first entry with an empty bookTitle
-      const emptyEntry = libraryHours.find((entry) => !entry.bookTitle);
+      // First, look for any session that requires book assignment
+      const sessionNeedingBook = libraryHours.find(
+        (entry) => entry.requiresBookAssignment === true
+      );
+      
+      // If none found, then look for any entry without a book title
+      const emptyEntry = sessionNeedingBook || 
+        libraryHours.find((entry) => !entry.bookTitle);
   
       if (!emptyEntry) {
         toast.error("No available entry to assign the book.");
@@ -332,10 +334,14 @@ const StudentLibraryHours = () => {
         }
       );
   
-      // Update the book title in the corresponding entry
+      // Update the book title and clear requiresBookAssignment flag in the local state
       const updatedLibraryHours = libraryHours.map((entry) =>
         entry.id === emptyEntry.id
-          ? { ...entry, bookTitle: bookDetails.title }
+          ? { 
+              ...entry, 
+              bookTitle: bookDetails.title,
+              requiresBookAssignment: false // Clear the flag
+            }
           : entry
       );
       setLibraryHours(updatedLibraryHours);
@@ -346,7 +352,8 @@ const StudentLibraryHours = () => {
           await api.put(
             `/library-hours/${emptyEntry.id}/add-summary`,
             {
-              summary: bookDetails.summary
+              summary: bookDetails.summary,
+              requiresBookAssignment: false // Explicitly set flag to false
             },
             {
               headers: {
@@ -366,6 +373,23 @@ const StudentLibraryHours = () => {
         } catch (summaryError) {
           console.error("Error adding summary to library hours:", summaryError);
           toast.warning(`Book assigned but couldn't add summary: ${summaryError.message}`);
+        }
+      } else {
+        // If no summary, make a separate call to update the requiresBookAssignment flag
+        try {
+          await api.put(
+            `/library-hours/${emptyEntry.id}/update-flags`,
+            {
+              requiresBookAssignment: false
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        } catch (updateError) {
+          console.error("Error updating flags:", updateError);
         }
       }
       
@@ -395,8 +419,6 @@ const StudentLibraryHours = () => {
           );
           
           let successMessage = `Book "${bookDetails.title}" assigned successfully and added to journal!`;
-         
-          
           toast.success(successMessage);
         } catch (journalError) {
           console.error("Error adding to journal:", journalError);
@@ -488,7 +510,7 @@ const StudentLibraryHours = () => {
           entry.bookTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           new Date(entry.timeIn).toLocaleDateString().includes(searchQuery) ||
           new Date(entry.timeIn).toLocaleTimeString().includes(searchQuery) ||
-          entry.summary?.toLowerCase().includes(searchQuery.toLowerCase()) // Keep search in summary
+          entry.summary?.toLowerCase().includes(searchQuery.toLowerCase()) 
       );
     }
     
@@ -533,7 +555,7 @@ const StudentLibraryHours = () => {
         entry.bookTitle?.toLowerCase().includes(query) ||
         new Date(entry.timeIn).toLocaleDateString().includes(query) ||
         new Date(entry.timeIn).toLocaleTimeString().includes(query) ||
-        entry.summary?.toLowerCase().includes(query) // Keep search in summary
+        entry.summary?.toLowerCase().includes(query)
     );
     
     // Apply current sort to search results
@@ -681,7 +703,7 @@ const StudentLibraryHours = () => {
               />
             </Box>
             
-            {/* Summary Information - MODIFIED to show current requirement details */}
+            {/* Summary Information */}
             <Box sx={{ 
               display: "flex", 
               gap: 2,
@@ -748,7 +770,7 @@ const StudentLibraryHours = () => {
             </Box>
           </Box>
 
-          {/* Filters and Insert Book Button */}
+          {/* Filters and Book Read Button */}
           <Box
             sx={{
               display: "flex",
@@ -820,7 +842,7 @@ const StudentLibraryHours = () => {
               </Button>
             </Box>
 
-            {/* Insert Book Button */}
+            {/* Book Read Button */}
             <Button
               variant="contained"
               onClick={handleClickOpen}
@@ -911,7 +933,11 @@ const StudentLibraryHours = () => {
                   <>
                     {/* Display actual data rows */}
                     {displayedHours.map((entry) => (
-                      <TableRow key={entry.id} sx={{ verticalAlign: "top" }}>
+                      <TableRow key={entry.id} sx={{ 
+                        verticalAlign: "top",
+                        // Highlight sessions that need book assignment
+                        backgroundColor: entry.requiresBookAssignment ? "rgba(255, 0, 0, 0.05)" : "inherit"
+                      }}>
                         <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleDateString()}</TableCell>
                         <TableCell sx={{ verticalAlign: "top" }}>{new Date(entry.timeIn).toLocaleTimeString()}</TableCell>
                         <TableCell sx={{ verticalAlign: "top" }}>
@@ -933,7 +959,13 @@ const StudentLibraryHours = () => {
                               {entry.bookTitle}
                             </Button>
                           ) : (
-                            "--"
+                            entry.requiresBookAssignment ? (
+                              <Typography color="error">
+                                -- (Book Required) --
+                              </Typography>
+                            ) : (
+                              "--"
+                            )
                           )}
                         </TableCell>
                         <TableCell sx={{ verticalAlign: "top" }}>{entry.timeOut ? new Date(entry.timeOut).toLocaleTimeString() : "--"}</TableCell>
