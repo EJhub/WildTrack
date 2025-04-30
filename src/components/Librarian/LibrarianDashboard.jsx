@@ -558,7 +558,7 @@ const LibrarianDashboard = () => {
 
   // Get chart titles with filter information
   const getParticipantsChartTitle = () => {
-    let title = "Active Library Hours Participants";
+    let title = "Library Hours Participants";
     
     if (appliedFilters.academicYear) {
       title += ` - AY ${appliedFilters.academicYear}`;
