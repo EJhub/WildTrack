@@ -25,7 +25,8 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
     gradeLevel: '',
     subject: 'English',
     quarter: '',
-    deadline: null
+    deadline: null, // Changed from separate month, day, year to a single date
+    task: '' // Added task field
   });
 
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
 
   // Set defaults when component mounts or when defaults change
   useEffect(() => {
-    // Initialize with next month's date for deadline
+    // Initialize with next month as default deadline
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     
@@ -61,7 +62,8 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
         // Only set default grade if there's exactly one assigned grade
         gradeLevel: assignedGradeLevels.length === 1 ? assignedGradeLevels[0] : prev.gradeLevel,
         subject: defaultSubject || 'English',
-        deadline: nextMonth
+        deadline: nextMonth, // Set as Date object
+        task: '' // Reset task field when reopening
       }));
     }
   }, [defaultSubject, open, assignedGradeLevels]);
@@ -103,8 +105,12 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleDateChange = (newDate) => {
+    setFormData({ ...formData, deadline: newDate });
+  };
+
   const validateForm = () => {
-    const { minutes, gradeLevel, quarter, deadline } = formData;
+    const { minutes, gradeLevel, quarter, deadline, task } = formData;
     if (!minutes || !gradeLevel || !quarter || !deadline) {
       toast.error('Please fill in all required fields');
       return false;
@@ -125,15 +131,18 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
     setLoading(true);
     try {
       // Format the date for the backend
-      const formattedDeadline = formData.deadline.toISOString().split('T')[0];
+      const formattedDeadline = formData.deadline 
+        ? formData.deadline.toISOString().split('T')[0] 
+        : null;
 
-      // Create the payload with the formatted date
+      // Create the payload with the formatted date and task
       const payload = {
         minutes: formData.minutes,
         gradeLevel: formData.gradeLevel,
         subject: formData.subject,
         quarter: formData.quarter,
         deadline: formattedDeadline,
+        task: formData.task, // Include task in payload
         createdById: user?.id // Add teacher's ID to track who created this requirement
       };
 
@@ -149,7 +158,8 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
         gradeLevel: assignedGradeLevels.length === 1 ? assignedGradeLevels[0] : '',
         subject: defaultSubject || 'English',
         quarter: '',
-        deadline: nextMonth
+        deadline: nextMonth,
+        task: '' // Reset task
       });
     } catch (error) {
       console.error('Error setting library hours:', error);
@@ -164,7 +174,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
       <Dialog
         open={open}
         onClose={handleClose}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
         sx={{
           '& .MuiPaper-root': {
@@ -221,7 +231,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
                 onChange={handleInputChange}
                 sx={{ backgroundColor: '#fff', borderRadius: '10px', width: '200px' }}
                 required
-                disabled={assignedGradeLevels.length === 1} // Disable only if exactly one grade is assigned
+                disabled={assignedGradeLevels.length === 1}
               >
                 <MenuItem value="">Select Grade</MenuItem>
                 {gradeOptions.map((grade) => (
@@ -288,6 +298,31 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
               )}
             </Box>
 
+            {/* Task Field */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+              <Typography sx={{ color: '#000', textAlign: 'left' }}>
+                Task Description:
+              </Typography>
+              <TextField
+                name="task"
+                multiline
+                rows={3}
+                variant="outlined"
+                value={formData.task}
+                onChange={handleInputChange}
+                placeholder="Describe the reading task requirements..."
+                sx={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '10px', 
+                  width: '100%' 
+                }}
+                inputProps={{ maxLength: 1000 }}
+              />
+              <Typography variant="caption" sx={{ color: '#000', textAlign: 'right' }}>
+                {formData.task.length}/1000 characters
+              </Typography>
+            </Box>
+
             {/* Deadline Field */}
             <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
               <Typography sx={{ color: '#000', width: '100px', textAlign: 'left' }}>
@@ -296,9 +331,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
               <DatePicker
                 label="Select Deadline"
                 value={formData.deadline}
-                onChange={(newValue) => {
-                  setFormData(prev => ({ ...prev, deadline: newValue }));
-                }}
+                onChange={handleDateChange}
                 renderInput={(params) => (
                   <TextField 
                     {...params} 
@@ -309,7 +342,7 @@ const SetLibraryHours = ({ open, handleClose, handleSubmit, defaultGradeLevel, d
                     }} 
                   />
                 )}
-                minDate={new Date()}
+                minDate={new Date()} // Prevent selecting past dates
               />
             </Box>
           </Box>

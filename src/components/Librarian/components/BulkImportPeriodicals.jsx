@@ -60,21 +60,21 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
   }));
   
   const generateTemplate = () => {
-    // Create sample data for periodicals
+    // Create sample data for periodicals - all fields are required now
     const data = [
       {
         'Title*': 'Scientific American',
         'Accession Number*': 'PER001',
-        'Place of Publication': 'New York',
-        'Publisher': 'Springer Nature',
-        'Copyright': '2023'
+        'Place of Publication*': 'New York',
+        'Publisher*': 'Springer Nature',
+        'Copyright*': '2023'
       },
       {
         'Title*': 'National Geographic',
         'Accession Number*': 'PER002',
-        'Place of Publication': 'Washington D.C.',
-        'Publisher': 'National Geographic Partners',
-        'Copyright': '2023'
+        'Place of Publication*': 'Washington D.C.',
+        'Publisher*': 'National Geographic Partners',
+        'Copyright*': '2023'
       }
     ];
 
@@ -84,7 +84,7 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
     
     // Add a note about required fields
     XLSX.utils.sheet_add_aoa(ws, [
-      ['Fields marked with * are required']
+      ['All fields are required']
     ], { origin: { r: data.length + 2, c: 0 } });
     
     // Add the worksheet to the workbook
@@ -109,6 +109,32 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
+        // Reset errors before validation
+        setErrors([]);
+        
+        // If jsonData is empty, show an error
+        if (jsonData.length === 0) {
+          setErrors([{ message: 'The uploaded file is empty.' }]);
+          return;
+        }
+        
+        // Check if all required columns are present in the uploaded file
+        const requiredFields = ['Title*', 'Accession Number*', 'Place of Publication*', 'Publisher*', 'Copyright*'];
+        const uploadedColumns = Object.keys(jsonData.length > 0 ? jsonData[0] : {});
+        const missingColumns = requiredFields.filter(
+          field => !uploadedColumns.includes(field)
+        );
+        
+        // If any required columns are missing, set errors and return
+        if (missingColumns.length > 0) {
+          setErrors([{
+            message: `Missing required columns: ${missingColumns.join(', ')}`
+          }]);
+          setParsedData([]);
+          setValidationResults([]);
+          return;
+        }
+        
         setParsedData(jsonData);
         validateData(jsonData);
       } catch (error) {
@@ -121,7 +147,7 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
 
   const validateData = (data) => {
     const validationResults = [];
-    const requiredFields = ['Title*', 'Accession Number*'];
+    const requiredFields = ['Title*', 'Accession Number*', 'Place of Publication*', 'Publisher*', 'Copyright*'];
     
     // Track duplicate accession numbers
     const accessionNumbers = new Set();
@@ -182,9 +208,9 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
         const periodical = {
           title: row['Title*'],
           accessionNumber: row['Accession Number*'],
-          placeOfPublication: row['Place of Publication'] || null,
-          publisher: row['Publisher'] || null,
-          copyright: row['Copyright'] || null,
+          placeOfPublication: row['Place of Publication*'], // No longer optional
+          publisher: row['Publisher*'], // No longer optional
+          copyright: row['Copyright*'], // No longer optional
           dateRegistered: new Date().toISOString()
         };
         
@@ -195,9 +221,9 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
         successfulImports.push({
           accessionNumber: periodical.accessionNumber,
           title: periodical.title,
-          publisher: periodical.publisher || 'N/A',
-          placeOfPublication: periodical.placeOfPublication || 'N/A',
-          copyright: periodical.copyright || 'N/A'
+          publisher: periodical.publisher,
+          placeOfPublication: periodical.placeOfPublication,
+          copyright: periodical.copyright
         });
         
         successful++;
@@ -367,7 +393,7 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
             
             <Alert severity="info" sx={{ mb: 3, width: '100%' }}>
               Please download our template file first, fill it with periodical data, then upload it.
-              Required fields are marked with an asterisk (*).
+              All fields are required and marked with an asterisk (*).
             </Alert>
             
             <Button
@@ -481,9 +507,9 @@ const BulkImportPeriodicals = forwardRef(({ open, onClose, onSuccess, initialSte
                       <TableCell>{result.row}</TableCell>
                       <TableCell>{result.data['Title*']}</TableCell>
                       <TableCell>{result.data['Accession Number*']}</TableCell>
-                      <TableCell>{result.data['Publisher'] || '-'}</TableCell>
-                      <TableCell>{result.data['Place of Publication'] || '-'}</TableCell>
-                      <TableCell>{result.data['Copyright'] || '-'}</TableCell>
+                      <TableCell>{result.data['Publisher*']}</TableCell>
+                      <TableCell>{result.data['Place of Publication*']}</TableCell>
+                      <TableCell>{result.data['Copyright*']}</TableCell>
                       <TableCell>
                         {result.valid ? (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
