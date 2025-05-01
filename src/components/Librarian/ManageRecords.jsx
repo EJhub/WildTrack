@@ -866,11 +866,8 @@ const LibrarianManageRecords = () => {
                   <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
                     Time-Out
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: 'black', backgroundColor: '#F8C400' }}>
-                    Total Minutes Completed
-                  </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', borderTopRightRadius: '5px', color: 'black', backgroundColor: '#F8C400' }}>
-                    Action
+                    Total Minutes Completed
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -892,25 +889,6 @@ const LibrarianManageRecords = () => {
                       <TableCell>{student.latestTimeIn}</TableCell>
                       <TableCell>{student.latestTimeOut}</TableCell>
                       <TableCell>{student.totalMinutes}</TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          variant="contained"
-                          onClick={(e) => handleUpdate(student, e)}
-                          sx={{
-                            color: 'black',
-                            backgroundColor: '#FFDF16',
-                            fontSize: '11px',
-                            border: '1px solid #FFEB3B',
-                            fontWeight: 'bold',
-                            '&:hover': {
-                              backgroundColor: '#FFEB3B',
-                            },
-                          }}
-                        >
-                          Update
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
               </TableBody>

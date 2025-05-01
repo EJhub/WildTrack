@@ -60,26 +60,26 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
   }));
   
   const generateTemplate = () => {
-    // Create sample data with new fields
+    // Create sample data with all fields required
     const data = [
       {
         'Title*': 'To Kill a Mockingbird',
         'Author*': 'Harper Lee',
-        'Call Number': 'FIC LEE',
+        'Call Number*': 'FIC LEE',
         'Accession Number*': 'ACC001',
-        'Place of Publication': 'New York',
-        'Publisher': 'HarperCollins',
-        'Copyright': '1960',
+        'Place of Publication*': 'New York',
+        'Publisher*': 'HarperCollins',
+        'Copyright*': '1960',
         'Genre*': activeGenres && activeGenres.length > 0 ? activeGenres[0].genre : 'Fiction'
       },
       {
         'Title*': 'The Great Gatsby',
         'Author*': 'F. Scott Fitzgerald',
-        'Call Number': 'FIC FIT',
+        'Call Number*': 'FIC FIT',
         'Accession Number*': 'ACC002',
-        'Place of Publication': 'New York',
-        'Publisher': 'Scribner',
-        'Copyright': '1925',
+        'Place of Publication*': 'New York',
+        'Publisher*': 'Scribner',
+        'Copyright*': '1925',
         'Genre*': activeGenres && activeGenres.length > 0 ? 
           (activeGenres.length > 1 ? activeGenres[1].genre : activeGenres[0].genre) : 'Fiction'
       }
@@ -91,7 +91,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
     
     // Add a note about required fields
     XLSX.utils.sheet_add_aoa(ws, [
-      ['Fields marked with * are required'],
+      ['All fields are required and marked with an asterisk (*)'],
       ['Available genres: ' + (activeGenres && activeGenres.length > 0 ? activeGenres.map(g => g.genre).join(', ') : 'No genres available')]
     ], { origin: { r: data.length + 2, c: 0 } });
     
@@ -117,11 +117,48 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
+        // Reset errors before validation
+        setErrors([]);
+        
+        // If jsonData is empty, show an error
+        if (jsonData.length === 0) {
+          setErrors([{ message: 'The uploaded file is empty.' }]);
+          return;
+        }
+        
+        // Check if all required columns are present in the uploaded file
+        const requiredFields = [
+          'Title*', 
+          'Author*', 
+          'Call Number*', 
+          'Accession Number*', 
+          'Place of Publication*', 
+          'Publisher*', 
+          'Copyright*', 
+          'Genre*'
+        ];
+        
+        const uploadedColumns = Object.keys(jsonData.length > 0 ? jsonData[0] : {});
+        const missingColumns = requiredFields.filter(
+          field => !uploadedColumns.includes(field)
+        );
+        
+        // If any required columns are missing, set errors and return
+        if (missingColumns.length > 0) {
+          setErrors([{
+            message: `Missing required columns: ${missingColumns.join(', ')}`
+          }]);
+          setParsedData([]);
+          setValidationResults([]);
+          return;
+        }
+        
         setParsedData(jsonData);
         validateData(jsonData);
       } catch (error) {
         console.error('Error parsing file:', error);
         setErrors([{ message: 'Could not parse file. Please ensure it is a valid Excel or CSV file.' }]);
+        setParsedData([]);
       }
     };
     reader.readAsArrayBuffer(selectedFile);
@@ -129,7 +166,16 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
 
   const validateData = (data) => {
     const validationResults = [];
-    const requiredFields = ['Title*', 'Author*', 'Accession Number*', 'Genre*'];
+    const requiredFields = [
+      'Title*', 
+      'Author*', 
+      'Call Number*', 
+      'Accession Number*', 
+      'Place of Publication*', 
+      'Publisher*', 
+      'Copyright*', 
+      'Genre*'
+    ];
     
     // Track duplicate accession numbers
     const accessionNumbers = new Set();
@@ -194,15 +240,15 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
       setImportProgress(Math.round(((i + 1) / totalRows) * 100));
       
       try {
-        // Map spreadsheet columns to API fields - now with new fields
+        // Map spreadsheet columns to API fields - all fields are now required
         const book = {
           title: row['Title*'],
           author: row['Author*'],
           accessionNumber: row['Accession Number*'],
-          callNumber: row['Call Number'] || null,
-          placeOfPublication: row['Place of Publication'] || null,
-          publisher: row['Publisher'] || null,
-          copyright: row['Copyright'] || null,
+          callNumber: row['Call Number*'],
+          placeOfPublication: row['Place of Publication*'],
+          publisher: row['Publisher*'],
+          copyright: row['Copyright*'],
           genre: row['Genre*'],
           dateRegistered: new Date().toISOString()
         };
@@ -215,8 +261,8 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
           accessionNumber: book.accessionNumber,
           title: book.title,
           author: book.author,
-          callNumber: book.callNumber || 'N/A',
-          publisher: book.publisher || 'N/A'
+          callNumber: book.callNumber,
+          publisher: book.publisher
         });
         
         successful++;
@@ -386,7 +432,7 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
             
             <Alert severity="info" sx={{ mb: 3, width: '100%' }}>
               Please download our template file first, fill it with book data, then upload it.
-              Required fields are marked with an asterisk (*).
+              All fields are required and marked with an asterisk (*).
             </Alert>
             
             <Button
@@ -502,10 +548,10 @@ const BulkImportBooks = forwardRef(({ open, onClose, onSuccess, initialStep, onS
                       <TableCell>{result.row}</TableCell>
                       <TableCell>{result.data['Title*']}</TableCell>
                       <TableCell>{result.data['Author*']}</TableCell>
-                      <TableCell>{result.data['Call Number'] || '-'}</TableCell>
+                      <TableCell>{result.data['Call Number*']}</TableCell>
                       <TableCell>{result.data['Accession Number*']}</TableCell>
-                      <TableCell>{result.data['Publisher'] || '-'}</TableCell>
-                      <TableCell>{result.data['Copyright'] || '-'}</TableCell>
+                      <TableCell>{result.data['Publisher*']}</TableCell>
+                      <TableCell>{result.data['Copyright*']}</TableCell>
                       <TableCell>{result.data['Genre*']}</TableCell>
                       <TableCell>
                         {result.valid ? (

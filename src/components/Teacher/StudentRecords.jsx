@@ -18,9 +18,9 @@ import Button from '@mui/material/Button';
 import TablePagination from '@mui/material/TablePagination';
 import { AuthContext } from '../AuthContext';
 import CircularProgress from '@mui/material/CircularProgress';
-import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import Grid from '@mui/material/Grid';
+import IconButton from '@mui/material/IconButton';
 // Import icons for sort indicators and filters
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -42,14 +42,12 @@ const StudentRecords = () => {
   const [pendingGradeLevel, setPendingGradeLevel] = useState('');
   const [pendingSection, setPendingSection] = useState('');
   const [pendingQuarter, setPendingQuarter] = useState('');
-  const [pendingProgress, setPendingProgress] = useState(''); // New progress filter
 
   // Applied filter states (actually used in data fetching)
   const [search, setSearch] = useState('');
   const [selectedGradeLevel, setSelectedGradeLevel] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [quarter, setQuarter] = useState('');
-  const [progress, setProgress] = useState(''); // New progress filter state
 
   // UI states
   const [loading, setLoading] = useState(true);
@@ -75,29 +73,6 @@ const StudentRecords = () => {
   
   // Get current user from AuthContext
   const { user } = useContext(AuthContext);
-
-  // Helper function to properly determine progress status
-  const determineProgress = (student) => {
-    // First check if the progress is explicitly provided by the backend
-    if (student.progress) {
-      // Backend already provided a status, use that
-      return student.progress;
-    }
-    
-    // Check if the student has an active timeIn session
-    if (student.hasActiveSession) {
-      return 'In-progress';
-    }
-    
-    // Otherwise calculate based on the data
-    if (student.isCompleted) {
-      return 'Completed';
-    } else if (student.minutesRendered && student.minutesRendered > 0) {
-      return 'In-progress';
-    } else {
-      return 'Not started';
-    }
-  };
 
   // Handler for opening student detail modal
   const handleOpenStudentDetail = (student) => {
@@ -231,6 +206,55 @@ const StudentRecords = () => {
     }
   }, [pendingGradeLevel]);
 
+  // Add real-time search functionality
+  useEffect(() => {
+    // Only proceed if we have loaded students and either:
+    // - search has at least 2 characters, or
+    // - search was cleared (length = 0)
+    if (students.length > 0 && (pendingSearch.length >= 2 || pendingSearch.length === 0)) {
+      // Add debounce to avoid excessive filtering operations while typing
+      const timer = setTimeout(() => {
+        // Apply client-side filtering without making API calls
+        let results = [...students];
+        
+        // Apply section filter if present
+        if (selectedSection) {
+          results = results.filter(
+            (student) => student.section === selectedSection
+          );
+        }
+        
+        // Apply quarter filter if present  
+        if (quarter) {
+          results = results.filter(
+            (student) => student.quarter === quarter
+          );
+        }
+        
+        // Apply search filter
+        if (pendingSearch) {
+          results = results.filter(
+            (student) =>
+              student.name.toLowerCase().includes(pendingSearch.toLowerCase()) || 
+              student.idNumber.toLowerCase().includes(pendingSearch.toLowerCase())
+          );
+        }
+        
+        // Apply sort
+        const sortedData = getSortedData(results);
+        setFilteredStudents(sortedData);
+        
+        // Reset to first page when search changes
+        setPage(0);
+        
+        // Update the active search state
+        setSearch(pendingSearch);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [pendingSearch, students, selectedSection, quarter, orderBy, order]);
+
   // Initial filter application - only for first load
   const applyInitialFilters = async () => {
     try {
@@ -253,50 +277,60 @@ const StudentRecords = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const formattedStudents = response.data.map((student) => {
-        // Split grade and section for separate display
-        let grade = '';
-        let section = '';
+      // Process and deduplicate students
+      const uniqueStudentsMap = new Map();
+      
+      response.data.forEach(student => {
+        // Create a unique key based on student ID
+        const studentKey = student.idNumber;
         
-        if (student.grade && student.section) {
-          grade = student.grade;
-          section = student.section;
-        } else if (student.gradeSection) {
-          // Try to parse from combined gradeSection field (e.g., "Grade 4 HAPPY")
-          const gradeSectionParts = student.gradeSection.split(/\s+/);
-          if (gradeSectionParts.length >= 2) {
-            // Check if first part contains "Grade"
-            if (gradeSectionParts[0].toLowerCase() === 'grade') {
-              grade = `${gradeSectionParts[0]} ${gradeSectionParts[1]}`;
-              section = gradeSectionParts.slice(2).join(' ');
+        // Only add if not already in the map (or if we need to update existing)
+        if (!uniqueStudentsMap.has(studentKey)) {
+          // Split grade and section for separate display
+          let grade = '';
+          let section = '';
+          
+          if (student.grade && student.section) {
+            grade = student.grade;
+            section = student.section;
+          } else if (student.gradeSection) {
+            // Try to parse from combined gradeSection field (e.g., "Grade 4 HAPPY")
+            const gradeSectionParts = student.gradeSection.split(/\s+/);
+            if (gradeSectionParts.length >= 2) {
+              // Check if first part contains "Grade"
+              if (gradeSectionParts[0].toLowerCase() === 'grade') {
+                grade = `${gradeSectionParts[0]} ${gradeSectionParts[1]}`;
+                section = gradeSectionParts.slice(2).join(' ');
+              } else {
+                grade = gradeSectionParts[0];
+                section = gradeSectionParts.slice(1).join(' ');
+              }
             } else {
-              grade = gradeSectionParts[0];
-              section = gradeSectionParts.slice(1).join(' ');
+              grade = student.gradeSection;
+              section = '';
             }
-          } else {
-            grade = student.gradeSection;
-            section = '';
           }
+          
+          // Create the formatted student object
+          uniqueStudentsMap.set(studentKey, {
+            idNumber: student.idNumber,
+            name: `${student.firstName} ${student.lastName}`,
+            grade: grade,
+            section: section,
+            gradeSection: student.gradeSection || `${grade} ${section}` || 'N/A',
+            subject: teacherSubject,
+            quarter: student.quarter || '',
+            // We keep the following properties for reference but won't display them in the table
+            minutesRendered: student.minutesRendered || 0,
+            requiredMinutes: student.requiredMinutes || 0,
+            hasActiveSession: student.hasActiveSession || false,
+            isCompleted: student.isCompleted || false
+          });
         }
-        
-        // Calculate the proper progress status
-        const progressStatus = determineProgress(student);
-        
-        return {
-          idNumber: student.idNumber,
-          name: `${student.firstName} ${student.lastName}`,
-          grade: grade,
-          section: section,
-          gradeSection: student.gradeSection || `${grade} ${section}` || 'N/A',
-          subject: teacherSubject,
-          quarter: student.quarter || '',
-          progress: progressStatus,
-          minutesRendered: student.minutesRendered || 0,
-          requiredMinutes: student.requiredMinutes || 0,
-          hasActiveSession: student.hasActiveSession || false,
-          isCompleted: student.isCompleted || false
-        };
       });
+      
+      // Convert map values to array
+      const formattedStudents = Array.from(uniqueStudentsMap.values());
 
       setStudents(formattedStudents);
       
@@ -342,7 +376,6 @@ const StudentRecords = () => {
       setSelectedSection(pendingSection);
       setQuarter(pendingQuarter);
       setSearch(pendingSearch);
-      setProgress(pendingProgress);
       
       // Build query parameters for API call - only include parameters supported by the API
       const params = {
@@ -360,40 +393,40 @@ const StudentRecords = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Process the student data
-      const formattedStudents = response.data.map((student) => {
-        // Determine the proper progress status
-        const progressStatus = determineProgress(student);
+      // Process and deduplicate students
+      const uniqueStudentsMap = new Map();
+      
+      response.data.forEach(student => {
+        // Create a unique key based on student ID
+        const studentKey = student.idNumber;
         
-        return {
-          idNumber: student.idNumber,
-          name: `${student.firstName} ${student.lastName}`,
-          grade: student.grade || '',
-          section: student.section || '',
-          gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
-          subject: student.subject || teacherSubject,
-          quarter: student.quarter || '',
-          progress: progressStatus,
-          // Store raw values for reference
-          minutesRendered: student.minutesRendered || 0,
-          requiredMinutes: student.requiredMinutes || 0,
-          hasActiveSession: student.hasActiveSession || false,
-          isCompleted: student.isCompleted || false
-        };
+        // Only add if not already in the map (or if we need to update existing)
+        if (!uniqueStudentsMap.has(studentKey)) {
+          uniqueStudentsMap.set(studentKey, {
+            idNumber: student.idNumber,
+            name: `${student.firstName} ${student.lastName}`,
+            grade: student.grade || '',
+            section: student.section || '',
+            gradeSection: student.gradeSection || `${student.grade} ${student.section}` || 'N/A',
+            subject: student.subject || teacherSubject,
+            quarter: student.quarter || '',
+            // Store raw values for reference
+            minutesRendered: student.minutesRendered || 0,
+            requiredMinutes: student.requiredMinutes || 0,
+            hasActiveSession: student.hasActiveSession || false,
+            isCompleted: student.isCompleted || false
+          });
+        }
       });
+      
+      // Convert map values to array
+      const formattedStudents = Array.from(uniqueStudentsMap.values());
 
       // Client-side filtering for section (since backend doesn't support section filter)
       let filteredResults = formattedStudents;
       if (pendingSection) {
         filteredResults = filteredResults.filter(
           (student) => student.section === pendingSection
-        );
-      }
-      
-      // Apply progress filter if present
-      if (pendingProgress) {
-        filteredResults = filteredResults.filter(
-          (student) => student.progress === pendingProgress
         );
       }
       
@@ -420,7 +453,6 @@ const StudentRecords = () => {
       if (pendingSection) filterDescriptions.push(`Section: ${pendingSection}`);
       if (pendingQuarter) filterDescriptions.push(`Quarter: ${pendingQuarter}`);
       if (teacherSubject) filterDescriptions.push(`Subject: ${teacherSubject}`);
-      if (pendingProgress) filterDescriptions.push(`Progress: ${pendingProgress}`);
       
       console.log(`Filters applied: ${filterDescriptions.length > 0 ? filterDescriptions.join(', ') : 'None'}`);
       
@@ -438,7 +470,6 @@ const StudentRecords = () => {
     // Keep the pending grade level but reset other pending filters
     setPendingSection('');
     setPendingQuarter('');
-    setPendingProgress('');
     setPendingSearch('');
     
     // Set up a small delay to ensure state updates have processed
@@ -489,23 +520,6 @@ const StudentRecords = () => {
           : bValue.localeCompare(aValue);
       }
       
-      // Special handling for progress column
-      if (sortOrderBy === 'progress') {
-        // Define a priority order for progress statuses
-        const progressPriority = {
-          'Not started': 1,
-          'In-progress': 2,
-          'Completed': 3
-        };
-        
-        const aValue = progressPriority[a.progress] || 0;
-        const bValue = progressPriority[b.progress] || 0;
-        
-        return sortOrder === 'asc'
-          ? aValue - bValue
-          : bValue - aValue;
-      }
-      
       // Default comparison for any other columns
       return sortOrder === 'asc'
         ? (a[sortOrderBy] < b[sortOrderBy] ? -1 : 1)
@@ -531,7 +545,7 @@ const StudentRecords = () => {
 
   // Check if there are any active filters
   const hasActiveFilters = () => {
-    return selectedSection || quarter || progress || search;
+    return selectedSection || quarter || search;
   };
 
   // Common style for sortable table headers
@@ -613,6 +627,21 @@ const StudentRecords = () => {
                     <SearchIcon />
                   </InputAdornment>
                 ),
+                endAdornment: pendingSearch && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear search"
+                      onClick={() => {
+                        setPendingSearch('');
+                        // Let the useEffect handle resetting the filtered list
+                      }}
+                      edge="end"
+                      size="small"
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                )
               }}
             />
           </Box>
@@ -708,27 +737,6 @@ const StudentRecords = () => {
                 <MenuItem value="Second">Second</MenuItem>
                 <MenuItem value="Third">Third</MenuItem>
                 <MenuItem value="Fourth">Fourth</MenuItem>
-              </TextField>
-              
-              {/* Progress Filter - New */}
-              <TextField
-                name="progress"
-                label="Progress"
-                select
-                variant="outlined"
-                size="small"
-                value={pendingProgress}
-                onChange={(e) => setPendingProgress(e.target.value)}
-                sx={{
-                  backgroundColor: '#fff',
-                  borderRadius: '15px',
-                  minWidth: '150px',
-                }}
-              >
-                <MenuItem value="">All Progress</MenuItem>
-                <MenuItem value="Not started">Not Started</MenuItem>
-                <MenuItem value="In-progress">In Progress</MenuItem>
-                <MenuItem value="Completed">Completed</MenuItem>
               </TextField>
               
               <Button
@@ -848,22 +856,12 @@ const StudentRecords = () => {
                         </Box>
                       </Tooltip>
                     </TableCell>
-                    <TableCell 
-                      onClick={() => handleRequestSort('progress')}
-                      sx={sortableHeaderStyle}
-                    >
-                      <Tooltip title="Sort by progress">
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          Progress <SortIndicator column="progress" />
-                        </Box>
-                      </Tooltip>
-                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {displayedRows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
+                      <TableCell colSpan={6} align="center">
                         No student records found matching your criteria
                       </TableCell>
                     </TableRow>
@@ -886,20 +884,6 @@ const StudentRecords = () => {
                         <TableCell>{student.section || "HAPPY"}</TableCell>
                         <TableCell>{student.subject}</TableCell>
                         <TableCell>{student.quarter}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={student.progress}
-                            size="small"
-                            sx={{
-                              backgroundColor: student.progress === 'Completed' ? '#1b8c3f' : 
-                                              student.progress === 'In-progress' ? '#3f51b5' : '#e0e0e0',
-                              color: student.progress === 'Not started' ? 'black' : 'white',
-                              fontWeight: 'bold',
-                              borderRadius: '16px',
-                              padding: '0 10px',
-                            }}
-                          />
-                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -935,6 +919,7 @@ const StudentRecords = () => {
         open={detailModalOpen}
         handleClose={handleCloseStudentDetail}
         student={selectedStudent}
+        teacherSubject={teacherSubject}
       />
     </>
   );

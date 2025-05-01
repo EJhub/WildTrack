@@ -46,7 +46,17 @@ const StudentLibraryHours = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+const [selectedTask, setSelectedTask] = useState({ task: "", subject: "" });
   
+
+const handleTaskClick = (requirement) => {
+  setSelectedTask({
+    task: requirement.task || "No task description provided.",
+    subject: requirement.subject
+  });
+  setTaskDialogOpen(true);
+};
   // Summary dialog state
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
   const [selectedSummary, setSelectedSummary] = useState({ bookTitle: "", summary: "" });
@@ -55,14 +65,16 @@ const StudentLibraryHours = () => {
   const [orderBy, setOrderBy] = useState("date"); // Default sort by date
   const [order, setOrder] = useState("asc"); // Default sort direction (ascending)
   
-  // Progress summary state
+  // Progress summary state with added task and creator
   const [progressSummary, setProgressSummary] = useState({
     totalMinutesRequired: 0,
     totalMinutesRendered: 0,
     currentSubject: "--",
     currentRequiredMinutes: 0,
     currentMinutesRendered: 0,
-    currentMinutesRemaining: 0
+    currentMinutesRemaining: 0,
+    currentTask: "--", // New field for task
+    currentCreator: "--" // New field for creator
   });
   
   // Use AuthContext to access user information
@@ -169,73 +181,88 @@ const StudentLibraryHours = () => {
     });
   };
 
-  // Fetch progress data function
-  const fetchProgressData = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      
-      if (!token || !user || !user.idNumber) {
-        return;
+  // Fetch progress data function - Updated to include task and creator
+ // Fetch progress data function - Updated to accurately report requirement status
+const fetchProgressData = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    if (!token || !user || !user.idNumber) {
+      return;
+    }
+    
+    // First check for any new requirements
+    await api.get(
+      `/library-progress/check-new-requirements/${user.idNumber}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
-      
-      await api.get(
-        `/library-progress/check-new-requirements/${user.idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      const summaryResponse = await api.get(
-        `/library-progress/summary-with-init/${user.idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      const progressResponse = await api.get(
-        `/library-progress/${user.idNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      // Find the first incomplete requirement
-      const firstIncompleteRequirement = progressResponse.data.find(
+    );
+    
+    // Get the summary data
+    const summaryResponse = await api.get(
+      `/library-progress/summary-with-init/${user.idNumber}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    
+    // Get detailed progress data with the fixed "In Progress" status
+    const progressResponse = await api.get(
+      `/library-progress/active-progress/${user.idNumber}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    
+    // FIX: Find the requirement that is marked as "In Progress" first
+    // (the backend now correctly identifies this)
+    let currentRequirement = progressResponse.data.find(
+      req => req.status === "In Progress"
+    );
+    
+    // If no "In Progress" requirement is found, fall back to the first incomplete requirement
+    if (!currentRequirement) {
+      currentRequirement = progressResponse.data.find(
         req => !req.isCompleted
       );
-      
-      // Update the progress summary with the current requirement details
-      if (firstIncompleteRequirement) {
-        setProgressSummary({
-          totalMinutesRequired: summaryResponse.data.totalMinutesRequired || 0,
-          totalMinutesRendered: summaryResponse.data.totalMinutesRendered || 0,
-          currentSubject: firstIncompleteRequirement.subject,
-          currentRequiredMinutes: firstIncompleteRequirement.requiredMinutes || 0,
-          currentMinutesRendered: firstIncompleteRequirement.minutesRendered || 0,
-          currentMinutesRemaining: firstIncompleteRequirement.remainingMinutes || 0
-        });
-      } else {
-        // No incomplete requirements found
-        setProgressSummary({
-          totalMinutesRequired: summaryResponse.data.totalMinutesRequired || 0,
-          totalMinutesRendered: summaryResponse.data.totalMinutesRendered || 0,
-          currentSubject: "--",
-          currentRequiredMinutes: 0,
-          currentMinutesRendered: 0,
-          currentMinutesRemaining: 0
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching progress data:", error);
     }
-  };
-
+    
+    // Update the progress summary with the current requirement details
+    if (currentRequirement) {
+      setProgressSummary({
+        totalMinutesRequired: summaryResponse.data.totalMinutesRequired || 0,
+        totalMinutesRendered: summaryResponse.data.totalMinutesRendered || 0,
+        currentSubject: currentRequirement.subject,
+        currentRequiredMinutes: currentRequirement.requiredMinutes || 0,
+        currentMinutesRendered: currentRequirement.minutesRendered || 0,
+        currentMinutesRemaining: currentRequirement.remainingMinutes || 0,
+        currentTask: currentRequirement.task || "--",
+        currentCreator: currentRequirement.creatorName || "--"
+      });
+    } else {
+      // No incomplete requirements found
+      setProgressSummary({
+        totalMinutesRequired: summaryResponse.data.totalMinutesRequired || 0,
+        totalMinutesRendered: summaryResponse.data.totalMinutesRendered || 0,
+        currentSubject: "--",
+        currentRequiredMinutes: 0,
+        currentMinutesRendered: 0,
+        currentMinutesRemaining: 0,
+        currentTask: "--",
+        currentCreator: "--"
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching progress data:", error);
+  }
+};
   const fetchInitialData = async () => {
     try {
       setLoading(true);
@@ -730,6 +757,72 @@ const StudentLibraryHours = () => {
                 </Typography>
               </Paper>
               
+              {/* New Paper component for TASK */}
+              <Paper
+  elevation={2}
+  sx={{
+    padding: "8px 16px",
+    backgroundColor: "#FFD700",
+    borderRadius: "15px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    maxWidth: "50px", // Limit width for longer task descriptions
+    cursor: progressSummary.currentTask !== "--" ? "pointer" : "default",
+    transition: "background-color 0.3s",
+    "&:hover": progressSummary.currentTask !== "--" ? {
+      backgroundColor: "rgba(255, 215, 0, 0.8)",
+    } : {},
+  }}
+  onClick={() => 
+    progressSummary.currentTask !== "--" && 
+    handleTaskClick({
+      task: progressSummary.currentTask, 
+      subject: progressSummary.currentSubject
+    })
+  }
+>
+  <Typography variant="subtitle2" fontWeight="bold" color="#000">
+    TASK
+  </Typography>
+  <Tooltip title={progressSummary.currentTask} placement="top">
+    <Typography 
+      variant="body1" 
+      color="#000" 
+      fontWeight="medium"
+      sx={{
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        width: "100%",
+        textAlign: "center"
+      }}
+    >
+      {progressSummary.currentTask}
+    </Typography>
+  </Tooltip>
+</Paper>
+              
+              {/* New Paper component for CREATED BY */}
+              <Paper
+                elevation={2}
+                sx={{
+                  padding: "8px 16px",
+                  backgroundColor: "#FFD700",
+                  borderRadius: "15px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight="bold" color="#000">
+                  CREATED BY
+                </Typography>
+                <Typography variant="body1" color="#000" fontWeight="medium">
+                  {progressSummary.currentCreator}
+                </Typography>
+              </Paper>
+              
               <Paper
                 elevation={2}
                 sx={{
@@ -1082,6 +1175,82 @@ const StudentLibraryHours = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+
+      {/* Task Description Dialog */}
+  <Dialog
+    open={taskDialogOpen}
+    onClose={() => setTaskDialogOpen(false)}
+    maxWidth="md"
+    fullWidth
+    sx={{
+      "& .MuiPaper-root": {
+        borderRadius: "15px",
+        overflow: "hidden",
+      },
+    }}
+  >
+    <DialogTitle
+      sx={{
+        textAlign: "center",
+        fontWeight: "bold",
+        fontSize: "25px",
+        backgroundColor: "#FFDF16",
+        color: "#000",
+      }}
+    >
+      Task Description: {selectedTask.subject}
+    </DialogTitle>
+    <DialogContent
+      sx={{
+        backgroundColor: "#FFDF16",
+        padding: "30px",
+      }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          padding: "16px",
+          backgroundColor: "#fff",
+          borderRadius: "10px",
+          minHeight: "200px",
+        }}
+      >
+        <Typography
+          sx={{
+            whiteSpace: "pre-wrap", // Preserve line breaks
+            color: "#000",
+          }}
+        >
+          {selectedTask.task}
+        </Typography>
+      </Paper>
+    </DialogContent>
+    <DialogActions
+      sx={{
+        justifyContent: "center",
+        backgroundColor: "#FFDF16",
+        padding: 2,
+      }}
+    >
+      <Button
+        onClick={() => setTaskDialogOpen(false)}
+        variant="contained"
+        sx={{
+          borderRadius: "10px",
+          width: "120px",
+          backgroundColor: "#A44444",
+          color: "#fff",
+          "&:hover": {
+            backgroundColor: "#BB5252",
+          },
+        }}
+      >
+        CLOSE
+      </Button>
+    </DialogActions>
+  </Dialog>
+
 
       <AddBook
         open={open}

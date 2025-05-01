@@ -19,7 +19,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import Tooltip from '@mui/material/Tooltip';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import SetLibraryHours from './components/SetLibraryHours';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -28,6 +29,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import CheckIcon from '@mui/icons-material/Check';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import ClearIcon from '@mui/icons-material/Clear';
+import EditLibraryHours from './components/EditLibraryHours ';
+import EditIcon from '@mui/icons-material/Edit';
 // Import API utility
 import api from '../../utils/api';
 
@@ -47,6 +50,9 @@ const TeacherDashboard = () => {
   const [participantsLoading, setParticipantsLoading] = useState(true);
   const [statisticsLoading, setStatisticsLoading] = useState(true);
   const [assignedDeadlinesLoading, setAssignedDeadlinesLoading] = useState(true); // New loading state
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedRequirement, setSelectedRequirement] = useState(null);
   const [statistics, setStatistics] = useState({
     studentsInsideLibrary: 0,
     totalRegisteredStudents: 0
@@ -156,6 +162,26 @@ const TeacherDashboard = () => {
     } finally {
       setSectionsLoading(false);
     }
+  };
+
+  const handleEditClick = (requirement) => {
+    setSelectedRequirement(requirement);
+    setEditOpen(true);
+  };
+  
+  // Function to close edit modal
+  const handleEditClose = () => {
+    setEditOpen(false);
+    setSelectedRequirement(null);
+  };
+  
+  // Function to handle updates after editing
+  const handleRequirementUpdate = (updatedRequirement) => {
+    // Refresh assigned deadlines
+    fetchAssignedDeadlines();
+    
+    // Refresh filtered deadlines if filters are applied
+    applyFilters();
   };
 
   // Function to fetch teacher assignments (grade, section, and subject)
@@ -547,7 +573,7 @@ const TeacherDashboard = () => {
 
       if (!response.data) throw new Error('Failed to add deadline');
       
-      toast.success("Library hours requirement submitted for approval!");
+      toast.success("Library hours requirement has been created successfully!");
       
       // Refresh both deadlines (filtered and assigned)
       fetchAssignedDeadlines();
@@ -795,40 +821,6 @@ const TeacherDashboard = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
-  // Generate status chip based on approval status
-  const getStatusChip = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return (
-          <Chip
-            label="Approved"
-            color="success"
-            size="small"
-            sx={{ fontWeight: 'bold' }}
-          />
-        );
-      case 'REJECTED':
-        return (
-          <Chip
-            label="Rejected"
-            color="error"
-            size="small"
-            sx={{ fontWeight: 'bold' }}
-          />
-        );
-      case 'PENDING':
-      default:
-        return (
-          <Chip
-            label="Pending Approval"
-            color="warning"
-            size="small"
-            sx={{ fontWeight: 'bold' }}
-          />
-        );
-    }
-  };
 
   // Get appropriate label for student count based on filtering
   const getStudentCountLabel = () => {
@@ -1260,7 +1252,7 @@ const TeacherDashboard = () => {
                         offset: -5
                       }}
                     />
-                    <Tooltip 
+                    <RechartsTooltip 
                       formatter={(value) => [`${value} participants`]}
                       contentStyle={{ 
                         backgroundColor: '#ffffff',
@@ -1294,71 +1286,97 @@ const TeacherDashboard = () => {
             )}
           </Paper>
 
-          {/* Assigned Deadline Table */}
+          {/* Assigned Deadlines Table */}
           <Typography variant="h6" sx={{ textAlign: 'left', marginBottom: 2 }}>
             Assigned Deadlines for {gradeLevel} {teacherSubject || ""}
           </Typography>
 
           <TableContainer sx={{ borderRadius: 2, overflow: 'hidden', mb: 4 }}>
             <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#781B1B' }}>
-                  <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
-                  <TableCell sx={{ color: 'white' }}>Subject</TableCell>
-                  <TableCell sx={{ color: 'white' }}>Quarter</TableCell>
-                  <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
-                  <TableCell sx={{ color: 'white' }}>Due Date</TableCell>
-                  <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {assignedDeadlinesLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      <CircularProgress size={24} sx={{ mr: 1 }} />
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : displayedAssignedDeadlines.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      {`No assigned deadlines found for ${gradeLevel} ${teacherSubject || ""}`}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  displayedAssignedDeadlines.map((row, index) => (
-                    <TableRow 
-                      key={index} 
-                      sx={{ 
-                        backgroundColor: row.approvalStatus === 'APPROVED' ? 'rgba(76, 175, 80, 0.1)' : 
-                                        row.approvalStatus === 'REJECTED' ? 'rgba(244, 67, 54, 0.1)' : 'white',
-                        color: 'black',
-                        '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' },
-                      }}
-                    >
-                      <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.gradeLevel}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.subject}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.quarter}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {row.minutes}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {/* FIX: Add 'T00:00:00' to ensure proper date parsing */}
-                        {new Date(row.deadline + 'T00:00:00').toLocaleDateString()}
-                      </TableCell>
-                      <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
-                        {getStatusChip(row.approvalStatus)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
+            <TableHead>
+    <TableRow sx={{ backgroundColor: '#781B1B' }}>
+      <TableCell sx={{ color: 'white', borderTopLeftRadius: '10px' }}>Grade Level</TableCell>
+      <TableCell sx={{ color: 'white' }}>Subject</TableCell>
+      <TableCell sx={{ color: 'white' }}>Quarter</TableCell>
+      <TableCell sx={{ color: 'white' }}>Task</TableCell>
+      <TableCell sx={{ color: 'white' }}>Minutes Required</TableCell>
+      <TableCell sx={{ color: 'white' }}>Due Date</TableCell>
+      <TableCell sx={{ color: 'white', borderTopRightRadius: '10px' }}>Actions</TableCell>
+    </TableRow>
+  </TableHead>
+  <TableBody>
+    {assignedDeadlinesLoading ? (
+      <TableRow>
+        <TableCell colSpan={7} align="center">
+          <CircularProgress size={24} sx={{ mr: 1 }} />
+          Loading...
+        </TableCell>
+      </TableRow>
+    ) : displayedAssignedDeadlines.length === 0 ? (
+      <TableRow>
+        <TableCell colSpan={7} align="center">
+          {`No assigned deadlines found for ${gradeLevel} ${teacherSubject || ""}`}
+        </TableCell>
+      </TableRow>
+    ) : (
+      displayedAssignedDeadlines.map((row, index) => (
+        <TableRow 
+          key={index} 
+          sx={{ 
+            backgroundColor: 'white',
+            color: 'black',
+            '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' },
+          }}
+        >
+          <TableCell sx={{ borderLeft: '1px solid rgb(2, 1, 1)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+            {row.gradeLevel}
+          </TableCell>
+          <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+            {row.subject}
+          </TableCell>
+          <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+            {row.quarter}
+          </TableCell>
+          <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+            <Tooltip title={row.task || "No task description"}>
+              <Typography sx={{ 
+                maxWidth: 200, 
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {row.task || "No task description"}
+              </Typography>
+            </Tooltip>
+          </TableCell>
+          <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+            {row.minutes}
+          </TableCell>
+          <TableCell sx={{ borderBottom: '1px solid rgb(4, 4, 4)' }}>
+            {row.deadline ? new Date(row.deadline + 'T00:00:00').toLocaleDateString() : "No deadline"}
+          </TableCell>
+          <TableCell sx={{ borderRight: '1px solid rgb(4, 4, 4)', borderBottom: '1px solid rgb(4, 4, 4)' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => handleEditClick(row)}
+              sx={{
+                borderColor: '#781B1B',
+                color: '#781B1B',
+                '&:hover': {
+                  backgroundColor: 'rgba(120, 27, 27, 0.04)',
+                  borderColor: '#5D1515',
+                }
+              }}
+            >
+              Edit
+            </Button>
+          </TableCell>
+        </TableRow>
+      ))
+    )}
+  </TableBody>
             </Table>
           </TableContainer>
 
@@ -1385,6 +1403,14 @@ const TeacherDashboard = () => {
         defaultGradeLevel={teacherAssignments.assignedGrade} // Pass all assigned grades as comma-separated string
         defaultSubject={teacherSubject} // Pass the teacher's subject as the default
       />
+
+       {/* Add the EditLibraryHours component at the bottom of TeacherDashboard */}
+  <EditLibraryHours 
+    open={editOpen}
+    handleClose={handleEditClose}
+    requirement={selectedRequirement}
+    handleUpdate={handleRequirementUpdate}
+  />
     </>
   );
 };

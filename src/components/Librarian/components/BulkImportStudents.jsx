@@ -118,11 +118,26 @@ const BulkImportStudents = forwardRef(({ open, onClose, onSuccess, initialStep, 
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
+        // Reset errors before validation
+        setErrors([]);
+        
+        // If jsonData is empty, show an error
+        if (jsonData.length === 0) {
+          setErrors([{ message: 'The uploaded file is empty.' }]);
+          return;
+        }
+        
         setParsedData(jsonData);
-        validateData(jsonData);
+        const results = validateData(jsonData);
+        
+        // If validation fails (due to missing columns), clear parsed data
+        if (results.length === 0) {
+          setParsedData([]);
+        }
       } catch (error) {
         console.error('Error parsing file:', error);
         setErrors([{ message: 'Could not parse file. Please ensure it is a valid Excel or CSV file.' }]);
+        setParsedData([]);
       }
     };
     reader.readAsArrayBuffer(selectedFile);
@@ -131,6 +146,23 @@ const BulkImportStudents = forwardRef(({ open, onClose, onSuccess, initialStep, 
   const validateData = (data) => {
     const validationResults = [];
     const requiredFields = ['First Name*', 'Last Name*', 'ID Number*', 'Grade*', 'Section*', 'Academic Year*'];
+    const optionalFields = ['Middle Name'];
+    
+    // Check if all required columns are present in the uploaded file
+    const uploadedColumns = Object.keys(data.length > 0 ? data[0] : {});
+    const missingColumns = requiredFields.filter(
+      field => !uploadedColumns.includes(field)
+    );
+    
+    // If any required columns are missing, set errors and return
+    if (missingColumns.length > 0) {
+      setErrors([{
+        message: `Missing required columns: ${missingColumns.join(', ')}`
+      }]);
+      setParsedData([]);
+      setValidationResults([]);
+      return [];
+    }
     
     // Track duplicate IDs
     const idNumbers = new Set();

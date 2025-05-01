@@ -35,9 +35,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import { GetApp as GetAppIcon } from '@mui/icons-material'; // Added GetAppIcon for export
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from '../../utils/api'; // Import the API utility
+import { saveAs } from 'file-saver'; // Import for export functionality
 
 const LibrarianManageBooks = () => {
   const [data, setData] = useState([]); // Book data with additional UI states
@@ -279,6 +281,129 @@ const LibrarianManageBooks = () => {
       toast.success(`Bulk operation completed successfully!`);
     }
     refreshTableData();
+  };
+
+  // Export books function
+  const handleExportBooks = () => {
+    // Start with loading indicator
+    setTableRefreshing(true);
+    
+    try {
+      // Use the current filtered books
+      const dataToExport = filteredBooks;
+      
+      // Create CSV headers for books
+      const headers = [
+        'Book Title',
+        'Author',
+        'Call Number',
+        'Accession Number',
+        'Place of Publication',
+        'Publisher', 
+        'Copyright',
+        'Genre',
+        'Date Registered'
+      ];
+      
+      // Convert data to CSV format
+      let csvContent = headers.join(',') + '\n';
+      
+      dataToExport.forEach(book => {
+        // Properly handle fields that might contain commas by wrapping in quotes
+        const row = [
+          `"${book.title || ''}"`,
+          `"${book.author || ''}"`,
+          `"${book.callNumber || 'N/A'}"`,
+          `"${book.accessionNumber || ''}"`,
+          `"${book.placeOfPublication || 'N/A'}"`,
+          `"${book.publisher || 'N/A'}"`,
+          `"${book.copyright || 'N/A'}"`,
+          `"${book.genre || 'N/A'}"`,
+          `"${formatDate(book.dateRegistered) || 'N/A'}"`
+        ];
+        
+        csvContent += row.join(',') + '\n';
+      });
+      
+      // Create Blob and filename
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `books_export_${timestamp}.csv`;
+      
+      // Use FileSaver to save the file
+      saveAs(blob, filename);
+      
+      // Success message
+      toast.success(`Exported ${dataToExport.length} books successfully!`);
+    } catch (error) {
+      console.error('Error exporting books:', error);
+      toast.error('Failed to export books. Please try again.');
+    } finally {
+      // Stop loading indicator
+      setTableRefreshing(false);
+    }
+  };
+
+  // Export periodicals function
+  const handleExportPeriodicals = () => {
+    // Start with loading indicator
+    setTableRefreshing(true);
+    
+    try {
+      // Use the current filtered periodicals
+      const dataToExport = filteredPeriodicals;
+      
+      // Create CSV headers for periodicals
+      const headers = [
+        'Accession Number',
+        'Title',
+        'Publisher',
+        'Place of Publication',
+        'Copyright Year'
+      ];
+      
+      // Convert data to CSV format
+      let csvContent = headers.join(',') + '\n';
+      
+      dataToExport.forEach(periodical => {
+        // Properly handle fields that might contain commas by wrapping in quotes
+        const row = [
+          `"${periodical.accessionNumber || ''}"`,
+          `"${periodical.title || ''}"`,
+          `"${periodical.publisher || 'N/A'}"`,
+          `"${periodical.placeOfPublication || 'N/A'}"`,
+          `"${periodical.copyright || 'N/A'}"`
+        ];
+        
+        csvContent += row.join(',') + '\n';
+      });
+      
+      // Create Blob and filename
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `periodicals_export_${timestamp}.csv`;
+      
+      // Use FileSaver to save the file
+      saveAs(blob, filename);
+      
+      // Success message
+      toast.success(`Exported ${dataToExport.length} periodicals successfully!`);
+    } catch (error) {
+      console.error('Error exporting periodicals:', error);
+      toast.error('Failed to export periodicals. Please try again.');
+    } finally {
+      // Stop loading indicator
+      setTableRefreshing(false);
+    }
+  };
+
+  // Combined handler function
+  const handleExport = () => {
+    if (activeTab === 'books') {
+      handleExportBooks();
+    } else {
+      handleExportPeriodicals();
+    }
   };
 
   const handleChangePage = (event, newPage) => {
@@ -593,6 +718,27 @@ const LibrarianManageBooks = () => {
               >
                 <DeleteIcon sx={{ marginRight: 1, fontSize: '16px' }} />
                 Bulk Delete
+              </Button>
+              
+              {/* Export Button */}
+              <Button
+                onClick={handleExport}
+                sx={{
+                  fontWeight: 'bold',
+                  padding: '10px 15px',
+                  fontSize: '11px', 
+                  borderRadius: '50px',
+                  color: '#800000',
+                  backgroundColor: '#CCCCCC', 
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(42, 42, 42, 0.6)',
+                  '&:hover': {
+                    backgroundColor: '#800000',
+                    color: '#CCCCCC',
+                  },
+                }}
+              >
+                <GetAppIcon sx={{ marginRight: 1, fontSize: '16px' }} />
+                Export {activeTab === 'books' ? 'Books' : 'Periodicals'}
               </Button>
             </Box>
           </Box>

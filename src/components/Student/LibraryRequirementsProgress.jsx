@@ -19,17 +19,29 @@ import {
   useTheme,
   useMediaQuery,
   Snackbar,
-  Alert
+  Alert,
+  IconButton,
+  Collapse,
+  Tooltip,
+  Button
 } from "@mui/material";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
+import ContributingSessionsModal from "./components/ContributingSessionsModal"; // Import the new modal
 import { AuthContext } from "../AuthContext";
 import DoneIcon from "@mui/icons-material/Done";
 import WarningIcon from "@mui/icons-material/Warning";
 import ScheduleIcon from "@mui/icons-material/Schedule";
+import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
+import PauseCircleOutlineIcon from "@mui/icons-material/PauseCircleOutline";
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import PersonIcon from '@mui/icons-material/Person';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import InfoIcon from "@mui/icons-material/Info"; // Added for session details button
 import api from "../../utils/api"; // Import the API utility instead of axios
 
 const LibraryRequirementsProgress = () => {
@@ -39,6 +51,7 @@ const LibraryRequirementsProgress = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [lastCompletedItem, setLastCompletedItem] = useState(null);
   const [lastRequirementHash, setLastRequirementHash] = useState("");
+  const [expandedIds, setExpandedIds] = useState({}); // Track expanded state for mobile cards
   const { user } = useContext(AuthContext);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -47,11 +60,33 @@ const LibraryRequirementsProgress = () => {
   // Store previously completed requirements to detect new completions
   const [previouslyCompleted, setPreviouslyCompleted] = useState([]);
   
+  // New state variables for the contributing sessions modal
+  const [sessionModalOpen, setSessionModalOpen] = useState(false);
+  const [selectedRequirementId, setSelectedRequirementId] = useState(null);
+
   // Utility function to create a simple hash of requirements array
   // This helps us detect changes efficiently
   const createRequirementsHash = (reqs) => {
     if (!reqs || reqs.length === 0) return "";
     return reqs.map(r => `${r.id}-${r.subject}-${r.isCompleted}`).join('|');
+  };
+
+  // Function to toggle expanded state for a requirement
+  const toggleExpanded = (id) => {
+    setExpandedIds(prevState => ({
+      ...prevState,
+      [id]: !prevState[id]
+    }));
+  };
+
+  // Functions to handle the contributing sessions modal
+  const handleOpenSessionsModal = (requirementId) => {
+    setSelectedRequirementId(requirementId);
+    setSessionModalOpen(true);
+  };
+
+  const handleCloseSessionsModal = () => {
+    setSessionModalOpen(false);
   };
 
   // Function to check for requirement updates
@@ -75,20 +110,22 @@ const LibraryRequirementsProgress = () => {
         return;
       }
 
-      // Check for new requirements (including when all existing ones are completed)
+      // Use the active-progress endpoint to get real-time status including active "In Progress"
       const progressResponse = await api.get(
-        `/library-progress/check-new-requirements/${idNumber}`
+        `/library-progress/active-progress/${idNumber}`
       );
 
       const newRequirements = progressResponse.data;
-      const newRequirementsHash = createRequirementsHash(newRequirements);
+      
+      // Create a hash to check if there are actual changes
+      const newRequirementsHash = JSON.stringify(newRequirements);
       
       // Only update if there's an actual change
       if (newRequirementsHash !== lastRequirementHash) {
         // Get completed requirements for celebration checks
         const currentCompleted = newRequirements
           .filter(req => req.isCompleted)
-          .map(req => req.id);
+          .map(req => req.requirementId);
         
         // Check for newly completed requirements
         if (previouslyCompleted.length > 0) {
@@ -99,7 +136,7 @@ const LibraryRequirementsProgress = () => {
           if (newlyCompleted.length > 0) {
             // Find details of newly completed requirements
             const newCompletionDetails = newRequirements.filter(
-              req => newlyCompleted.includes(req.id)
+              req => newlyCompleted.includes(req.requirementId)
             );
             
             if (newCompletionDetails.length > 0) {
@@ -111,14 +148,12 @@ const LibraryRequirementsProgress = () => {
         
         // Check for newly added requirements
         if (newRequirements.length > requirements.length) {
-          // Get the difference
-          const newIds = newRequirements.map(r => r.id);
-          const oldIds = requirements.map(r => r.id);
-          const addedRequirements = newRequirements.filter(r => !oldIds.includes(r.id));
+          // Get the difference by comparing lengths - assuming only additions, not removals
+          const difference = newRequirements.length - requirements.length;
           
-          if (addedRequirements.length > 0) {
+          if (difference > 0) {
             // Notify for new requirements
-            toast.info(`${addedRequirements.length} new requirement${addedRequirements.length > 1 ? 's' : ''} have been added`, {
+            toast.info(`${difference} new requirement${difference > 1 ? 's' : ''} have been added`, {
               position: "bottom-right",
               autoClose: 3000
             });
@@ -130,7 +165,7 @@ const LibraryRequirementsProgress = () => {
         setRequirements(newRequirements);
         setLastRequirementHash(newRequirementsHash);
         
-        // Use the auto-init endpoint to ensure requirements are initialized and get summary
+        // Get summary data
         const summaryResponse = await api.get(
           `/library-progress/summary-with-init/${idNumber}`
         );
@@ -151,15 +186,15 @@ const LibraryRequirementsProgress = () => {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
 
-      // First check for new requirements
+      // Get requirements with active status
       const requirementsResponse = await api.get(
-        `/library-progress/check-new-requirements/${idNumber}`
+        `/library-progress/active-progress/${idNumber}`
       );
       
       // If we got requirements back, use them
       if (requirementsResponse.data && requirementsResponse.data.length > 0) {
         setRequirements(requirementsResponse.data);
-        setLastRequirementHash(createRequirementsHash(requirementsResponse.data));
+        setLastRequirementHash(JSON.stringify(requirementsResponse.data));
       } else {
         // Otherwise call the refresh endpoint to force initialization
         const response = await api.post(
@@ -168,8 +203,13 @@ const LibraryRequirementsProgress = () => {
         );
   
         if (response.data.requirements) {
-          setRequirements(response.data.requirements);
-          setLastRequirementHash(createRequirementsHash(response.data.requirements));
+          // After refresh, get the data with active status
+          const refreshedData = await api.get(
+            `/library-progress/active-progress/${idNumber}`
+          );
+          
+          setRequirements(refreshedData.data);
+          setLastRequirementHash(JSON.stringify(refreshedData.data));
         }
       }
       
@@ -228,7 +268,7 @@ const LibraryRequirementsProgress = () => {
     setShowCelebration(false);
   };
 
-  // Status chip component
+  // Status chip component with updated styling for all statuses including "Not Started"
   const getStatusChip = (status) => {
     switch (status) {
       case "Completed":
@@ -249,11 +289,38 @@ const LibraryRequirementsProgress = () => {
             size="small"
           />
         );
+      case "In Progress":
+        return (
+          <Chip
+            icon={<PlayCircleOutlineIcon />}
+            label="In Progress"
+            color="primary"
+            size="small"
+          />
+        );
+      case "Not Started":
+        return (
+          <Chip
+            icon={<ScheduleIcon />}
+            label="Not Started"
+            color="default"
+            size="small"
+          />
+        );
+      case "Paused":
+        return (
+          <Chip
+            icon={<PauseCircleOutlineIcon />}
+            label="Paused"
+            color="secondary"
+            size="small"
+          />
+        );
       default:
         return (
           <Chip
             icon={<ScheduleIcon />}
-            label="In Progress"
+            label={status}
             color="primary"
             size="small"
           />
@@ -294,8 +361,14 @@ const LibraryRequirementsProgress = () => {
         return "#4caf50"; // green
       case "Overdue":
         return "#f44336"; // red
+      case "In Progress":
+        return "#2196f3"; // blue
+      case "Paused":
+        return "#9c27b0"; // purple
+      case "Not Started":
+        return "#9e9e9e"; // grey
       default:
-        return "#2196f3"; // blue (In Progress)
+        return "#9e9e9e"; // grey for unknown status
     }
   };
 
@@ -377,7 +450,7 @@ const LibraryRequirementsProgress = () => {
                 mt: 0.5
               }}
             >
-              Updates automatically as new requirements are approved
+              Updates automatically as you time in/out and as new requirements are added
             </Typography>
           </Box>
 
@@ -409,7 +482,9 @@ const LibraryRequirementsProgress = () => {
                     backgroundColor: "rgba(255, 255, 255, 0.9)",
                     borderRadius: "15px",
                     boxShadow: 3,
-                    border: requirement.isCompleted ? "2px solid #4caf50" : "none"
+                    border: requirement.isCompleted ? "2px solid #4caf50" : 
+                           requirement.status === "In Progress" ? "2px solid #2196f3" : 
+                           requirement.status === "Not Started" ? "2px solid #9e9e9e" : "none"
                   }}
                 >
                   <CardContent>
@@ -428,6 +503,52 @@ const LibraryRequirementsProgress = () => {
                     </Box>
                     
                     <Divider sx={{ mb: 2 }} />
+                    
+                    {/* Created By (Teacher) */}
+                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                      <PersonIcon fontSize="small" sx={{ mr: 1, color: '#8C383E' }} />
+                      <Box>
+                        <Typography variant="body2" color="textSecondary">
+                          Created By:
+                        </Typography>
+                        <Typography variant="body1" fontWeight="bold">
+                          {requirement.creatorName || "Unknown Teacher"}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    {/* Task Description with toggle */}
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <AssignmentIcon fontSize="small" sx={{ mr: 1, color: '#8C383E' }} />
+                          <Typography variant="body2" color="textSecondary">
+                            Task:
+                          </Typography>
+                        </Box>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => toggleExpanded(requirement.id)}
+                          sx={{ p: 0 }}
+                        >
+                          {expandedIds[requirement.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </IconButton>
+                      </Box>
+                      <Collapse in={expandedIds[requirement.id] || false}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            mt: 1, 
+                            p: 1, 
+                            backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                            borderRadius: 1,
+                            whiteSpace: 'pre-wrap' // Preserve line breaks in task descriptions
+                          }}
+                        >
+                          {requirement.task || "No task description provided."}
+                        </Typography>
+                      </Collapse>
+                    </Box>
                     
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="body2" color="textSecondary">
@@ -483,6 +604,26 @@ const LibraryRequirementsProgress = () => {
                         }}
                       />
                     </Box>
+
+                    {/* Added button for viewing contributing sessions on mobile */}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<InfoIcon />}
+                      onClick={() => handleOpenSessionsModal(requirement.id)}
+                      sx={{
+                        mt: 2,
+                        borderColor: "#8C383E",
+                        color: "#8C383E",
+                        "&:hover": {
+                          backgroundColor: "rgba(140, 56, 62, 0.05)",
+                          borderColor: "#8C383E",
+                        },
+                      }}
+                    >
+                      View Sessions
+                      {requirement.contributingSessionsCount > 0 && ` (${requirement.contributingSessionsCount})`}
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -504,11 +645,14 @@ const LibraryRequirementsProgress = () => {
                   <TableRow sx={{ backgroundColor: "#8C383E" }}>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Subject</TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Quarter</TableCell>
+                    <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Created By</TableCell>
+                    <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Task</TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Required Minutes</TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Minutes Rendered</TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Deadline</TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Progress</TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Status</TableCell>
+                    <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Details</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -516,11 +660,33 @@ const LibraryRequirementsProgress = () => {
                     <TableRow 
                       key={requirement.id}
                       sx={{
-                        backgroundColor: requirement.isCompleted ? "rgba(76, 175, 80, 0.1)" : "transparent"
+                        backgroundColor: requirement.isCompleted ? "rgba(76, 175, 80, 0.1)" :
+                                        requirement.status === "In Progress" ? "rgba(33, 150, 243, 0.1)" : 
+                                        requirement.status === "Not Started" ? "rgba(158, 158, 158, 0.05)" : "transparent"
                       }}
                     >
                       <TableCell>{requirement.subject}</TableCell>
                       <TableCell>{requirement.quarter}</TableCell>
+                      <TableCell>{requirement.creatorName || "Unknown Teacher"}</TableCell>
+                      <TableCell>
+                        <Tooltip 
+                          title={requirement.task || "No task description provided."}
+                          placement="top-start"
+                          arrow
+                          sx={{ whiteSpace: 'pre-wrap' }}
+                        >
+                          <Typography
+                            sx={{
+                              maxWidth: 200,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {requirement.task || "No task description."}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
                       <TableCell>{requirement.requiredMinutes} mins</TableCell>
                       <TableCell>
                         {requirement.minutesRendered} mins
@@ -562,6 +728,25 @@ const LibraryRequirementsProgress = () => {
                       </TableCell>
                       <TableCell>
                         {getStatusChip(requirement.status)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<InfoIcon />}
+                          onClick={() => handleOpenSessionsModal(requirement.id)}
+                          sx={{
+                            borderColor: "#8C383E",
+                            color: "#8C383E",
+                            "&:hover": {
+                              backgroundColor: "rgba(140, 56, 62, 0.05)",
+                              borderColor: "#8C383E",
+                            },
+                          }}
+                        >
+                          Sessions
+                          {requirement.contributingSessionsCount > 0 && ` (${requirement.contributingSessionsCount})`}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -638,63 +823,71 @@ const LibraryRequirementsProgress = () => {
             </Grid>
           )}
 
-          {/* Overall Progress */}
-          {summary && (
-            <Card sx={{ 
-              mt: 4, 
-              mb: 8,
-              backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-              borderRadius: '15px', 
-              boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.15)',
-              position: 'relative', 
-              zIndex: 1,
-              minHeight: 160,
-              border: '2px solid #FFC107',
-            }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
-                  Overall Reading Progress
-                </Typography>
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  mb: 2,
-                  mt: 3,
-                }}>
-                  <Box sx={{ 
-                    flexGrow: 1, 
-                    mr: 2,
-                    height: 20,
-                    bgcolor: 'rgba(0,0,0,0.05)',
-                    borderRadius: 5,
-                  }}>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={summary.overallPercentage}
-                      sx={{
-                        height: 20,
-                        borderRadius: 5,
-                        '& .MuiLinearProgress-bar': {
-                          backgroundColor: '#FFD700',
-                        }
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', minWidth: '60px', textAlign: 'right' }}>
-                    {Math.round(summary.overallPercentage)}%
-                  </Typography>
-                </Box>
-                <Typography variant="body1" align="center" sx={{ mt: 2, fontWeight: 'medium' }}>
-                  {summary.totalMinutesRendered} minutes read out of {summary.totalMinutesRequired} minutes required
-                </Typography>
-              </CardContent>
-            </Card>
-          )}
+        {/* Overall Completed Requirements */}
+{summary && (
+  <Card sx={{ 
+    mt: 4, 
+    mb: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+    borderRadius: '15px', 
+    boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.15)',
+    position: 'relative', 
+    zIndex: 1,
+    minHeight: 160,
+    border: '2px solid #FFC107',
+  }}>
+    <CardContent sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
+        Overall Completed Requirements
+      </Typography>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        mb: 2,
+        mt: 3,
+      }}>
+        <Box sx={{ 
+          flexGrow: 1, 
+          mr: 2,
+          height: 20,
+          bgcolor: 'rgba(0,0,0,0.05)',
+          borderRadius: 5,
+        }}>
+          <LinearProgress 
+            variant="determinate" 
+            value={summary.totalRequirements > 0 ? (summary.completedRequirements / summary.totalRequirements) * 100 : 0}
+            sx={{
+              height: 20,
+              borderRadius: 5,
+              '& .MuiLinearProgress-bar': {
+                backgroundColor: '#FFD700',
+              }
+            }}
+          />
+        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', minWidth: '60px', textAlign: 'right' }}>
+          {summary.totalRequirements > 0 ? Math.round((summary.completedRequirements / summary.totalRequirements) * 100) : 0}%
+        </Typography>
+      </Box>
+      <Typography variant="body1" align="center" sx={{ mt: 2, fontWeight: 'medium' }}>
+        {summary.completedRequirements} requirements completed out of {summary.totalRequirements} total requirements
+      </Typography>
+    </CardContent>
+  </Card>
+)}
           
           {/* Extra spacer to ensure scrollability to the very bottom */}
           <Box sx={{ height: 100, width: '100%' }} />
         </Box>
       </Box>
+      
+      {/* Contributing Sessions Modal */}
+      <ContributingSessionsModal
+        open={sessionModalOpen}
+        handleClose={handleCloseSessionsModal}
+        requirementId={selectedRequirementId}
+        token={localStorage.getItem("token")}
+      />
       
       {/* Completion Celebration Notification */}
       {lastCompletedItem && (

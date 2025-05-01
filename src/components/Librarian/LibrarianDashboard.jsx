@@ -23,6 +23,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ClearIcon from '@mui/icons-material/Clear';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 // Component Imports
 import NavBar from './components/NavBar';
@@ -71,19 +72,13 @@ const LibrarianDashboard = () => {
   const [barData, setBarData] = useState([]);
   const [completionRateLoading, setCompletionRateLoading] = useState(true);
   
-  // Pending approvals states
-  const [pendingApprovals, setPendingApprovals] = useState([]);
-  const [approvalsLoading, setApprovalsLoading] = useState(true);
+  // Requirements states (replacing pending approvals)
+  const [requirements, setRequirements] = useState([]);
+  const [requirementsLoading, setRequirementsLoading] = useState(true);
   
-  // Dialog and Action States
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [currentRequirement, setCurrentRequirement] = useState(null);
-  const [actionType, setActionType] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [actionInProgress, setActionInProgress] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  // Task detail dialog states
+  const [taskDetailOpen, setTaskDetailOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   
   // Active Students Dialog State
   const [activeStudentsDialogOpen, setActiveStudentsDialogOpen] = useState(false);
@@ -257,9 +252,17 @@ const LibrarianDashboard = () => {
     
     setSelectedAcademicYear(value);
   };
-  
-  const handleRejectionReasonChange = (event) => {
-    setRejectionReason(event.target.value);
+
+  // Handler for opening task detail dialog
+  const handleOpenTaskDetail = (task) => {
+    setSelectedTask(task);
+    setTaskDetailOpen(true);
+  };
+
+  // Handler for closing task detail dialog
+  const handleCloseTaskDetail = () => {
+    setTaskDetailOpen(false);
+    setSelectedTask(null);
   };
   
   // Updated Apply Filters function with date validation
@@ -317,18 +320,6 @@ const LibrarianDashboard = () => {
     fetchDashboardData();
   };
   
-  // Dialog handlers
-  const handleOpenDialog = (requirement, action) => {
-    setCurrentRequirement(requirement);
-    setActionType(action);
-    setRejectionReason('');
-    setDialogOpen(true);
-  };
-  
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-  
   // Active Students Dialog handlers
   const handleOpenActiveStudentsDialog = () => {
     setActiveStudentsDialogOpen(true);
@@ -336,48 +327,6 @@ const LibrarianDashboard = () => {
   
   const handleCloseActiveStudentsDialog = () => {
     setActiveStudentsDialogOpen(false);
-  };
-  
-  const handleConfirmAction = async () => {
-    if (!currentRequirement || !actionType) return;
-    
-    setActionInProgress(true);
-    
-    try {
-      const endpoint = actionType === 'approve' 
-        ? `/library-hours-approval/approve/${currentRequirement.id}`
-        : `/library-hours-approval/reject/${currentRequirement.id}`;
-        
-      const requestBody = actionType === 'reject' ? { reason: rejectionReason } : {};
-      
-      const response = await api.post(endpoint, requestBody);
-      
-      if (response.data.success) {
-        // Show success message
-        setSnackbarMessage(actionType === 'approve' 
-          ? 'Library hours requirement approved successfully!' 
-          : 'Library hours requirement rejected successfully!');
-        setSnackbarSeverity('success');
-        setSnackbarOpen(true);
-        
-        // Remove from pending list
-        setPendingApprovals(prev => prev.filter(item => item.id !== currentRequirement.id));
-      } else {
-        throw new Error(response.data.message);
-      }
-    } catch (err) {
-      console.error("Error processing requirement:", err);
-      setSnackbarMessage(`Error: ${err.message || 'Failed to process requirement'}`);
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
-    } finally {
-      setActionInProgress(false);
-      setDialogOpen(false);
-    }
-  };
-  
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
   };
 
   // Format date for display - FIXED to handle timezone correctly
@@ -397,31 +346,41 @@ const LibrarianDashboard = () => {
     fetchStatistics();
     fetchParticipantsData();
     fetchCompletionRateData();
-    // No need to refresh pending approvals as they are not affected by filters
+    fetchRequirements();
   };
 
-  // Fetch Data for Pending Approvals
-  useEffect(() => {
-    const fetchPendingApprovals = async () => {
-      try {
-        setApprovalsLoading(true);
-        
-        const response = await api.get('/library-hours-approval/pending');
-        
-        setPendingApprovals(response.data);
-      } catch (err) {
-        console.error("Error fetching pending approvals:", err);
-        toast.error("Failed to load pending approvals");
-      } finally {
-        setApprovalsLoading(false);
+  // Fetch Requirements Data - UPDATED to use /all endpoint
+  const fetchRequirements = async () => {
+    try {
+      setRequirementsLoading(true);
+      
+      // Build query parameters for filtering
+      const params = new URLSearchParams();
+      
+      if (appliedFilters.gradeLevel) {
+        params.append('gradeLevel', appliedFilters.gradeLevel);
       }
-    };
-    
-    fetchPendingApprovals();
-    // Refresh every 2 minutes
-    const interval = setInterval(fetchPendingApprovals, 120000);
-    return () => clearInterval(interval);
-  }, []);
+      
+      // Use the /all endpoint that returns enhanced DTO objects
+      const url = `/set-library-hours/all${params.toString() ? `?${params.toString()}` : ''}`;
+      console.log("Fetching from URL:", url);
+      
+      const response = await api.get(url);
+      console.log("Library hours data received:", response.data);
+      
+      // Sort requirements by creation date (newest first)
+      const sortedRequirements = response.data.sort((a, b) => 
+        new Date(b.createdAt || "2000-01-01") - new Date(a.createdAt || "2000-01-01")
+      );
+      
+      setRequirements(sortedRequirements);
+    } catch (err) {
+      console.error("Error fetching requirements:", err);
+      toast.error("Failed to load requirements");
+    } finally {
+      setRequirementsLoading(false);
+    }
+  };
 
   // Fetch Participants Data with Filters
   const fetchParticipantsData = async () => {
@@ -556,9 +515,21 @@ const LibrarianDashboard = () => {
     return () => clearInterval(statsInterval);
   }, [appliedFilters]); // Re-fetch when applied filters change
 
+  // Log requirements data for debugging
+  useEffect(() => {
+    if (requirements.length > 0) {
+      console.log("Requirements with task details:", requirements.map(req => ({
+        id: req.id,
+        task: req.task,
+        creatorId: req.createdById, 
+        creatorName: req.creatorName
+      })));
+    }
+  }, [requirements]);
+
   // Get chart titles with filter information
   const getParticipantsChartTitle = () => {
-    let title = "Active Library Hours Participants";
+    let title = "Library Hours Participants";
     
     if (appliedFilters.academicYear) {
       title += ` - AY ${appliedFilters.academicYear}`;
@@ -1108,7 +1079,7 @@ const LibrarianDashboard = () => {
             </Grid>
           </Grid>
 
-          {/* Approvals Table */}
+          {/* Library Hours Requirements Table - UPDATED */}
           <Paper sx={{ 
             width: '100%', 
             mb: 4, 
@@ -1118,7 +1089,7 @@ const LibrarianDashboard = () => {
             overflow: 'visible' // Changed from 'hidden' to 'visible'
           }}>
             <Typography variant="h6" sx={{ p: 2, color: '#8C383E', fontWeight: 'bold' }}>
-              Pending Library Hours Requirement Approvals
+              Library Hours Requirements
             </Typography>
             <TableContainer sx={{ 
               maxHeight: 'none', // Remove any max height constraints
@@ -1130,53 +1101,62 @@ const LibrarianDashboard = () => {
                     <TableCell sx={{ fontWeight: 'bold' }}>Subject</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Quarter</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Grade Level</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Task</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Minutes Required</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Created By</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {approvalsLoading ? (
+                  {requirementsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center' }}>
-                        <CircularProgress size={24} /> Loading approvals...
+                      <TableCell colSpan={8} sx={{ textAlign: 'center' }}>
+                        <CircularProgress size={24} /> Loading requirements...
                       </TableCell>
                     </TableRow>
-                  ) : pendingApprovals.length === 0 ? (
+                  ) : requirements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center' }}>
-                        No pending approvals found
+                      <TableCell colSpan={8} sx={{ textAlign: 'center' }}>
+                        No library hours requirements found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    pendingApprovals
+                    requirements
                       .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                      .map((approval) => (
-                        <TableRow key={approval.id} sx={{ backgroundColor: 'rgba(205, 97, 97, 0.2)' }}>
-                          <TableCell>{approval.subject}</TableCell>
-                          <TableCell>{approval.quarter}</TableCell>
-                          <TableCell>{approval.gradeLevel}</TableCell>
-                          <TableCell>{approval.minutes} mins</TableCell>
-                          <TableCell>{formatDate(approval.deadline)}</TableCell>
+                      .map((req) => (
+                        <TableRow key={req.id} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
+                          <TableCell>{req.subject}</TableCell>
+                          <TableCell>{req.quarter}</TableCell>
+                          <TableCell>{req.gradeLevel}</TableCell>
                           <TableCell>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <Tooltip title="Approve">
-                                <IconButton 
-                                  onClick={() => handleOpenDialog(approval, 'approve')}
-                                  sx={{ color: '#4CAF50' }}
-                                >
-                                  <CheckIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Reject">
-                                <IconButton 
-                                  onClick={() => handleOpenDialog(approval, 'reject')}
-                                  sx={{ color: '#F44336' }}
-                                >
-                                  <CloseIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
+                            <Typography 
+                              sx={{ 
+                                maxWidth: 150, 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {req.task ? req.task : "No task description provided"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{req.minutes} mins</TableCell>
+                          <TableCell>{formatDate(req.deadline)}</TableCell>
+                          <TableCell>
+                            {req.creatorName && req.creatorName !== "Unknown" 
+                              ? req.creatorName 
+                              : (req.createdById ? `Teacher #${req.createdById}` : "Unknown Teacher")}
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title="View Task Details">
+                              <IconButton 
+                                onClick={() => handleOpenTaskDetail(req)}
+                                sx={{ color: '#8C383E' }}
+                              >
+                                <VisibilityIcon />
+                              </IconButton>
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1187,7 +1167,7 @@ const LibrarianDashboard = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={pendingApprovals.length}
+              count={requirements.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
@@ -1210,104 +1190,82 @@ const LibrarianDashboard = () => {
         </Box>
       </Box>
       
-      {/* Confirmation Dialog - Updated UI */}
+      {/* Task Detail Dialog */}
       <Dialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
+        open={taskDetailOpen}
+        onClose={handleCloseTaskDetail}
+        maxWidth="md"
         PaperProps={{
           sx: {
             borderRadius: '15px',
-            width: '320px',
             padding: '8px',
             boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.25)',
           }
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', ml: 1, color: '#8C383E' }}>
-            {actionType === 'approve' ? "APPROVE DEADLINE" : "REJECT DEADLINE"}
-          </Typography>
-          <IconButton onClick={handleCloseDialog} size="small">
-            <CloseIcon />
-          </IconButton>
-        </Box>
-        
-        {currentRequirement && (
-          <Box sx={{ px: 1, mb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Subject:</strong> {currentRequirement.subject}
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Grade Level:</strong> {currentRequirement.gradeLevel}
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Quarter:</strong> {currentRequirement.quarter}
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Minutes:</strong> {currentRequirement.minutes} mins
-            </Typography>
-            <Typography variant="body2">
-              <strong>Due Date:</strong> {formatDate(currentRequirement.deadline)}
-            </Typography>
-          </Box>
+        {selectedTask && (
+          <>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
+              <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: '#8C383E' }}>
+                Task Details
+              </Typography>
+              <IconButton onClick={handleCloseTaskDetail} size="small">
+                <ClearIcon />
+              </IconButton>
+            </Box>
+            <Divider />
+            <Box sx={{ p: 3 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle1" fontWeight="bold">Subject:</Typography>
+                  <Typography variant="body1" paragraph>{selectedTask.subject}</Typography>
+                  
+                  <Typography variant="subtitle1" fontWeight="bold">Grade Level:</Typography>
+                  <Typography variant="body1" paragraph>{selectedTask.gradeLevel}</Typography>
+                  
+                  <Typography variant="subtitle1" fontWeight="bold">Quarter:</Typography>
+                  <Typography variant="body1" paragraph>{selectedTask.quarter}</Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle1" fontWeight="bold">Minutes Required:</Typography>
+                  <Typography variant="body1" paragraph>{selectedTask.minutes} minutes</Typography>
+                  
+                  <Typography variant="subtitle1" fontWeight="bold">Due Date:</Typography>
+                  <Typography variant="body1" paragraph>{formatDate(selectedTask.deadline)}</Typography>
+                  
+                  <Typography variant="subtitle1" fontWeight="bold">Created By:</Typography>
+                  <Typography variant="body1" paragraph>
+                    {selectedTask.creatorName && selectedTask.creatorName !== "Unknown" 
+                      ? `${selectedTask.creatorName} (${selectedTask.creatorRole || "Teacher"})` 
+                      : (selectedTask.createdById ? `Teacher #${selectedTask.createdById}` : "Unknown Teacher")}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" fontWeight="bold">Task Description:</Typography>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(255, 215, 0, 0.1)', borderRadius: '10px', mt: 1 }}>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {selectedTask.task ? selectedTask.task : "No task description provided."}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 2 }}>
+              <Button 
+                onClick={handleCloseTaskDetail} 
+                variant="contained"
+                sx={{ 
+                  backgroundColor: '#FFD700', 
+                  color: '#000', 
+                  borderRadius: '10px',
+                  '&:hover': { backgroundColor: '#E6C300' }
+                }}
+              >
+                Close
+              </Button>
+            </Box>
+          </>
         )}
-        
-        {actionType === 'reject' && (
-          <Box sx={{ px: 1, mb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Please provide reason for rejection:
-            </Typography>
-            <TextField
-              id="rejection-reason"
-              type="text"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={2}
-              size="small"
-              value={rejectionReason}
-              onChange={handleRejectionReasonChange}
-              sx={{ backgroundColor: '#fff', borderRadius: '8px' }}
-            />
-          </Box>
-        )}
-        
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
-          <Button 
-            onClick={handleCloseDialog} 
-            variant="contained"
-            disabled={actionInProgress}
-            sx={{ 
-              backgroundColor: '#FF0000', 
-              color: '#ffffff', 
-              fontWeight: 'bold',
-              width: '80px',
-              borderRadius: '15px',
-              '&:hover': { backgroundColor: '#db0000' }
-            }}
-          >
-            No
-          </Button>
-          <Button 
-            onClick={handleConfirmAction} 
-            variant="contained"
-            disabled={actionInProgress || (actionType === 'reject' && rejectionReason.trim() === '')}
-            sx={{ 
-              backgroundColor: '#FFD700', 
-              color: '#000000', 
-              fontWeight: 'bold',
-              width: '80px',
-              borderRadius: '15px',
-              '&:hover': { backgroundColor: '#FFC107' }
-            }}
-          >
-            {actionInProgress ? (
-              <CircularProgress size={20} sx={{ color: '#000000' }} />
-            ) : (
-              "Yes"
-            )}
-          </Button>
-        </Box>
       </Dialog>
       
       {/* Active Students Dialog */}
@@ -1315,18 +1273,6 @@ const LibrarianDashboard = () => {
         open={activeStudentsDialogOpen} 
         onClose={handleCloseActiveStudentsDialog}
       />
-      
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: '100%' }}>
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </>
   );
 };
