@@ -106,14 +106,13 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
   const hasChanges = () => {
     // Check each field individually
     if (formData.minutes !== originalData.minutes) return true;
-    if (formData.gradeLevel !== originalData.gradeLevel) return true;
-    if (formData.subject !== originalData.subject) return true;
     if (formData.quarter !== originalData.quarter) return true;
     if (formData.task !== originalData.task) return true;
     
     // Specific check for deadline
     if (formData.deadline !== originalData.deadline) return true;
     
+    // No need to check gradeLevel and subject since they're disabled
     return false;
   };
 
@@ -281,6 +280,7 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 onChange={handleInputChange}
                 error={!!validationErrors.gradeLevel}
                 helperText={validationErrors.gradeLevel}
+                disabled={true} // Disabled the grade level field
               >
                 <MenuItem value="">Select Grade</MenuItem>
                 <MenuItem value="Grade 1">Grade 1</MenuItem>
@@ -308,6 +308,7 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 onChange={handleInputChange}
                 error={!!validationErrors.subject}
                 helperText={validationErrors.subject}
+                disabled={true} // Disabled the subject field
               >
                 <MenuItem value="">Select Subject</MenuItem>
                 <MenuItem value="English">English</MenuItem>
