@@ -64,9 +64,6 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
           task: requirement.task || ''
         };
         
-        console.log('Original deadline:', requirement.deadline);
-        console.log('Formatted deadline for form:', formattedDeadline);
-        
         // Store both current form data and original data
         setFormData(formattedData);
         setOriginalData(formattedData);
@@ -138,7 +135,7 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
     // Check if anything has changed
     if (!hasChanges()) {
@@ -171,12 +168,14 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
         throw new Error("Authentication token not found");
       }
       
-      // Format data for submission - make sure all fields are included
+      // Format data for submission - making sure all fields are included
+      // IMPORTANT: Even though gradeLevel and subject are disabled in UI,
+      // we still need to include them in the API request
       const updatedRequirement = {
         id: formData.id,
         minutes: parseInt(formData.minutes),
-        gradeLevel: formData.gradeLevel,
-        subject: formData.subject,
+        gradeLevel: formData.gradeLevel, // Include even though field is disabled
+        subject: formData.subject,       // Include even though field is disabled
         quarter: formData.quarter,
         task: formData.task
       };
@@ -191,36 +190,31 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
           updatedRequirement.year = parseInt(dateParts[0]);
           updatedRequirement.month = parseInt(dateParts[1]);
           updatedRequirement.day = parseInt(dateParts[2]);
-          
-          // Log the date parts being sent
-          console.log('Sending date parts:', {
-            year: updatedRequirement.year,
-            month: updatedRequirement.month,
-            day: updatedRequirement.day
-          });
         } else {
           console.error('Invalid date format:', formData.deadline);
         }
       }
       
-      console.log("Updating library hours for user:", user.idNumber);
-      console.log("Token exists:", !!token);
-      console.log("Request data:", JSON.stringify(updatedRequirement));
-      
       // Explicitly set the request headers with the token
-      const response = await api.put(`/set-library-hours/${formData.id}`, updatedRequirement, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          // Include user ID in a custom header
-          'X-User-ID': user.idNumber
+      try {
+        const response = await api.put(`/set-library-hours/${formData.id}`, updatedRequirement, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.data) {
+          toast.success("Library hours requirement updated successfully!");
+          // Call the parent component's update handler with the response data
+          if (typeof handleUpdate === 'function') {
+            handleUpdate(response.data);
+          }
+          handleClose();
         }
-      });
-      
-      if (response.data) {
-        toast.success("Library hours requirement updated successfully!");
-        handleUpdate(response.data);
-        handleClose();
+      } catch (requestError) {
+        // Re-throw to be caught by the outer try/catch
+        throw requestError;
       }
     } catch (error) {
       console.error('Error updating library hours:', error);
@@ -267,7 +261,7 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
           </Alert>
         )}
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -276,11 +270,14 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 select
                 fullWidth
                 required
-                value={formData.gradeLevel}
+                value={formData.gradeLevel || ''}
                 onChange={handleInputChange}
                 error={!!validationErrors.gradeLevel}
-                helperText={validationErrors.gradeLevel}
-                disabled={true} // Disabled the grade level field
+                helperText={validationErrors.gradeLevel || "Grade level cannot be changed"}
+                disabled={true}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               >
                 <MenuItem value="">Select Grade</MenuItem>
                 <MenuItem value="Grade 1">Grade 1</MenuItem>
@@ -304,11 +301,14 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 select
                 fullWidth
                 required
-                value={formData.subject}
+                value={formData.subject || ''}
                 onChange={handleInputChange}
                 error={!!validationErrors.subject}
-                helperText={validationErrors.subject}
-                disabled={true} // Disabled the subject field
+                helperText={validationErrors.subject || "Subject cannot be changed"}
+                disabled={true}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               >
                 <MenuItem value="">Select Subject</MenuItem>
                 <MenuItem value="English">English</MenuItem>
@@ -322,10 +322,13 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 select
                 fullWidth
                 required
-                value={formData.quarter}
+                value={formData.quarter || ''}
                 onChange={handleInputChange}
                 error={!!validationErrors.quarter}
                 helperText={validationErrors.quarter}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               >
                 <MenuItem value="">Select Quarter</MenuItem>
                 <MenuItem value="First">First</MenuItem>
@@ -341,11 +344,14 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 type="number"
                 fullWidth
                 required
-                value={formData.minutes}
+                value={formData.minutes || ''}
                 onChange={handleInputChange}
                 inputProps={{ min: 1 }}
                 error={!!validationErrors.minutes}
                 helperText={validationErrors.minutes}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -355,10 +361,13 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 fullWidth
                 multiline
                 rows={3}
-                value={formData.task}
+                value={formData.task || ''}
                 onChange={handleInputChange}
                 error={!!validationErrors.task}
                 helperText={validationErrors.task}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -367,7 +376,7 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
                 name="deadline"
                 type="date"
                 fullWidth
-                value={formData.deadline}
+                value={formData.deadline || ''}
                 onChange={handleInputChange}
                 InputLabelProps={{
                   shrink: true,
@@ -383,7 +392,10 @@ const EditLibraryHours = ({ open, handleClose, requirement, handleUpdate }) => {
         </form>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} color="secondary">
+        <Button 
+          onClick={handleClose} 
+          color="secondary"
+        >
           Cancel
         </Button>
         <Button 
