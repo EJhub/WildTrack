@@ -1105,19 +1105,18 @@ const LibrarianDashboard = () => {
                     <TableCell sx={{ fontWeight: 'bold' }}>Minutes Required</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Created By</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {requirementsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ textAlign: 'center' }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center' }}>
                         <CircularProgress size={24} /> Loading requirements...
                       </TableCell>
                     </TableRow>
                   ) : requirements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ textAlign: 'center' }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center' }}>
                         No library hours requirements found
                       </TableCell>
                     </TableRow>
@@ -1125,7 +1124,15 @@ const LibrarianDashboard = () => {
                     requirements
                       .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                       .map((req) => (
-                        <TableRow key={req.id} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
+                        <TableRow 
+                          key={req.id} 
+                          sx={{ 
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            cursor: 'pointer', // Add cursor pointer to show the row is clickable
+                            '&:hover': { backgroundColor: 'rgba(217, 140, 140, 0.2)' }, // Add hover effect
+                          }}
+                          onClick={() => handleOpenTaskDetail(req)} // Make entire row clickable
+                        >
                           <TableCell>{req.subject}</TableCell>
                           <TableCell>{req.quarter}</TableCell>
                           <TableCell>{req.gradeLevel}</TableCell>
@@ -1147,16 +1154,6 @@ const LibrarianDashboard = () => {
                             {req.creatorName && req.creatorName !== "Unknown" 
                               ? req.creatorName 
                               : (req.createdById ? `Teacher #${req.createdById}` : "Unknown Teacher")}
-                          </TableCell>
-                          <TableCell>
-                            <Tooltip title="View Task Details">
-                              <IconButton 
-                                onClick={() => handleOpenTaskDetail(req)}
-                                sx={{ color: '#8C383E' }}
-                              >
-                                <VisibilityIcon />
-                              </IconButton>
-                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))
